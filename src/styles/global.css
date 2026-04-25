@@ -27,3 +27,8 @@ input,
 textarea {
   font: inherit;
 }
+
+.group-1,
+.group-1 * {
+  box-sizing: border-box;
+}
