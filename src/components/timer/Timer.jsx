@@ -15,7 +15,7 @@ function Timer() {
     }
 
     return () => clearInterval(timer);
-  }, [isRunning, time]);
+  }, [isRunning]);
 
   const formatTime = () => {
     const minutes = String(Math.floor(time / 60)).padStart(2, "0");

@@ -6,6 +6,10 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
   const origin = useRef({ x: 0, y: 0, left: 0, top: 0 });
 
   const onPointerDown = (e) => {
+    // 버튼이나 입력 요소에서는 드래그 시작하지 않음
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.closest('button, input')) {
+      return;
+    }
     e.currentTarget.setPointerCapture(e.pointerId);
     dragging.current = true;
     origin.current = {
