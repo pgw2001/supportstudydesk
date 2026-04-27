@@ -1,49 +1,161 @@
-function TodoList() {
-  const tasks = [
-    { title: "Scene layout", done: true },
-    { title: "Window area", done: false },
-    { title: "Timer widget", done: false },
-    { title: "Todo input and responsive sizing test", done: false },
-  ];
+import { useEffect, useRef, useState } from "react";
+import rough from "roughjs";
+
+function TodoList({className}) {
+  const svgRef = useRef(null);
+  // 5개의 투두 항목을 위한 상태 관리
+  const [todos, setTodos] = useState([
+    { text: "", completed: false },
+    { text: "", completed: false },
+    { text: "", completed: false },
+    { text: "", completed: false },
+    { text: "", completed: false },
+  ]);
+
+  const handleTextClick = (index) => {
+    const newText = prompt("할 일을 입력하세요:", todos[index].text);
+    if (newText !== null) {
+      const newTodos = [...todos];
+      newTodos[index].text = newText;
+      setTodos(newTodos);
+    }
+  };
+
+  const addTodo = () => {
+    if (todos.length < 6) { // 최대 6개까지만 확장 가능하도록 제한 (디자인 유지)
+      setTodos([...todos, { text: "", completed: false }]);
+    }
+  };
+
+  const toggleTodo = (index) => {
+    const newTodos = [...todos];
+    newTodos[index].completed = !newTodos[index].completed;
+    setTodos(newTodos);
+  };
+
+  useEffect(() => {
+    if (svgRef.current) {
+        svgRef.current.innerHTML = "";
+
+        const rc = rough.svg(svgRef.current);
+
+        const rect = rc.rectangle(5,5,100,140,{
+          fill: '#fff',
+          fillStyle: 'solid',
+          stroke: '#000',
+          strokeWidth: 2,
+          roughness: 2,
+          bowing: 1
+        });
+        svgRef.current.appendChild(rect);
+
+        // Title: "Todo"
+        const titleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        titleText.setAttribute("x", "15");
+        titleText.setAttribute("y", "25");
+        titleText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 12px; font-weight: bold;");
+        titleText.textContent = "Todo";
+        svgRef.current.appendChild(titleText);
+
+        // Plus Button (+)
+        const plusCircle = rc.circle(90, 20, 12, {
+          stroke: '#000',
+          strokeWidth: 1,
+          roughness: 1
+        });
+        svgRef.current.appendChild(plusCircle);
+
+        const plusLine1 = rc.line(86, 20, 94, 20, { strokeWidth: 1 });
+        const plusLine2 = rc.line(90, 16, 90, 24, { strokeWidth: 1 });
+        svgRef.current.appendChild(plusLine1);
+        svgRef.current.appendChild(plusLine2);
+
+        // Plus Button Hitbox (Invisible)
+        const plusHitbox = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        plusHitbox.setAttribute("cx", "90");
+        plusHitbox.setAttribute("cy", "20");
+        plusHitbox.setAttribute("r", "8");
+        plusHitbox.setAttribute("fill", "transparent");
+        plusHitbox.style.cursor = "pointer";
+        plusHitbox.onpointerdown = (e) => {
+          e.stopPropagation();
+          addTodo();
+        };
+        svgRef.current.appendChild(plusHitbox);
+
+        // Horizontal Lines (Notebook style)
+        todos.forEach((todo, i) => {
+          const y = 45 + (i * 20);
+          
+          // Main line
+          const line = rc.line(10, y, 100, y, {
+            stroke: '#ccc',
+            strokeWidth: 1,
+            roughness: 0.5
+          });
+          svgRef.current.appendChild(line);
+
+          // Clickable area for text (Native SVG rect for reliable clicking)
+          const textHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          textHitbox.setAttribute("x", "10");
+          textHitbox.setAttribute("y", (y - 15).toString());
+          textHitbox.setAttribute("width", "70");
+          textHitbox.setAttribute("height", "15");
+          textHitbox.setAttribute("fill", "transparent");
+          textHitbox.style.cursor = "pointer";
+          textHitbox.onpointerdown = (e) => {
+            e.stopPropagation();
+            handleTextClick(i);
+          };
+          svgRef.current.appendChild(textHitbox);
+
+          // User input text
+          if (todo.text) {
+            const todoText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            todoText.setAttribute("x", "12");
+            todoText.setAttribute("y", y - 4);
+            todoText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 8px; pointer-events: none; ${todo.completed ? 'text-decoration: line-through; opacity: 0.5;' : ''}`);
+            todoText.textContent = todo.text;
+            svgRef.current.appendChild(todoText);
+          }
+
+          // Checkbox on the right
+          const checkbox = rc.rectangle(85, y - 12, 8, 8, {
+            roughness: 1.5,
+            stroke: '#555',
+            fill: todo.completed ? 'rgba(0,0,0,0.1)' : undefined
+          });
+          svgRef.current.appendChild(checkbox);
+
+          // Checkbox Hitbox (Native SVG rect)
+          const checkboxHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          checkboxHitbox.setAttribute("x", "85");
+          checkboxHitbox.setAttribute("y", (y - 12).toString());
+          checkboxHitbox.setAttribute("width", "8");
+          checkboxHitbox.setAttribute("height", "8");
+          checkboxHitbox.setAttribute("fill", "transparent");
+          checkboxHitbox.style.cursor = "pointer";
+          checkboxHitbox.onpointerdown = (e) => {
+            e.stopPropagation();
+            toggleTodo(i);
+          };
+          svgRef.current.appendChild(checkboxHitbox);
+
+          // Checkmark (X shape)
+          if (todo.completed) {
+            const check1 = rc.line(86, y - 11, 92, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5 });
+            const check2 = rc.line(92, y - 11, 86, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5 });
+            svgRef.current.appendChild(check1);
+            svgRef.current.appendChild(check2);
+          }
+        });
+      }
+  }, [todos]); // todos가 변경될 때마다 다시 그림
 
   return (
-    <section className="w-full rounded-[clamp(12px,1vw,18px)] border-2 border-neutral-900 bg-white p-[clamp(10px,1vw,16px)] shadow-[4px_5px_0_rgba(0,0,0,0.12)]">
-      <div className="flex items-center justify-between gap-[clamp(6px,0.8vw,10px)]">
-        <p className="text-[clamp(12px,1vw,16px)] font-semibold text-neutral-900">
-          Todo
-        </p>
-        <button className="grid h-[clamp(18px,1.5vw,24px)] w-[clamp(18px,1.5vw,24px)] shrink-0 place-items-center rounded-full border border-neutral-900 text-[clamp(10px,0.8vw,12px)] leading-none">
-          +
-        </button>
-      </div>
-
-      <div className="mt-[clamp(8px,0.8vw,12px)] flex flex-col gap-[clamp(6px,0.8vw,10px)]">
-        {tasks.map((task) => (
-          <div
-            key={task.title}
-            className="flex items-start gap-[clamp(6px,0.8vw,10px)]"
-          >
-            <span
-              className={`mt-[0.2em] grid h-[clamp(12px,1vw,16px)] w-[clamp(12px,1vw,16px)] shrink-0 place-items-center rounded-full border border-neutral-900 text-[clamp(8px,0.7vw,10px)] ${
-                task.done ? "bg-neutral-900 text-white" : "bg-white"
-              }`}
-            >
-              {task.done ? "✓" : ""}
-            </span>
-
-            <span
-              className={`min-w-0 break-words text-[clamp(10px,0.85vw,14px)] leading-[1.35] text-neutral-700 ${
-                task.done ? "line-through" : ""
-              }`}
-            >
-              {task.title}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
+    <svg ref={svgRef} width="100%" className={className} viewBox="0 0 110 150" preserveAspectRatio="xMidYMid meet">
+    </svg>
   );
 }
 
 export default TodoList;
-
