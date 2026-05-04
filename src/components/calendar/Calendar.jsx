@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import rough from "roughjs";
+import { getHolidays } from "../../utils/HolidayAPI";
 
 const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
 
@@ -53,7 +54,7 @@ function CalendarPin({className}) {
     );
 }
 
-function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday }) {
+function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, holidays }) {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -270,10 +271,16 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             for (let i = 0; i < 35; i++) {
                 const tempDate = new Date(startDate);
                 tempDate.setDate(startDate.getDate() + i);
+                
+                const dateString = `${tempDate.getFullYear()}${String(tempDate.getMonth() + 1).padStart(2, '0')}${String(tempDate.getDate()).padStart(2, '0')}`;
+                const holiday = (holidays || []).find(h => String(h.locdate) === dateString);
+
                 calendarDays.push({
                     day: tempDate.getDate(),
                     isCurrentMonth: tempDate.getMonth() === currentMonth,
-                    isToday: tempDate.toDateString() === now.toDateString()
+                    isToday: tempDate.toDateString() === now.toDateString(),
+                    isHoliday: !!holiday,
+                    holidayName: holiday ? holiday.dateName : ""
                 });
             }
 
@@ -326,16 +333,23 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                     );
                     svgRef.current.appendChild(todayFrame);
                 }
+
+                // 일요일이거나 공휴일이면 빨간색, 그 외 현재 달이면 검정, 아니면 회색
+                let textColor = dateInfo.isCurrentMonth ? '#333' : '#ccc';
+                if (dateInfo.isCurrentMonth && (col === 0 || (dateInfo.isHoliday && col !== 6))) {
+                    textColor = '#D43333';
+                }
+
                 const dateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 dateText.setAttribute("x", x.toString());
                 dateText.setAttribute("y", y.toString());
                 dateText.setAttribute("text-anchor", "middle");
-                dateText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 18px; font-weight: ${dateInfo.isToday ? 'bold' : 'normal'}; fill: ${dateInfo.isCurrentMonth ? '#333' : '#ccc'};`);
+                dateText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 18px; font-weight: ${dateInfo.isToday ? 'bold' : 'normal'}; fill: ${textColor};`);
                 dateText.textContent = dateInfo.day.toString();
                 svgRef.current.appendChild(dateText);
             });
         }
-    }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday]);
+    }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, holidays]);
     return (
         <div className={`relative ${className}`}>
             <svg ref={svgRef} width="100%" className="absolute inset-0 w-full h-full" viewBox="0 0 522 506" preserveAspectRatio="none">
@@ -349,6 +363,7 @@ function Calendar() {
     // 현재 보고 있는 달력을 관리하는 상태 (해당 월의 1일로 설정)
     const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
     const [showPicker, setShowPicker] = useState(false);
+    const [holidays, setHolidays] = useState([]);
 
     const minDate = useMemo(() => new Date(today.getFullYear() - 10, today.getMonth(), 1), [today]);
     const maxDate = useMemo(() => new Date(today.getFullYear() + 10, today.getMonth(), 1), [today]);
@@ -370,6 +385,17 @@ function Calendar() {
     const handleGoToday = () => {
         setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
     };
+
+    // 월이 변경될 때마다 공휴일 데이터를 가져옵니다.
+    useEffect(() => {
+        const fetchHolidays = async () => {
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth() + 1;
+            const data = await getHolidays(year, month);
+            setHolidays(data);
+        };
+        fetchHolidays();
+    }, [viewDate]);
 
     return (
         <section className="relative w-[clamp(180px,30vw,522px)] aspect-[522/506]">
@@ -414,6 +440,7 @@ function Calendar() {
                 canNext={viewDate < maxDate}
                 onTitleClick={() => setShowPicker(!showPicker)}
                 onGoToday={handleGoToday}
+                holidays={holidays}
             />
         </section>
 
