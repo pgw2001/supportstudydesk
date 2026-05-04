@@ -190,6 +190,24 @@ function CalendarBody({className}) {
                 const x = gridStartX + (col * cellWidth) + (cellWidth / 2);
                 const y = gridStartY + (row * cellHeight) + (cellHeight / 2) + 7; // 약간 아래로 조정
 
+                // Draw frame for today's date
+                if (dateInfo.isToday) {
+                    const todayFrame = rc.rectangle(
+                        gridStartX + (col * cellWidth), // x
+                        gridStartY + (row * cellHeight), // y
+                        cellWidth, // width
+                        cellHeight, // height
+                        {
+                            stroke: '#0a0a0a', // Red color for today's frame
+                            strokeWidth: 2.5,
+                            roughness: 1.5,
+                            bowing: 1,
+                            fill: 'none', // No fill
+                            seed: SEED + index + 300 // Unique seed
+                        }
+                    );
+                    svgRef.current.appendChild(todayFrame);
+                }
                 const dateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 dateText.setAttribute("x", x.toString());
                 dateText.setAttribute("y", y.toString());
