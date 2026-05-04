@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import rough from "roughjs";
 
+const TODO_SEED = 54321; // Todo 리스트 전용 고정 시드
+
 function TodoList({className}) {
   const svgRef = useRef(null);
   // 5개의 투두 항목을 위한 상태 관리
@@ -45,7 +47,8 @@ function TodoList({className}) {
           stroke: '#000',
           strokeWidth: 2,
           roughness: 2,
-          bowing: 1
+          bowing: 1,
+          seed: TODO_SEED
         });
         svgRef.current.appendChild(rect);
 
@@ -61,12 +64,13 @@ function TodoList({className}) {
         const plusCircle = rc.circle(90, 20, 12, {
           stroke: '#000',
           strokeWidth: 1,
-          roughness: 1
+          roughness: 1,
+          seed: TODO_SEED + 1
         });
         svgRef.current.appendChild(plusCircle);
 
-        const plusLine1 = rc.line(86, 20, 94, 20, { strokeWidth: 1 });
-        const plusLine2 = rc.line(90, 16, 90, 24, { strokeWidth: 1 });
+        const plusLine1 = rc.line(86, 20, 94, 20, { strokeWidth: 1, seed: TODO_SEED + 2 });
+        const plusLine2 = rc.line(90, 16, 90, 24, { strokeWidth: 1, seed: TODO_SEED + 3 });
         svgRef.current.appendChild(plusLine1);
         svgRef.current.appendChild(plusLine2);
 
@@ -91,7 +95,8 @@ function TodoList({className}) {
           const line = rc.line(10, y, 100, y, {
             stroke: '#ccc',
             strokeWidth: 1,
-            roughness: 0.5
+            roughness: 0.5,
+            seed: TODO_SEED + i + 10
           });
           svgRef.current.appendChild(line);
 
@@ -123,7 +128,8 @@ function TodoList({className}) {
           const checkbox = rc.rectangle(85, y - 12, 8, 8, {
             roughness: 1.5,
             stroke: '#555',
-            fill: todo.completed ? 'rgba(0,0,0,0.1)' : undefined
+            fill: todo.completed ? 'rgba(0,0,0,0.1)' : undefined,
+            seed: TODO_SEED + i + 20
           });
           svgRef.current.appendChild(checkbox);
 
@@ -143,8 +149,8 @@ function TodoList({className}) {
 
           // Checkmark (X shape)
           if (todo.completed) {
-            const check1 = rc.line(86, y - 11, 92, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5 });
-            const check2 = rc.line(92, y - 11, 86, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5 });
+            const check1 = rc.line(86, y - 11, 92, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5, seed: TODO_SEED + i + 30 });
+            const check2 = rc.line(92, y - 11, 86, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5, seed: TODO_SEED + i + 40 });
             svgRef.current.appendChild(check1);
             svgRef.current.appendChild(check2);
           }

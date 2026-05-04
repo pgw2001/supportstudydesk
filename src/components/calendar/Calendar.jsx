@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import rough from "roughjs";
 
+const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
+
 function CalendarPin({className}) {
     const svgRef = useRef(null);
 
@@ -15,6 +17,7 @@ function CalendarPin({className}) {
                 stroke: '#000',
                 strokeWidth: 1,
                 roughness: 1,  // 구불구불 정도
+                seed: SEED
             });
 
             triangle.setAttribute('transform', 'translate(10, 1)');
@@ -25,7 +28,8 @@ function CalendarPin({className}) {
                 stroke: '#000',
                 strokeWidth: 2,
                 roughness: 1,  // 구불구불 정도
-                bowing: 1      // 휘어짐 정도
+                bowing: 1,      // 휘어짐 정도
+                seed: SEED + 1
             });
 
             const innerCircle = rc.circle(38.5,15,16, {
@@ -34,7 +38,8 @@ function CalendarPin({className}) {
                 stroke: '#000',
                 strokeWidth: 2,
                 roughness: 1,
-                bowing: 1
+                bowing: 1,
+                seed: SEED + 2
             });
 
             svgRef.current.appendChild(triangle);
@@ -77,7 +82,8 @@ function CalendarBody({className}) {
                 stroke: '#000',
                 strokeWidth: 3.5,
                 roughness: 2.5,
-                bowing: 2
+                bowing: 2,
+                seed: SEED
             });
             svgRef.current.appendChild(rect);
 
@@ -110,7 +116,8 @@ function CalendarBody({className}) {
                     stroke: '#000',
                     strokeWidth: 1.5,
                     roughness: 1.5,
-                    bowing: 1
+                    bowing: 1,
+                    seed: SEED + index + 10
                 });
                 svgRef.current.appendChild(dayRect);
 
@@ -158,7 +165,8 @@ function CalendarBody({className}) {
                 const line = rc.line(x, gridStartY, x, gridStartY + gridTotalHeight, {
                     stroke: '#ccc',
                     strokeWidth: 1,
-                    roughness: 0.5
+                    roughness: 0.5,
+                    seed: SEED + i + 100
                 });
                 svgRef.current.appendChild(line);
             }
@@ -169,7 +177,8 @@ function CalendarBody({className}) {
                 const line = rc.line(gridStartX, y, gridStartX + gridTotalWidth, y, {
                     stroke: '#ccc',
                     strokeWidth: 1,
-                    roughness: 0.5
+                    roughness: 0.5,
+                    seed: SEED + i + 200
                 });
                 svgRef.current.appendChild(line);
             }
