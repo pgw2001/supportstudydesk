@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from 'react-dom';
 import rough from "roughjs";
 import { getHolidays } from "../../utils/HolidayAPI";
@@ -57,7 +57,7 @@ function CalendarPin({className}) {
     );
 }
 
-function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick, onScheduleDetailsClick }) {
+function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick, onScheduleDetailsClick, onDeleteSchedule }) {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -496,8 +496,27 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                         firstSchedDiv.style.color = firstColor;
                         firstSchedDiv.style.whiteSpace = "nowrap";
                         firstSchedDiv.style.overflow = "hidden";
-                        firstSchedDiv.style.textOverflow = "ellipsis";
-                        firstSchedDiv.textContent = firstSched.title;
+                        firstSchedDiv.style.display = "flex";
+                        firstSchedDiv.style.justifyContent = "space-between";
+                        firstSchedDiv.style.alignItems = "center";
+
+                        const titleSpan = document.createElement("span");
+                        titleSpan.style.overflow = "hidden";
+                        titleSpan.style.textOverflow = "ellipsis";
+                        titleSpan.textContent = firstSched.title;
+                        firstSchedDiv.appendChild(titleSpan);
+
+                        const delBtn = document.createElement("span");
+                        delBtn.textContent = "✕";
+                        delBtn.style.fontSize = "9px";
+                        delBtn.style.cursor = "pointer";
+                        delBtn.style.opacity = "0";
+                        delBtn.style.marginLeft = "4px";
+                        delBtn.onpointerdown = (e) => { e.stopPropagation(); onDeleteSchedule(firstSched.id); };
+                        firstSchedDiv.onmouseenter = () => { delBtn.style.opacity = "1"; };
+                        firstSchedDiv.onmouseleave = () => { delBtn.style.opacity = "0"; };
+                        firstSchedDiv.appendChild(delBtn);
+
                         div.appendChild(firstSchedDiv);
 
                         const dotsContainer = document.createElement("div");
@@ -555,8 +574,27 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                             schedDiv.style.color = color;
                             schedDiv.style.whiteSpace = "nowrap";
                             schedDiv.style.overflow = "hidden";
-                            schedDiv.style.textOverflow = "ellipsis";
-                            schedDiv.textContent = sched.title;
+                            schedDiv.style.display = "flex";
+                            schedDiv.style.justifyContent = "space-between";
+                            schedDiv.style.alignItems = "center";
+
+                            const titleSpan = document.createElement("span");
+                            titleSpan.style.overflow = "hidden";
+                            titleSpan.style.textOverflow = "ellipsis";
+                            titleSpan.textContent = sched.title;
+                            schedDiv.appendChild(titleSpan);
+
+                            const delBtn = document.createElement("span");
+                            delBtn.textContent = "✕";
+                            delBtn.style.fontSize = "9px";
+                            delBtn.style.cursor = "pointer";
+                            delBtn.style.opacity = "0";
+                            delBtn.style.marginLeft = "4px";
+                            delBtn.onpointerdown = (e) => { e.stopPropagation(); onDeleteSchedule(sched.id); };
+                            schedDiv.onmouseenter = () => { delBtn.style.opacity = "1"; };
+                            schedDiv.onmouseleave = () => { delBtn.style.opacity = "0"; };
+                            schedDiv.appendChild(delBtn);
+
                             div.appendChild(schedDiv);
                         });
                     }
@@ -571,7 +609,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 svgRef.current.appendChild(plusBtnHitbox); // 4. 최상단: + 버튼 실제 클릭 판정 (35x35)
             });
         }
-    }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick]);
+    }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick, onScheduleDetailsClick, onDeleteSchedule]);
     return (
         <div className={`relative ${className}`}>
             <svg ref={svgRef} width="100%" className="absolute inset-0 w-full h-full" viewBox="0 0 522 506" preserveAspectRatio="none">
@@ -626,6 +664,10 @@ function Calendar({ onExpandStateChange }) {
     const handleGoToday = () => {
         setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
     };
+
+    const handleDeleteSchedule = useCallback((id) => {
+        setSchedules(prev => prev.filter(s => s.id !== id));
+    }, []);
 
     const handleDateClick = (date, pos) => {
         setScheduleInput({ date: date.toISOString().split('T')[0], pos });
@@ -836,6 +878,7 @@ function Calendar({ onExpandStateChange }) {
                 schedules={schedules}
                 onDateClick={handleDateClick}
                 onScheduleDetailsClick={handleScheduleDetailsClick}
+                onDeleteSchedule={handleDeleteSchedule}
             />
 
             {/* Schedule Details Popover */}
@@ -846,6 +889,7 @@ function Calendar({ onExpandStateChange }) {
                     date={showScheduleDetails.date}
                     schedulesForDate={schedules.filter(s => s.date === showScheduleDetails.date)}
                     pos={showScheduleDetails.pos}
+                    onDeleteSchedule={handleDeleteSchedule}
                 />
             )}
         </section>

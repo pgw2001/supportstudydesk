@@ -3,7 +3,7 @@ import rough from 'roughjs';
 
 const SEED = 3333; // Calendar.jsx와 동일한 시드 사용
 
-const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos }) => {
+const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, onDeleteSchedule }) => {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -79,8 +79,18 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos }
             <div className="flex flex-col gap-1 overflow-y-auto mt-2" style={{ fontSize: 'clamp(9px, 4.8cqw, 14px)' }}>
                 {schedulesForDate.length > 0 ? (
                     schedulesForDate.map(sched => (
-                        <div key={sched.id} style={{ color: sched.color, borderLeft: `2px solid ${sched.color}`, paddingLeft: '5px' }}>
-                            {sched.title}
+                        <div 
+                            key={sched.id} 
+                            className="flex justify-between items-center group"
+                            style={{ color: sched.color, borderLeft: `2px solid ${sched.color}`, paddingLeft: '5px' }}
+                        >
+                            <span className="truncate">{sched.title}</span>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onDeleteSchedule(sched.id); }}
+                                className="opacity-0 group-hover:opacity-100 hover:scale-125 transition-all px-1 font-bold"
+                            >
+                                ✕
+                            </button>
                         </div>
                     ))
                 ) : (
