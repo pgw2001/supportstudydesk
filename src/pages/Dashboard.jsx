@@ -8,6 +8,8 @@ import Calendar from "../components/calendar/Calendar";
 import Draggable from "../utils/Draggable";
 
 function Dashboard() {
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+
   return (
     <div className="flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f1ec]">
       <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden bg-[#fcfbf8]">
@@ -21,8 +23,12 @@ function Dashboard() {
         </div>
 
         {/* Calendar */}
-        <Draggable initialLeft="8%" initialTop="7%" className="z-20">
-          <Calendar />
+        <Draggable 
+          initialLeft="8%" 
+          initialTop="7%" 
+          className={isCalendarExpanded ? "z-[9999]" : "z-20"}
+        >
+          <Calendar onExpandStateChange={setIsCalendarExpanded} />
         </Draggable>
         
         {/* Memo */}

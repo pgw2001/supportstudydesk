@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import rough from "roughjs";
 import { getHolidays } from "../../utils/HolidayAPI";
+import ExpandedModal from "../common/ExpandedModal";
 
 const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
 
@@ -54,7 +55,7 @@ function CalendarPin({className}) {
     );
 }
 
-function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, holidays }) {
+function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick }) {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -116,9 +117,9 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             svgRef.current.appendChild(titleHitbox);
 
             // Combined frame for Prev, Next, and Today buttons
-            const buttonFrameX = 345;
+            const buttonFrameX = 305; // 확장 버튼 공간 확보를 위해 왼쪽으로 이동
             const buttonFrameY = 25;
-            const buttonFrameWidth = 165;
+            const buttonFrameWidth = 205; // 165 -> 205로 너비 확장
             const buttonFrameHeight = 35;
 
             const buttonFrame = rc.rectangle(buttonFrameX, buttonFrameY, buttonFrameWidth, buttonFrameHeight, {
@@ -136,12 +137,16 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             const sep2 = rc.line(buttonFrameX + 80, buttonFrameY, buttonFrameX + 80, buttonFrameY + buttonFrameHeight, {
                 stroke: '#000', strokeWidth: 1.2, roughness: 1, seed: SEED + 47
             });
+            const sep3 = rc.line(buttonFrameX + 165, buttonFrameY, buttonFrameX + 165, buttonFrameY + buttonFrameHeight, {
+                stroke: '#000', strokeWidth: 1.2, roughness: 1, seed: SEED + 48
+            });
             svgRef.current.appendChild(sep1);
             svgRef.current.appendChild(sep2);
+            svgRef.current.appendChild(sep3);
 
             // Today Button Text (No frame)
             const todayBtnText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            todayBtnText.setAttribute("x", (buttonFrameX + 80 + (buttonFrameWidth - 80) / 2).toString());
+            todayBtnText.setAttribute("x", (buttonFrameX + 80 + 85 / 2).toString()); // Today 버튼(너비 85)의 중앙
             todayBtnText.setAttribute("y", "51");
             todayBtnText.setAttribute("text-anchor", "middle");
             todayBtnText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 19px; font-weight: bold; fill: #333; letter-spacing: -0.8px;");
@@ -151,7 +156,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             const todayHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             todayHitbox.setAttribute("x", (buttonFrameX + 80).toString());
             todayHitbox.setAttribute("y", buttonFrameY.toString());
-            todayHitbox.setAttribute("width", (buttonFrameWidth - 80).toString());
+            todayHitbox.setAttribute("width", "85");
             todayHitbox.setAttribute("height", buttonFrameHeight.toString());
             todayHitbox.setAttribute("fill", "transparent");
             todayHitbox.style.cursor = "pointer";
@@ -160,6 +165,30 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 onGoToday();
             };
             svgRef.current.appendChild(todayHitbox);
+
+            // Expand Button Icon (Using path from expand.jsx with roughjs style)
+            const expandIconPath = "M14.0004 9.99958L21 3.00003M21 3.00003L15.8572 3M21 3.00003L20.9999 8.14263M10.0004 14L3.00044 21M3.00044 21L8.14326 21M3.00044 21L3.00051 15.8574M14.0004 14L21 20.9996M21 20.9996L21 15.8569M21 20.9996L15.8573 20.9995M10.0004 10.0004L3.00003 3.00003L3 8.14272M3.00003 3.00003L8.14275 3.0001";
+            const expandIcon = rc.path(expandIconPath, {
+                stroke: '#333',
+                strokeWidth: 1.5,
+                roughness: 1,
+                seed: SEED + 49
+            });
+            expandIcon.setAttribute('transform', `translate(${buttonFrameX + 165 + 10}, ${buttonFrameY + 7.5}) scale(0.8)`);
+            svgRef.current.appendChild(expandIcon);
+
+            const expandHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            expandHitbox.setAttribute("x", (buttonFrameX + 165).toString());
+            expandHitbox.setAttribute("y", buttonFrameY.toString());
+            expandHitbox.setAttribute("width", "40");
+            expandHitbox.setAttribute("height", buttonFrameHeight.toString());
+            expandHitbox.setAttribute("fill", "transparent");
+            expandHitbox.style.cursor = "pointer";
+            expandHitbox.onpointerdown = (e) => {
+                e.stopPropagation();
+                onExpand();
+            };
+            svgRef.current.appendChild(expandHitbox);
 
             // Left Arrow Button (Prev Month)
             if (canPrev) {
@@ -272,11 +301,14 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 const tempDate = new Date(startDate);
                 tempDate.setDate(startDate.getDate() + i);
                 
-                const dateString = `${tempDate.getFullYear()}${String(tempDate.getMonth() + 1).padStart(2, '0')}${String(tempDate.getDate()).padStart(2, '0')}`;
-                const holiday = (holidays || []).find(h => String(h.locdate) === dateString);
+                const holidayDateString = `${tempDate.getFullYear()}${String(tempDate.getMonth() + 1).padStart(2, '0')}${String(tempDate.getDate()).padStart(2, '0')}`;
+                const scheduleDateString = tempDate.toISOString().split('T')[0];
+                
+                const holiday = (holidays || []).find(h => String(h.locdate) === holidayDateString);
+                const daySchedules = (schedules || []).filter(s => s.date === scheduleDateString);
 
                 calendarDays.push({
-                    day: tempDate.getDate(),
+                    date: new Date(tempDate),
                     isCurrentMonth: tempDate.getMonth() === currentMonth,
                     isToday: tempDate.toDateString() === now.toDateString(),
                     isHoliday: !!holiday,
@@ -312,8 +344,24 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             calendarDays.forEach((dateInfo, index) => {
                 const row = Math.floor(index / 7);
                 const col = index % 7;
-                const x = gridStartX + (col * cellWidth) + (cellWidth / 2);
-                const y = gridStartY + (row * cellHeight) + (cellHeight / 2) + 7; // 약간 아래로 조정
+                const cellX = gridStartX + (col * cellWidth);
+                const cellY = gridStartY + (row * cellHeight);
+                const textX = cellX + 8; // 좌측 여백
+                const textY = cellY + 22; // 상단 여백 (날짜 숫자 위치)
+
+                // Cell Hitbox (For adding schedules)
+                const cellHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                cellHitbox.setAttribute("x", cellX.toString());
+                cellHitbox.setAttribute("y", cellY.toString());
+                cellHitbox.setAttribute("width", cellWidth.toString());
+                cellHitbox.setAttribute("height", cellHeight.toString());
+                cellHitbox.setAttribute("fill", "transparent");
+                cellHitbox.style.cursor = "pointer";
+                cellHitbox.onpointerdown = (e) => {
+                    e.stopPropagation();
+                    onDateClick(dateInfo.date);
+                };
+                svgRef.current.appendChild(cellHitbox);
 
                 // Draw frame for today's date
                 if (dateInfo.isToday) {
@@ -341,15 +389,68 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 }
 
                 const dateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                dateText.setAttribute("x", x.toString());
-                dateText.setAttribute("y", y.toString());
-                dateText.setAttribute("text-anchor", "middle");
-                dateText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 18px; font-weight: ${dateInfo.isToday ? 'bold' : 'normal'}; fill: ${textColor};`);
-                dateText.textContent = dateInfo.day.toString();
+                dateText.setAttribute("x", textX.toString());
+                dateText.setAttribute("y", textY.toString());
+                dateText.setAttribute("text-anchor", "start");
+                dateText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 17px; font-weight: ${dateInfo.isToday ? 'bold' : 'normal'}; fill: ${textColor}; pointer-events: none;`);
+                dateText.textContent = dateInfo.date.getDate().toString();
                 svgRef.current.appendChild(dateText);
+
+                // 공휴일 및 사용자 일정 표시
+                if (dateInfo.isCurrentMonth) {
+                    const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+                    fo.setAttribute("x", textX.toString());
+                    fo.setAttribute("y", (cellY + 28).toString()); // 날짜 숫자와 겹치지 않게 약간 하단으로 조정
+                    fo.setAttribute("width", (cellWidth - 12).toString()); // 셀 너비를 넘지 않도록 설정
+                    fo.setAttribute("height", "45"); // 일정이 여러 개일 수 있으므로 충분한 높이 확보
+                    fo.style.pointerEvents = "auto"; // 툴팁 활성화를 위해 마우스 이벤트 허용
+
+                    const div = document.createElement("div");
+                    div.style.fontFamily = "'Comic Sans MS', cursive";
+                    div.style.fontSize = "10px";
+                    div.style.display = "flex";
+                    div.style.flexDirection = "column";
+                    div.style.gap = "1px";
+
+                    if (dateInfo.isHoliday) {
+                        const holidayDiv = document.createElement("div");
+                        holidayDiv.style.backgroundColor = "#e6f4ea"; // 구글 캘린더 스타일 연한 녹색 배경
+                        holidayDiv.style.borderLeft = "3px solid #188038"; // 짙은 녹색 세로줄
+                        holidayDiv.style.padding = "1px 4px";
+                        holidayDiv.style.borderRadius = "2px";
+                        holidayDiv.style.color = "#188038"; // 글자색도 녹색 계열로 변경
+                        holidayDiv.style.whiteSpace = "nowrap";
+                        holidayDiv.style.overflow = "hidden";
+                        holidayDiv.style.textOverflow = "ellipsis";
+                        holidayDiv.style.cursor = "help"; // 마우스 오버 시 도움말 커서 표시
+                        holidayDiv.textContent = dateInfo.holidayName;
+                        holidayDiv.title = dateInfo.holidayName;
+                        div.appendChild(holidayDiv);
+                    }
+
+                    // 사용자 일정 표시 (최대 2개까지만 표시 예시)
+                    const daySchedules = schedules.filter(s => s.date === dateInfo.date.toISOString().split('T')[0]);
+                    daySchedules.slice(0, 2).forEach(sched => {
+                        const schedDiv = document.createElement("div");
+                        const color = sched.color || "#3b82f6";
+                        schedDiv.style.backgroundColor = `${color}20`; // 선택한 색상의 20% 투명도 배경
+                        schedDiv.style.borderLeft = `3px solid ${color}`; // 선택한 색상의 세로줄
+                        schedDiv.style.padding = "1px 4px";
+                        schedDiv.style.borderRadius = "2px";
+                        schedDiv.style.color = color;
+                        schedDiv.style.whiteSpace = "nowrap";
+                        schedDiv.style.overflow = "hidden";
+                        schedDiv.style.textOverflow = "ellipsis";
+                        schedDiv.textContent = sched.title;
+                        div.appendChild(schedDiv);
+                    });
+
+                    fo.appendChild(div);
+                    svgRef.current.appendChild(fo);
+                }
             });
         }
-    }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, holidays]);
+    }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick]);
     return (
         <div className={`relative ${className}`}>
             <svg ref={svgRef} width="100%" className="absolute inset-0 w-full h-full" viewBox="0 0 522 506" preserveAspectRatio="none">
@@ -358,15 +459,33 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
     );
 }
 
-function Calendar() {
+function Calendar({ onExpandStateChange }) {
     const today = useMemo(() => new Date(), []);
     // 현재 보고 있는 달력을 관리하는 상태 (해당 월의 1일로 설정)
     const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
     const [showPicker, setShowPicker] = useState(false);
     const [holidays, setHolidays] = useState([]);
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    // 확장 상태가 바뀔 때마다 부모(Dashboard)에게 알림
+    useEffect(() => {
+        onExpandStateChange?.(isExpanded);
+    }, [isExpanded, onExpandStateChange]);
+
+    // 일정 입력 관련 상태
+    const [scheduleInput, setScheduleInput] = useState(null); // { date: string }
+    const [tempTitle, setTempTitle] = useState("");
+    const [tempColor, setTempColor] = useState("#3b82f6");
+    
+    const [schedules, setSchedules] = useState(() => {
+        const saved = localStorage.getItem("calendar_schedules");
+        return saved ? JSON.parse(saved) : [];
+    });
 
     const minDate = useMemo(() => new Date(today.getFullYear() - 10, today.getMonth(), 1), [today]);
     const maxDate = useMemo(() => new Date(today.getFullYear() + 10, today.getMonth(), 1), [today]);
+
+    const palette = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#6366f1', '#a855f7']; // 무지개 색상 팔레트
 
     const handlePrevMonth = () => {
         const prev = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
@@ -385,6 +504,28 @@ function Calendar() {
     const handleGoToday = () => {
         setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
     };
+
+    const handleDateClick = (date) => {
+        setScheduleInput({ date: date.toISOString().split('T')[0] });
+    };
+
+    const saveSchedule = () => {
+        if (tempTitle.trim()) {
+            const newSchedule = {
+                id: Date.now(),
+                date: scheduleInput.date,
+                title: tempTitle,
+                color: tempColor
+            };
+            setSchedules(prev => [...prev, newSchedule]);
+        }
+        setScheduleInput(null);
+        setTempTitle("");
+    };
+
+    useEffect(() => {
+        localStorage.setItem("calendar_schedules", JSON.stringify(schedules));
+    }, [schedules]);
 
     // 월이 변경될 때마다 공휴일 데이터를 가져옵니다.
     useEffect(() => {
@@ -431,6 +572,16 @@ function Calendar() {
                 </div>
             )}
 
+            {/* Expanded Modal UI (16:9 Floating Window) */}
+            <ExpandedModal 
+                isOpen={isExpanded} 
+                onClose={() => setIsExpanded(false)} 
+                title="Expanded Calendar View"
+            >
+                {/* 여기에 확장되었을 때 보여줄 내용을 넣습니다. 필요하다면 더 큰 CalendarBody를 넣을 수 있습니다. */}
+                <span className="text-gray-400 italic text-2xl" style={{ fontFamily: "'Comic Sans MS', cursive" }}>Calendar Content Here</span>
+            </ExpandedModal>
+
             <CalendarBody 
                 className="absolute w-[100%] aspect-[515.5/490] left-0 top-[6%] z-10"
                 viewDate={viewDate}
@@ -440,7 +591,10 @@ function Calendar() {
                 canNext={viewDate < maxDate}
                 onTitleClick={() => setShowPicker(!showPicker)}
                 onGoToday={handleGoToday}
+                onExpand={() => setIsExpanded(true)}
                 holidays={holidays}
+                schedules={schedules}
+                onDateClick={handleDateClick}
             />
         </section>
 
