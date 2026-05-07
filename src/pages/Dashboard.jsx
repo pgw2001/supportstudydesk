@@ -27,22 +27,23 @@ function Dashboard() {
           initialLeft="8%" 
           initialTop="7%" 
           className={isCalendarExpanded ? "z-[9999]" : "z-20"}
+          style={{ width: '28%' }}
         >
           <Calendar onExpandStateChange={setIsCalendarExpanded} />
         </Draggable>
         
         {/* Memo */}
-        <Draggable initialLeft="60%" initialTop="18%" className="z-10">
+        <Draggable initialLeft="61%" initialTop="18%" className="z-10" style={{ width: '16%' }}>
           <Memo />
         </Draggable>
         
         {/* Timer */}
-        <Draggable initialLeft="34%" initialTop="auto" className="z-20" style={{ bottom: '19%' }}>
+        <Draggable initialLeft="34%" initialTop="68%" className="z-20" style={{ width: '22%' }}>
           <Timer />
         </Draggable>
         
         {/* 자명종 시계 */}
-        <div className="absolute bottom-[21%] left-[46%] h-[10%] w-[6%] rounded-full border-2 border-neutral-800 bg-white z-20">
+        <div className="absolute top-[69%] left-[46%] h-[10%] w-[6%] rounded-full border-2 border-neutral-800 bg-white z-20">
             <div className="absolute left-1/2 top-[20%] h-[40%] w-px -translate-x-1/2 bg-neutral-900" />
             <div className="absolute left-1/2 top-1/2 h-px w-[26%] bg-neutral-900" />
             <div className="absolute -bottom-[16%] left-[18%] h-[20%] w-px rotate-[18deg] bg-neutral-900" />
@@ -50,7 +51,7 @@ function Dashboard() {
         </div>
         
         {/* Desk */}
-        <div className="absolute bottom-[12%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
+        <div className="absolute top-[82%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
         <div className="absolute bottom-[0%] left-[19%] w-[81%] aspect-[1594/390] z-0">
           <img
             src={deskSvg}
@@ -60,7 +61,7 @@ function Dashboard() {
         </div>
         
         {/* Monitor */}
-          <div className="absolute bottom-[20%] left-[58%] h-[23%] w-[16%] rounded-[8px] border-2 border-neutral-900 bg-white shadow-[3px_4px_0_rgba(0,0,0,0.12)]">
+          <div className="absolute top-[57%] left-[58%] h-[23%] w-[16%] rounded-[8px] border-2 border-neutral-900 bg-white shadow-[3px_4px_0_rgba(0,0,0,0.12)]">
             <div className="mx-auto mt-[8%] h-[48%] w-[82%] rounded-[6px] border-2 border-neutral-900 bg-neutral-950" />
             <div className="mx-auto mt-[3%] h-[24%] w-[75%] rounded-b-[10px] border-2 border-neutral-500 bg-white" />
           </div>
@@ -75,7 +76,7 @@ function Dashboard() {
         </div>
         
         {/* Todo List */}
-        <Draggable initialLeft="60%" initialTop="auto" className="z-20" style={{ bottom: '50%', right: '28%', width: '11%' }}>
+        <Draggable initialLeft="61%" initialTop="38%" className="z-20" style={{ width: '11%' }}>
           <TodoList />
         </Draggable>
       </main>

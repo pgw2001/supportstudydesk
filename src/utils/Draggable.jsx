@@ -10,21 +10,35 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
     if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.closest('button, input')) {
       return;
     }
-    e.currentTarget.setPointerCapture(e.pointerId);
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const parentRect = e.currentTarget.parentElement.getBoundingClientRect();
+
     dragging.current = true;
     origin.current = {
       x: e.clientX,
       y: e.clientY,
-      left: e.currentTarget.offsetLeft,
-      top: e.currentTarget.offsetTop,
+      // 현재 위치를 부모 대비 %로 계산하여 저장
+      left: ((rect.left - parentRect.left) / parentRect.width) * 100,
+      top: ((rect.top - parentRect.top) / parentRect.height) * 100,
     };
+
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e) => {
     if (!dragging.current) return;
-    const dx = e.clientX - origin.current.x;
-    const dy = e.clientY - origin.current.y;
-    setPosition({ left: origin.current.left + dx, top: origin.current.top + dy });
+
+    const parentRect = e.currentTarget.parentElement.getBoundingClientRect();
+    
+    // 마우스 이동 거리를 부모 너비/높이 대비 % 변화량으로 변환
+    const dxPct = ((e.clientX - origin.current.x) / parentRect.width) * 100;
+    const dyPct = ((e.clientY - origin.current.y) / parentRect.height) * 100;
+
+    setPosition({ 
+      left: `${origin.current.left + dxPct}%`, 
+      top: `${origin.current.top + dyPct}%` 
+    });
   };
 
   const onPointerUp = (e) => {
@@ -35,7 +49,13 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
   return (
     <div
       className={`absolute ${className}`}
-      style={{ ...style, left: position.left, top: position.top, touchAction: "none", cursor: "grab" }}
+      style={{ 
+        ...style, 
+        left: position.left, 
+        top: position.top, 
+        touchAction: "none", 
+        cursor: dragging.current ? "grabbing" : "grab" 
+      }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
