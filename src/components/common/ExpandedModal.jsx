@@ -4,7 +4,14 @@ import rough from 'roughjs';
 
 const MODAL_SEED = 9999; // 모달 전용 고정 시드
 
-const ExpandedModal = ({ isOpen, onClose, title, children }) => {
+const ExpandedModal = ({ 
+    isOpen, 
+    onClose, 
+    title, 
+    children, 
+    width = "max-w-6xl", // 기본 너비 (Tailwind 클래스나 CSS 값 모두 가능)
+    height = "aspect-video" // 기본 높이
+}) => {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -24,16 +31,25 @@ const ExpandedModal = ({ isOpen, onClose, title, children }) => {
             });
             svgRef.current.appendChild(rect);
         }
-    }, [isOpen]);
+    }, [isOpen, width, height]);
 
     if (!isOpen) return null;
+
+    // Tailwind 클래스인지 일반 CSS 값인지 판별하는 간단한 유틸리티
+    const isTailwind = (val) => typeof val === 'string' && (val.includes('-') || val.startsWith('aspect-'));
 
     return createPortal(
         <div 
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-10"
             onPointerDown={(e) => e.stopPropagation()}
         >
-            <div className="relative w-full max-w-6xl aspect-video flex flex-col items-center justify-center">
+            <div 
+                className={`relative flex flex-col items-center justify-center w-full ${isTailwind(width) ? width : ''} ${isTailwind(height) ? height : ''}`}
+                style={{
+                    width: !isTailwind(width) ? width : undefined,
+                    height: !isTailwind(height) ? height : undefined
+                }}
+            >
                 {/* RoughJS Background SVG */}
                 <svg 
                     ref={svgRef} 

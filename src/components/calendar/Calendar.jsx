@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from 'react-dom';
 import rough from "roughjs";
 import { getHolidays } from "../../utils/HolidayAPI";
 import ExpandedModal from "../common/ExpandedModal";
+import ScheduleDetailsPopover from "./ScheduleDetailsPopover";
 
 const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
 
@@ -55,7 +57,7 @@ function CalendarPin({className}) {
     );
 }
 
-function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick }) {
+function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick, onScheduleDetailsClick }) {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -356,12 +358,45 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 cellHitbox.setAttribute("width", cellWidth.toString());
                 cellHitbox.setAttribute("height", cellHeight.toString());
                 cellHitbox.setAttribute("fill", "transparent");
-                cellHitbox.style.cursor = "pointer";
-                cellHitbox.onpointerdown = (e) => {
+                cellHitbox.onpointerdown = (e) => e.stopPropagation(); // 칸 전체 클릭 시 드래그 방지용 전파 차단만 수행
+                cellHitbox.style.cursor = "default"; // 기본 커서로 설정
+
+                // 일정 추가용 + 버튼 그룹 (반투명 호버용)
+                const plusGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                plusGroup.style.opacity = "0"; // 초기 상태는 숨김
+                plusGroup.style.transition = "opacity 0.2s";
+                plusGroup.style.pointerEvents = "none";
+                const pX = cellX + cellWidth - 15;
+                const pY = cellY + 15;
+                const pSize = 10;
+                const l1 = rc.line(pX - pSize/2, pY, pX + pSize/2, pY, { strokeWidth: 2, roughness: 1, seed: SEED + index + 500 });
+                const l2 = rc.line(pX, pY - pSize/2, pX, pY + pSize/2, { strokeWidth: 2, roughness: 1, seed: SEED + index + 501 });
+                plusGroup.appendChild(l1);
+                plusGroup.appendChild(l2);
+
+                // + 버튼 전용 히트박스
+                const plusBtnHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                plusBtnHitbox.setAttribute("x", (pX - 17.5).toString()); // 중심점 기준 더 넓게 설정
+                plusBtnHitbox.setAttribute("y", (pY - 17.5).toString());
+                plusBtnHitbox.setAttribute("width", "35");
+                plusBtnHitbox.setAttribute("height", "35");
+                plusBtnHitbox.setAttribute("fill", "transparent");
+                plusBtnHitbox.style.cursor = "pointer";
+                plusBtnHitbox.style.pointerEvents = "none"; // 초기에는 클릭 방지
+                plusBtnHitbox.onpointerdown = (e) => {
                     e.stopPropagation();
-                    onDateClick(dateInfo.date);
+                    onDateClick(dateInfo.date, { x: cellX, y: cellY, w: cellWidth, h: cellHeight }); // 위치 정보 전달
                 };
-                svgRef.current.appendChild(cellHitbox);
+
+                // 셀 호버 이벤트: + 버튼 표시 및 활성화
+                cellHitbox.onpointerenter = () => {
+                    plusGroup.style.opacity = "0.5";
+                    plusBtnHitbox.style.pointerEvents = "auto"; // 호버 시 클릭 가능
+                };
+                cellHitbox.onpointerleave = () => {
+                    plusGroup.style.opacity = "0";
+                    plusBtnHitbox.style.pointerEvents = "none"; // 호버 해제 시 클릭 방지
+                };
 
                 // Draw frame for today's date
                 if (dateInfo.isToday) {
@@ -397,17 +432,25 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 svgRef.current.appendChild(dateText);
 
                 // 공휴일 및 사용자 일정 표시
+                let fo = null;
                 if (dateInfo.isCurrentMonth) {
-                    const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+                    fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
                     fo.setAttribute("x", textX.toString());
-                    fo.setAttribute("y", (cellY + 28).toString()); // 날짜 숫자와 겹치지 않게 약간 하단으로 조정
+                    fo.setAttribute("y", (cellY + 25).toString()); // 전체 영역을 위로 3px 이동
                     fo.setAttribute("width", (cellWidth - 12).toString()); // 셀 너비를 넘지 않도록 설정
                     fo.setAttribute("height", "45"); // 일정이 여러 개일 수 있으므로 충분한 높이 확보
                     fo.style.pointerEvents = "auto"; // 툴팁 활성화를 위해 마우스 이벤트 허용
 
+                    // 일정 상세 정보 팝업을 띄우는 이벤트 (드래그 방지 및 상세 팝업 트리거)
+                    fo.onpointerdown = (e) => {
+                        e.stopPropagation(); // 드래그 이벤트 전파 차단
+                        onScheduleDetailsClick(dateInfo.date, { x: cellX, y: cellY, w: cellWidth, h: cellHeight });
+                    };
+
                     const div = document.createElement("div");
                     div.style.fontFamily = "'Comic Sans MS', cursive";
-                    div.style.fontSize = "10px";
+                    // 일정 텍스트 크기도 가변적으로 설정 (최소 8px, 기본 2cqw, 최대 11px)
+                    div.style.fontSize = "clamp(8px, 2cqw, 11px)";
                     div.style.display = "flex";
                     div.style.flexDirection = "column";
                     div.style.gap = "1px";
@@ -427,27 +470,105 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                         holidayDiv.title = dateInfo.holidayName;
                         div.appendChild(holidayDiv);
                     }
+                    
+                    // 공휴일/일정 위에서도 +버튼이 유지되도록 이벤트 추가
+                    fo.onpointerenter = () => {
+                        plusGroup.style.opacity = "0.5";
+                        plusBtnHitbox.style.pointerEvents = "auto";
+                    };
+                    fo.onpointerleave = () => {
+                        plusGroup.style.opacity = "0";
+                        plusBtnHitbox.style.pointerEvents = "none";
+                    };
 
-                    // 사용자 일정 표시 (최대 2개까지만 표시 예시)
+                    // 사용자 일정 표시
                     const daySchedules = schedules.filter(s => s.date === dateInfo.date.toISOString().split('T')[0]);
-                    daySchedules.slice(0, 2).forEach(sched => {
-                        const schedDiv = document.createElement("div");
-                        const color = sched.color || "#3b82f6";
-                        schedDiv.style.backgroundColor = `${color}20`; // 선택한 색상의 20% 투명도 배경
-                        schedDiv.style.borderLeft = `3px solid ${color}`; // 선택한 색상의 세로줄
-                        schedDiv.style.padding = "1px 4px";
-                        schedDiv.style.borderRadius = "2px";
-                        schedDiv.style.color = color;
-                        schedDiv.style.whiteSpace = "nowrap";
-                        schedDiv.style.overflow = "hidden";
-                        schedDiv.style.textOverflow = "ellipsis";
-                        schedDiv.textContent = sched.title;
-                        div.appendChild(schedDiv);
-                    });
+
+                    if (daySchedules.length >= 3) {
+                        // 3개 이상의 일정이 있을 경우: 첫 번째는 바 형태, 나머지는 점 형태로 표시
+                        const firstSched = daySchedules[0];
+                        const firstSchedDiv = document.createElement("div");
+                        const firstColor = firstSched.color || "#3b82f6";
+                        firstSchedDiv.style.backgroundColor = `${firstColor}20`;
+                        firstSchedDiv.style.borderLeft = `3px solid ${firstColor}`;
+                        firstSchedDiv.style.padding = "1px 4px";
+                        firstSchedDiv.style.borderRadius = "2px";
+                        firstSchedDiv.style.color = firstColor;
+                        firstSchedDiv.style.whiteSpace = "nowrap";
+                        firstSchedDiv.style.overflow = "hidden";
+                        firstSchedDiv.style.textOverflow = "ellipsis";
+                        firstSchedDiv.textContent = firstSched.title;
+                        div.appendChild(firstSchedDiv);
+
+                        const dotsContainer = document.createElement("div");
+                        dotsContainer.style.display = "flex";
+                        dotsContainer.style.flexDirection = "row";
+                        dotsContainer.style.alignItems = "center"; // 점들과 텍스트의 중앙 정렬을 맞춤
+                        dotsContainer.style.gap = "6px"; // 점 사이의 간격 (한 칸 띄우기)
+                        dotsContainer.style.padding = "1px 2px 0 4px"; // 상단 여백을 줄여 점들을 위로 밀착
+                        dotsContainer.style.flexWrap = "nowrap";
+                        dotsContainer.style.overflow = "hidden";
+
+                        if (daySchedules.length >= 6) {
+                            // 6개 이상일 경우: 점 3개 + "..+n" 표시 (공간 절약)
+                            daySchedules.slice(1, 4).forEach(sched => {
+                                const dot = document.createElement("div");
+                                dot.style.width = "5px";
+                                dot.style.height = "5px";
+                                dot.style.borderRadius = "50%";
+                                dot.style.flexShrink = "0";
+                                dot.style.backgroundColor = sched.color || "#3b82f6";
+                                dotsContainer.appendChild(dot);
+                            });
+
+                            const remainingText = document.createElement("span");
+                            remainingText.style.fontSize = "clamp(7px, 1.8cqw, 10px)";
+                            remainingText.style.color = "#666";
+                            remainingText.style.marginLeft = "1px";
+                            remainingText.style.whiteSpace = "nowrap";
+                            remainingText.style.transform = "translateY(-1.5px)"; // 점들과 수평을 맞추기 위해 약간 위로 이동
+                            remainingText.textContent = `..+${daySchedules.length - 4}`;
+                            dotsContainer.appendChild(remainingText);
+                        } else {
+                            // 3개 ~ 5개일 경우: 남은 모든 일정을 점으로 표시
+                            daySchedules.slice(1).forEach(sched => {
+                                const dot = document.createElement("div");
+                                dot.style.width = "5px";
+                                dot.style.height = "5px";
+                                dot.style.borderRadius = "50%";
+                                dot.style.flexShrink = "0";
+                                dot.style.backgroundColor = sched.color || "#3b82f6";
+                                dotsContainer.appendChild(dot);
+                            });
+                        }
+
+                        div.appendChild(dotsContainer);
+                    } else {
+                        // 2개 이하일 때는 기존처럼 모두 바 형태로 표시
+                        daySchedules.forEach(sched => {
+                            const schedDiv = document.createElement("div");
+                            const color = sched.color || "#3b82f6";
+                            schedDiv.style.backgroundColor = `${color}20`;
+                            schedDiv.style.borderLeft = `3px solid ${color}`;
+                            schedDiv.style.padding = "1px 4px";
+                            schedDiv.style.borderRadius = "2px";
+                            schedDiv.style.color = color;
+                            schedDiv.style.whiteSpace = "nowrap";
+                            schedDiv.style.overflow = "hidden";
+                            schedDiv.style.textOverflow = "ellipsis";
+                            schedDiv.textContent = sched.title;
+                            div.appendChild(schedDiv);
+                        });
+                    }
 
                     fo.appendChild(div);
-                    svgRef.current.appendChild(fo);
                 }
+
+                // 레이어 순서 조정: 툴팁과 클릭 판정을 모두 살리는 순서
+                svgRef.current.appendChild(cellHitbox); // 1. 가장 아래: 칸 호버 감지
+                if (fo) svgRef.current.appendChild(fo); // 2. 중간: 일정/공휴일 (툴팁 활성)
+                svgRef.current.appendChild(plusGroup); // 3. 상단: + 아이콘 시각 요소
+                svgRef.current.appendChild(plusBtnHitbox); // 4. 최상단: + 버튼 실제 클릭 판정 (35x35)
             });
         }
     }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick]);
@@ -465,6 +586,7 @@ function Calendar({ onExpandStateChange }) {
     const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
     const [showPicker, setShowPicker] = useState(false);
     const [holidays, setHolidays] = useState([]);
+    const [showScheduleDetails, setShowScheduleDetails] = useState(null); // { date: string, pos: {x, y, w, h} }
     const [isExpanded, setIsExpanded] = useState(false);
 
     // 확장 상태가 바뀔 때마다 부모(Dashboard)에게 알림
@@ -505,8 +627,12 @@ function Calendar({ onExpandStateChange }) {
         setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
     };
 
-    const handleDateClick = (date) => {
-        setScheduleInput({ date: date.toISOString().split('T')[0] });
+    const handleDateClick = (date, pos) => {
+        setScheduleInput({ date: date.toISOString().split('T')[0], pos });
+    };
+
+    const handleScheduleDetailsClick = (date, pos) => {
+        setShowScheduleDetails({ date: date.toISOString().split('T')[0], pos });
     };
 
     const saveSchedule = () => {
@@ -538,8 +664,41 @@ function Calendar({ onExpandStateChange }) {
         fetchHolidays();
     }, [viewDate]);
 
+    // 일정 입력창용 RoughJS 말풍선 배경 그리기
+    const inputSvgRef = useRef(null);
+    useEffect(() => {
+        if (scheduleInput && inputSvgRef.current) {
+            // Clear previous drawings
+            inputSvgRef.current.innerHTML = "";
+            const rc = rough.svg(inputSvgRef.current);
+            
+            // 말풍선 본체 (사각형)
+            const rect = rc.rectangle(5, 5, 270, 190, {
+                fill: '#fff',
+                fillStyle: 'solid',
+                stroke: '#000',
+                strokeWidth: 3,
+                roughness: 2,
+                seed: SEED + 999
+            });
+            
+            // 말풍선 꼬리: 왼쪽 중앙에서 왼쪽 밖을 가리키도록 설정 (+버튼 조준)
+            const tail = rc.polygon([[5, 90], [5, 110], [-15, 100]], {
+                fill: '#fff',
+                fillStyle: 'solid',
+                stroke: '#000',
+                strokeWidth: 3,
+                roughness: 1.5,
+                seed: SEED + 1000
+            });
+
+            inputSvgRef.current.appendChild(rect);
+            inputSvgRef.current.appendChild(tail);
+        }
+    }, [scheduleInput]);
+
     return (
-        <section className="relative w-[clamp(180px,30vw,522px)] aspect-[522/506]">
+        <section className="relative w-full aspect-[522/506]" style={{ containerType: 'inline-size' }}>
             <CalendarPin className="absolute w-[15%] aspect-[77/71] left-1/2 -translate-x-1/2 z-0"/>
             
             {/* Month/Year Picker Dropdown */}
@@ -582,6 +741,87 @@ function Calendar({ onExpandStateChange }) {
                 <span className="text-gray-400 italic text-2xl" style={{ fontFamily: "'Comic Sans MS', cursive" }}>Calendar Content Here</span>
             </ExpandedModal>
 
+            {/* Schedule Input Popover */}
+            {scheduleInput && (
+                <div
+                    className="absolute z-[100] flex flex-col"
+                    style={{ 
+                        fontFamily: "'Comic Sans MS', cursive",
+                        containerType: 'both', // 내부 요소들이 컨테이너 크기에 반응하도록 설정
+                        // + 버튼(x + w - 15)의 바로 오른쪽으로 배치 (약 2% 정도 여백)
+                        left: `${(scheduleInput.pos.x + scheduleInput.pos.w) / 522 * 100}%`,
+                        top: `${(scheduleInput.pos.y + 15) / 506 * 100}%`,
+                        width: '53.6%',  // 280px / 522px (기존 크기 비율 유지)
+                        height: '39.5%', // 200px / 506px
+                        padding: '4% 5%',
+                        gap: '3%',
+                        transform: 'translate(5%, -50%)', // 버튼 우측 여백도 비율로 조정
+                        filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()} // 팝업 내 클릭 시 드래그 방지
+                >
+                    {/* RoughJS 말풍선 SVG 배경 */}
+                    <svg 
+                        ref={inputSvgRef}
+                        className="absolute inset-0 w-full h-full -z-10 overflow-visible"
+                        viewBox="0 0 280 200"
+                        preserveAspectRatio="none"
+                    />
+
+                    <div className="flex justify-between items-center">
+                        <span className="font-bold italic" style={{ fontSize: 'clamp(10px, 5.5cqw, 16px)' }}>Plan: {scheduleInput.date}</span>
+                        <button 
+                            onClick={() => setScheduleInput(null)} 
+                            className="font-bold hover:scale-110 leading-none"
+                            style={{ fontSize: 'clamp(12px, 7cqw, 20px)' }}
+                        >✕</button>
+                    </div>
+                    
+                    <input 
+                        autoFocus
+                        className="border-black outline-none bg-transparent"
+                        style={{ 
+                            fontSize: 'clamp(9px, 4.8cqw, 14px)', 
+                            borderWidth: 'clamp(1px, 0.8cqw, 2.5px)',
+                            padding: '2% 3%'
+                        }}
+                        placeholder="What's the plan?"
+                        value={tempTitle}
+                        onChange={e => setTempTitle(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveSchedule()}
+                    />
+
+                    <div className="flex justify-center" style={{ gap: '2.5%', padding: '2% 0' }}>
+                        {palette.map(color => (
+                            <button 
+                                key={color}
+                                onClick={() => setTempColor(color)}
+                                className={`rounded-full border-black transition-transform ${tempColor === color ? 'scale-125' : 'hover:scale-110'}`}
+                                style={{ 
+                                    backgroundColor: color, 
+                                    width: '10%', 
+                                    aspectRatio: '1/1',
+                                    borderWidth: 'min(1.5px, 0.5cqw)',
+                                    boxShadow: tempColor === color ? '0 0 0 min(1.5px, 0.5cqw) #9ca3af' : 'none'
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    <button 
+                        onClick={saveSchedule}
+                        className="bg-black text-white font-bold hover:bg-gray-800 transition-colors mt-auto"
+                        style={{ 
+                            fontSize: 'clamp(10px, 5.5cqw, 16px)', 
+                            padding: '3% 0',
+                            borderRadius: 'clamp(2px, 1.5cqw, 5px)'
+                        }}
+                    >
+                        SAVE IT!
+                    </button>
+                </div>
+            )}
+
             <CalendarBody 
                 className="absolute w-[100%] aspect-[515.5/490] left-0 top-[6%] z-10"
                 viewDate={viewDate}
@@ -595,7 +835,19 @@ function Calendar({ onExpandStateChange }) {
                 holidays={holidays}
                 schedules={schedules}
                 onDateClick={handleDateClick}
+                onScheduleDetailsClick={handleScheduleDetailsClick}
             />
+
+            {/* Schedule Details Popover */}
+            {showScheduleDetails && (
+                <ScheduleDetailsPopover
+                    isOpen={!!showScheduleDetails}
+                    onClose={() => setShowScheduleDetails(null)}
+                    date={showScheduleDetails.date}
+                    schedulesForDate={schedules.filter(s => s.date === showScheduleDetails.date)}
+                    pos={showScheduleDetails.pos}
+                />
+            )}
         </section>
 
     );
