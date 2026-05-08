@@ -671,21 +671,42 @@ function Calendar({ onExpandStateChange }) {
 
     const handleDateClick = (date, pos) => {
         setScheduleInput({ date: date.toISOString().split('T')[0], pos });
+        setTempTitle("");
+        setTempColor("#3b82f6");
     };
 
     const handleScheduleDetailsClick = (date, pos) => {
         setShowScheduleDetails({ date: date.toISOString().split('T')[0], pos });
     };
 
+    const handleEditSchedule = (schedule) => {
+        setScheduleInput({ 
+            date: schedule.date, 
+            pos: showScheduleDetails.pos, 
+            id: schedule.id 
+        });
+        setTempTitle(schedule.title);
+        setTempColor(schedule.color);
+        setShowScheduleDetails(null); // 상세 창 닫기
+    };
+
     const saveSchedule = () => {
         if (tempTitle.trim()) {
-            const newSchedule = {
-                id: Date.now(),
-                date: scheduleInput.date,
-                title: tempTitle,
-                color: tempColor
-            };
-            setSchedules(prev => [...prev, newSchedule]);
+            if (scheduleInput.id) {
+                // 수정 모드
+                setSchedules(prev => prev.map(s => 
+                    s.id === scheduleInput.id ? { ...s, title: tempTitle, color: tempColor } : s
+                ));
+            } else {
+                // 신규 추가 모드
+                const newSchedule = {
+                    id: Date.now(),
+                    date: scheduleInput.date,
+                    title: tempTitle,
+                    color: tempColor
+                };
+                setSchedules(prev => [...prev, newSchedule]);
+            }
         }
         setScheduleInput(null);
         setTempTitle("");
@@ -811,9 +832,9 @@ function Calendar({ onExpandStateChange }) {
                     />
 
                     <div className="flex justify-between items-center">
-                        <span className="font-bold italic" style={{ fontSize: 'clamp(10px, 5.5cqw, 16px)' }}>Plan: {scheduleInput.date}</span>
+                        <span className="font-bold italic" style={{ fontSize: 'clamp(10px, 5.5cqw, 16px)' }}>{scheduleInput.id ? 'Edit Plan:' : 'Plan:'} {scheduleInput.date}</span>
                         <button 
-                            onClick={() => setScheduleInput(null)} 
+                            onClick={() => { setScheduleInput(null); setTempTitle(""); }} 
                             className="font-bold hover:scale-110 leading-none"
                             style={{ fontSize: 'clamp(12px, 7cqw, 20px)' }}
                         >✕</button>
@@ -859,7 +880,7 @@ function Calendar({ onExpandStateChange }) {
                             borderRadius: 'clamp(2px, 1.5cqw, 5px)'
                         }}
                     >
-                        SAVE IT!
+                        {scheduleInput.id ? 'UPDATE!' : 'SAVE IT!'}
                     </button>
                 </div>
             )}
@@ -890,6 +911,7 @@ function Calendar({ onExpandStateChange }) {
                     schedulesForDate={schedules.filter(s => s.date === showScheduleDetails.date)}
                     pos={showScheduleDetails.pos}
                     onDeleteSchedule={handleDeleteSchedule}
+                    onEditSchedule={handleEditSchedule}
                 />
             )}
         </section>
