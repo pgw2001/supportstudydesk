@@ -14,13 +14,15 @@ import Draggable from "../utils/Draggable";
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // ⭐ 스타일 상태
+  // StyleBar 상태
   const [isStyleOpen, setIsStyleOpen] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState(1);
 
+  // Calendar 확대 상태
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+
   return (
     <div className="flex min-h-screen items-center justify-center overflow-visible bg-[#f4f1ec]">
-
       <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-visible bg-[#fcfbf8]">
 
         {/* 메뉴 버튼 */}
@@ -39,16 +41,30 @@ function Dashboard() {
 
         {/* Window */}
         <div className="absolute left-[0%] top-[0%] w-[30%] aspect-[370/687] z-0">
-          <img src={windowSvg} alt="window" className="h-full w-full object-contain" />
+          <img
+            src={windowSvg}
+            alt="window"
+            className="h-full w-full object-contain"
+          />
         </div>
 
         {/* Calendar */}
-        <Draggable initialLeft="8%" initialTop="7%" className="z-20">
-          <Calendar />
+        <Draggable
+          initialLeft="8%"
+          initialTop="7%"
+          className={isCalendarExpanded ? "z-[9999]" : "z-20"}
+          style={{ width: "28%" }}
+        >
+          <Calendar onExpandStateChange={setIsCalendarExpanded} />
         </Draggable>
 
         {/* Memo */}
-        <Draggable initialLeft="60%" initialTop="18%" className="z-10">
+        <Draggable
+          initialLeft="61%"
+          initialTop="18%"
+          className="z-10"
+          style={{ width: "16%" }}
+        >
           <Memo />
         </Draggable>
 
@@ -62,7 +78,7 @@ function Dashboard() {
           <Timer />
         </Draggable>
 
-        {/* 시계 */}
+        {/* 자명종 시계 */}
         <div className="absolute bottom-[21%] left-[46%] h-[10%] w-[6%] rounded-full border-2 border-neutral-800 bg-white z-20">
           <div className="absolute left-1/2 top-[20%] h-[40%] w-px -translate-x-1/2 bg-neutral-900" />
           <div className="absolute left-1/2 top-1/2 h-px w-[26%] bg-neutral-900" />
@@ -71,9 +87,14 @@ function Dashboard() {
         </div>
 
         {/* Desk */}
-        <div className="absolute bottom-[12%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
+        <div className="absolute top-[82%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
+
         <div className="absolute bottom-[0%] left-[19%] w-[81%] aspect-[1594/390] z-0">
-          <img src={deskSvg} alt="desk" className="h-full w-full object-contain" />
+          <img
+            src={deskSvg}
+            alt="desk"
+            className="h-full w-full object-contain"
+          />
         </div>
 
         {/* Monitor */}
@@ -82,7 +103,7 @@ function Dashboard() {
           <div className="mx-auto mt-[3%] h-[24%] w-[75%] rounded-b-[10px] border-2 border-neutral-500 bg-white" />
         </div>
 
-        {/* Lamp */}
+        {/* Desk Lamp */}
         <div className="absolute bottom-[16%] right-[7%] h-[30%] w-[8%] z-20">
           <div className="h-[30%] w-[8%]">
             <div className="absolute bottom-0 right-[12%] h-[18%] w-[44%] rounded-[14px] border-2 border-neutral-700 bg-white" />
@@ -108,7 +129,7 @@ function Dashboard() {
           setIsStyleOpen={setIsStyleOpen}
         />
 
-        {/*StyleBar*/}
+        {/* StyleBar */}
         <StyleBar
           isOpen={isStyleOpen}
           selectedStyle={selectedStyle}
