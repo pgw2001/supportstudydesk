@@ -1,6 +1,7 @@
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
 import Memo from "../components/memo/Memo";
+import Quotes from "../components/quotes/Quotes";
 import deskSvg from "../assets/desk.svg";
 import windowSvg from "../assets/window.svg";
 
@@ -52,6 +53,11 @@ function Dashboard() {
         {/* Memo */}
         <div className="absolute left-[60%] top-[18%] z-10">
             <Memo />
+        </div>
+        
+        {/* Quotes */}
+        <div className="absolute left-[10%] bottom-[20%] z-10">
+            <Quotes />
         </div>
         
         {/* Timer */}
