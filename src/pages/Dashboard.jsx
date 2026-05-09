@@ -76,7 +76,7 @@ function Dashboard() {
         </div>
         
         {/* Todo List */}
-        <Draggable initialLeft="61%" initialTop="38%" className="z-20" style={{ width: '11%' }}>
+        <Draggable initialLeft="61%" initialTop="38%" className="z-20" style={{ width: '14.5%' }}>
           <TodoList />
         </Draggable>
       </main>
