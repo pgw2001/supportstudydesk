@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
 import Memo from "../components/memo/Memo";
+import Quotes from "../components/quotes/Quotes";
 import deskSvg from "../assets/desk.svg";
 import windowSvg from "../assets/window.svg";
 import Calendar from "../components/calendar/Calendar";
@@ -36,6 +37,11 @@ function Dashboard() {
         <Draggable initialLeft="61%" initialTop="18%" className="z-10" style={{ width: '16%' }}>
           <Memo />
         </Draggable>
+        
+        {/* Quotes */}
+        <div className="absolute left-[10%] bottom-[20%] z-10">
+            <Quotes />
+        </div>
         
         {/* Timer */}
         <Draggable initialLeft="34%" initialTop="68%" className="z-20" style={{ width: '22%' }}>
