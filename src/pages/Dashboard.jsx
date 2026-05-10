@@ -39,9 +39,9 @@ function Dashboard() {
         </Draggable>
         
         {/* Quotes */}
-        <div className="absolute left-[10%] bottom-[20%] z-10">
-            <Quotes />
-        </div>
+        <Draggable initialLeft="80%" initialTop="25%" className="z-10" style={{ width: '18%' }}>
+          <Quotes />
+        </Draggable>
         
         {/* Timer */}
         <Draggable initialLeft="34%" initialTop="68%" className="z-20" style={{ width: '22%' }}>
