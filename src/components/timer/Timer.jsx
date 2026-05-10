@@ -78,7 +78,6 @@ function Timer() {
     <section
       className="
         w-[clamp(150px,22vw,320px)]
-        rotate-[6deg]
       "
     >
       <svg
