@@ -1,32 +1,22 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import rough from "roughjs";
 import { TODO_SEED, getLineCount } from "./TodoUtils";
 import TodoItem from "./TodoItem";
-
-const createEmptyTodos = () => [
-  { text: "", completed: false },
-  { text: "", completed: false },
-  { text: "", completed: false },
-  { text: "", completed: false },
-  { text: "", completed: false },
-];
-
-const createTodoList = (number = 1) => ({
-  title: number === 1 ? "Todo" : `Todo ${number}`,
-  todos: createEmptyTodos(),
-});
+import TodoHeader from "./TodoHeader";
+import TodoNavigation from "./TodoNavigation";
+import { TODO_STYLES } from "./TodoStyles";
+import { createTodo, createTodoList, loadTodoData, saveTodoData } from "./TodoStorage";
 
 function TodoList({ className }) {
-  const svgRef = useRef(null);
   const listSvgRef = useRef(null);
 
-  const [todoLists, setTodoLists] = useState(() => [createTodoList()]);
-  const [currentListIndex, setCurrentListIndex] = useState(0);
+  const [todoData, setTodoData] = useState(loadTodoData);
   const [editingIndex, setEditingIndex] = useState(-1);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   const [isWidgetHovered, setIsWidgetHovered] = useState(false); // New state for widget hover
+  const todoLists = todoData.lists;
+  const currentListIndex = todoData.currentListIndex;
   const currentList = todoLists[currentListIndex];
   const todos = currentList.todos;
   const title = currentList.title;
@@ -34,12 +24,13 @@ function TodoList({ className }) {
   const hasMultipleLists = todoLists.length > 1;
 
   const updateCurrentList = useCallback((updater) => {
-    setTodoLists((prev) =>
-      prev.map((list, index) => (
-        index === currentListIndex ? updater(list) : list
-      ))
-    );
-  }, [currentListIndex]);
+    setTodoData((prev) => ({
+      ...prev,
+      lists: prev.lists.map((list, index) => (
+        index === prev.currentListIndex ? updater(list) : list
+      )),
+    }));
+  }, []);
 
   const setTodos = useCallback((updater) => {
     updateCurrentList((list) => ({
@@ -65,7 +56,7 @@ function TodoList({ className }) {
 
   const addTodo = useCallback(() => {
     setTodos((prev) => {
-      const next = [...prev, { text: "", completed: false }];
+      const next = [...prev, createTodo()];
       setEditingIndex(next.length - 1);
       return next;
     });
@@ -87,25 +78,42 @@ function TodoList({ className }) {
 
   const createNextTodoList = useCallback((e) => {
     e.stopPropagation();
-    setTodoLists((prev) => {
-      const next = [...prev, createTodoList(prev.length + 1)];
-      setCurrentListIndex(next.length - 1);
-      return next;
+    setTodoData((prev) => {
+      const lists = [...prev.lists, createTodoList(prev.lists.length + 1)];
+      return {
+        ...prev,
+        lists,
+        currentListIndex: lists.length - 1,
+        listCount: lists.length,
+      };
     });
     resetInteraction();
   }, [resetInteraction]);
 
   const goToPreviousList = useCallback((e) => {
     e.stopPropagation();
-    setCurrentListIndex((prev) => Math.max(prev - 1, 0));
+    setTodoData((prev) => ({
+      ...prev,
+      currentListIndex: Math.max(prev.currentListIndex - 1, 0),
+    }));
     resetInteraction();
   }, [resetInteraction]);
 
   const goToNextList = useCallback((e) => {
     e.stopPropagation();
-    setCurrentListIndex((prev) => Math.min(prev + 1, todoLists.length - 1));
+    setTodoData((prev) => ({
+      ...prev,
+      currentListIndex: Math.min(prev.currentListIndex + 1, prev.lists.length - 1),
+    }));
     resetInteraction();
-  }, [resetInteraction, todoLists.length]);
+  }, [resetInteraction]);
+
+  useEffect(() => {
+    saveTodoData({
+      lists: todoLists,
+      currentListIndex,
+    });
+  }, [currentListIndex, todoLists]);
 
   const handleMouseMove = useCallback((e) => {
     if (editingIndex !== -1) return;
@@ -132,132 +140,6 @@ function TodoList({ className }) {
   const completedCount = todos.filter((todo) => todo.completed).length;
   const totalCount = todos.length;
 
-  useEffect(() => {
-    if (!svgRef.current) return;
-
-    svgRef.current.innerHTML = "";
-    const rc = rough.svg(svgRef.current);
-
-    const rect = rc.rectangle(6.5, 6.5, 327, 372, {
-      fill: "#fff",
-      fillStyle: "solid",
-      stroke: "#000",
-      strokeWidth: 2,
-      roughness: 2,
-      bowing: 1,
-      seed: TODO_SEED + currentListIndex * 1000,
-    });
-    svgRef.current.appendChild(rect);
-
-    if (isEditingTitle) {
-      const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
-      fo.setAttribute("x", "26");
-      fo.setAttribute("y", "20");
-      fo.setAttribute("width", "250");
-      fo.setAttribute("height", "45");
-
-      const input = document.createElement("input");
-      input.value = title;
-      input.dataset.noDrag = "true";
-      input.style.cssText = "width: 100%; height: 100%; font-family: 'Comic Sans MS', cursive; font-size: 31.2px; font-weight: bold; border: none; outline: none; background: transparent; padding: 0; margin: 0;";
-
-      const saveTitle = () => {
-        setTitle(input.value || "Todo");
-        setIsEditingTitle(false);
-      };
-
-      input.onkeydown = (e) => {
-        if (e.key === "Enter") saveTitle();
-        if (e.key === "Escape") setIsEditingTitle(false);
-      };
-      input.onblur = saveTitle;
-      input.onpointerdown = (e) => e.stopPropagation();
-      input.onmousedown = (e) => e.stopPropagation();
-
-      fo.appendChild(input);
-      svgRef.current.appendChild(fo);
-      setTimeout(() => input.focus(), 0);
-    } else {
-      const titleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      titleText.setAttribute("x", "26");
-      titleText.setAttribute("y", "65");
-      titleText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 31.2px; font-weight: bold; cursor: pointer;");
-      titleText.textContent = title;
-      titleText.onpointerdown = (e) => {
-        e.stopPropagation();
-        setIsEditingTitle(true);
-      };
-      titleText.onmousedown = (e) => e.stopPropagation();
-      svgRef.current.appendChild(titleText);
-    }
-
-    const plusCircle = rc.circle(303.6, 49.4, 23.4, {
-      stroke: "#000",
-      strokeWidth: 1,
-      roughness: 1,
-      seed: TODO_SEED + 1,
-    });
-    svgRef.current.appendChild(plusCircle);
-    svgRef.current.appendChild(rc.line(295.8, 49.4, 311.4, 49.4, { strokeWidth: 2, seed: TODO_SEED + 2 }));
-    svgRef.current.appendChild(rc.line(303.6, 41.6, 303.6, 57.2, { strokeWidth: 2, seed: TODO_SEED + 3 }));
-
-    const plusHitbox = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    plusHitbox.setAttribute("cx", "303.6");
-    plusHitbox.setAttribute("cy", "49.4");
-    plusHitbox.setAttribute("r", "19.5");
-    plusHitbox.setAttribute("fill", "transparent");
-    plusHitbox.setAttribute("pointer-events", "all");
-    plusHitbox.setAttribute("data-no-drag", "true");
-    plusHitbox.style.cursor = "pointer";
-    plusHitbox.onpointerdown = (e) => {
-      e.stopPropagation();
-      addTodo();
-    };
-    plusHitbox.onmousedown = (e) => e.stopPropagation();
-    svgRef.current.appendChild(plusHitbox);
-
-    const isAllDone = totalCount > 0 && completedCount === totalCount;
-    const statusText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    statusText.setAttribute("x", "170");
-    statusText.setAttribute("y", "370");
-    statusText.setAttribute("text-anchor", "middle");
-    statusText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 14px; fill: ${isAllDone ? "#2ecc71" : "#888"}; font-weight: bold; pointer-events: none; transition: fill 0.3s;`);
-    statusText.textContent = isAllDone ? "All done!" : `${completedCount} / ${totalCount} done`;
-    svgRef.current.appendChild(statusText);
-
-    // Rough.js 스타일의 삼각형 이동 버튼 그리기
-    const arrowOpacity = isWidgetHovered ? "1" : "0";
-    const arrowTransition = "opacity 0.2s";
-
-    // 왼쪽 화살표 (이전 리스트) - currentListIndex가 0보다 클 때만 표시
-    if (currentListIndex > 0) {
-      const prevTriangle = rc.polygon([[-36, 192.5], [-4, 172.5], [-4, 212.5]], {
-        fill: "#fff",
-        fillStyle: "solid",
-        stroke: "#000",
-        strokeWidth: 1,
-        roughness: 1.5,
-        seed: TODO_SEED + currentListIndex + 100,
-      });
-      prevTriangle.setAttribute("style", `pointer-events: none; opacity: ${arrowOpacity}; transition: ${arrowTransition};`);
-      svgRef.current.appendChild(prevTriangle);
-    }
-
-    // 오른쪽 화살표 (다음 리스트) - 마지막 리스트가 아닐 때만 표시
-    if (currentListIndex < todoLists.length - 1) {
-      const nextTriangle = rc.polygon([[344, 172.5], [344, 212.5], [376, 192.5]], {
-        fill: "#fff",
-        fillStyle: "solid",
-        stroke: "#000",
-        strokeWidth: 1,
-        roughness: 1.5,
-        seed: TODO_SEED + currentListIndex + 101,
-      });
-      nextTriangle.setAttribute("style", `pointer-events: none; opacity: ${arrowOpacity}; transition: ${arrowTransition};`);
-      svgRef.current.appendChild(nextTriangle);
-    }
-  }, [addTodo, completedCount, currentListIndex, isEditingTitle, setTitle, title, totalCount, isWidgetHovered, todoLists.length]);
-
   const totalLines = todos.reduce((acc, todo) => acc + getLineCount(todo.text), 0);
   const listHeight = Math.max(260, totalLines * 45.5 + 60);
 
@@ -282,147 +164,33 @@ function TodoList({ className }) {
         overflow: "visible",
       }}
     >
-      <style>
-        {`
-          .todo-list-container::-webkit-scrollbar {
-            width: 4px;
-          }
-          .todo-list-container::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .todo-list-container::-webkit-scrollbar-thumb {
-            background: #dbdbdb;
-            border-radius: 10px;
-          }
-          .todo-list-container {
-            scrollbar-width: thin;
-            scrollbar-color: #dbdbdb transparent;
-          }
-          .todo-list-switch {
-            position: absolute;
-            top: 50%;
-            z-index: 4;
-            border: 0;
-            background: transparent;
-            padding: 0;
-            opacity: 0; /* Hide by default */
-            transition: opacity 0.2s;
-            transform: translateY(-50%);
-            width: 40px; /* Increased width for larger triangle */
-            height: 50px; /* Increased height for larger triangle */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .todo-list-widget-root:hover .todo-list-switch {
-            opacity: 1; /* Show on hover */
-          }
-          .todo-list-switch:disabled {
-            opacity: 0.25;
-            cursor: default;
-          }
-          .todo-list-triangle-left,
-          .todo-list-triangle-right {
-            display: block;
-            width: 0; /* These spans are no longer drawing the triangles */
-            height: 0; /* They will be hidden */
-            overflow: hidden; /* Ensure they don't take up space */
-            pointer-events: none; /* Ensure clicks go to the button */
-            /* filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.22)); */ /* Rough.js will handle shadow */
-          }
-          .todo-list-create {
-            position: absolute;
-            right: -32px;
-            top: 49%;
-            z-index: 4;
-            width: 25px;
-            height: 25px;
-            border-radius: 999px;
-            border: none;
-            background: rgba(216, 216, 216, 0.4);
-            color: transparent;
-            transform: translateY(-50%);
-            cursor: pointer;
-            box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.18);
-            opacity: 0;
-            transition: opacity 0.2s;
-          }
-          .todo-list-widget-root:hover .todo-list-create {
-            opacity: 1;
-          }
-          .todo-list-create::before,
-          .todo-list-create::after {
-            content: "";
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            background: #555;
-            border: none;
-            transform: translate(-50%, -50%);
-            box-sizing: border-box;
-          }
-          .todo-list-create::before {
-            width: 12px;
-            height: 2px;
-          }
-          .todo-list-create::after {
-            width: 2px;
-            height: 12px;
-          }
-        `}
-      </style>
-
-      {isLastList ? (
-        <>
-          {hasMultipleLists && (
-            <button
-              type="button"
-              aria-label="Previous todo list"
-              className="todo-list-switch"
-              data-no-drag="true"
-              onPointerDown={goToPreviousList}
-              style={{ left: "-26px", cursor: "pointer" }}
-            >
-            </button>
-          )}
-          <button
-            type="button"
-            aria-label="Create todo list"
-            className="todo-list-create"
-            data-no-drag="true"
-            onPointerDown={createNextTodoList}
-          >
-            +
-          </button>
-        </>
-      ) : (
-        <>
-          <button
-            type="button"
-            aria-label="Previous todo list"
-            className="todo-list-switch"
-            data-no-drag="true"
-            disabled={currentListIndex === 0}
-            onPointerDown={goToPreviousList}
-            style={{ left: "-46px", cursor: currentListIndex === 0 ? "default" : "pointer" }} /* Increased margin */
-          >
-          </button>
-          <button
-            type="button"
-            aria-label="Next todo list"
-            className="todo-list-switch"
-            data-no-drag="true"
-            onPointerDown={goToNextList}
-            style={{ right: "-46px", cursor: "pointer" }} /* Increased margin */
-          >
-          </button>
-        </>
-      )}
+      <style>{TODO_STYLES}</style>
 
       <svg
-        ref={svgRef}
         viewBox="0 0 340 385"
         style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "visible" }}
+      >
+        <TodoHeader
+          currentListIndex={currentListIndex}
+          title={title}
+          setTitle={setTitle}
+          isEditingTitle={isEditingTitle}
+          setIsEditingTitle={setIsEditingTitle}
+          addTodo={addTodo}
+          totalCount={totalCount}
+          completedCount={completedCount}
+        />
+      </svg>
+
+      <TodoNavigation
+        currentListIndex={currentListIndex}
+        todoListsLength={todoLists.length}
+        isWidgetHovered={isWidgetHovered}
+        goToPreviousList={goToPreviousList}
+        goToNextList={goToNextList}
+        isLastList={isLastList}
+        hasMultipleLists={hasMultipleLists}
+        createNextTodoList={createNextTodoList}
       />
 
       <div
@@ -444,7 +212,7 @@ function TodoList({ className }) {
           <g ref={listSvgRef}>
             {todos.map((todo, i) => (
               <TodoItem
-                key={i}
+                key={todo.id}
                 todo={todo}
                 index={i}
                 firstLineY={todoPositions[i]}
