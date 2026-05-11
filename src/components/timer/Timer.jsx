@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import rough from "roughjs";
 
 function Timer() {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+
+  const svgRef = useRef(null);
+  const roughGroupRef = useRef(null);
 
   // 타이머 동작
   useEffect(() => {
@@ -17,49 +21,191 @@ function Timer() {
     return () => clearInterval(timer);
   }, [isRunning]);
 
+  // rough.js SVG 렌더링
+  useEffect(() => {
+    const svg = svgRef.current;
+    const roughGroup = roughGroupRef.current;
+
+    if (!svg || !roughGroup) return;
+
+    const draw = () => {
+      roughGroup.innerHTML = "";
+
+      const rc = rough.svg(svg);
+
+      // 외부 박스
+      const outer = rc.rectangle(4, 4, 332, 232, {
+        stroke: "black",
+        strokeWidth: 2,
+        fill: "white",
+        fillStyle: "solid",
+        roughness: 1.5,
+        bowing: 1.5,
+      });
+
+      // 내부 화면
+      const inner = rc.rectangle(40, 48, 260, 84, {
+        stroke: "black",
+        strokeWidth: 2,
+        fill: "#e5e5e5",
+        fillStyle: "solid",
+        roughness: 1.5,
+        bowing: 1.5,
+      });
+
+      roughGroup.appendChild(outer);
+      roughGroup.appendChild(inner);
+    };
+
+    draw();
+
+    window.addEventListener("resize", draw);
+
+    return () => {
+      window.removeEventListener("resize", draw);
+    };
+  }, []);
+
+  // 시간 포맷
   const formatTime = () => {
     const minutes = String(Math.floor(time / 60)).padStart(2, "0");
     const seconds = String(time % 60).padStart(2, "0");
+
     return `${minutes}:${seconds}`;
   };
 
   return (
-    <section className="w-[170px] rotate-[6deg] rounded-[26px] border-2 border-neutral-800 bg-white p-4 shadow-[4px_5px_0_rgba(0,0,0,0.16)]">
-      <div className="text-center">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-neutral-500">
-          Desk Timer
-        </p>
+    <section
+      className="
+        w-[clamp(150px,22vw,320px)]
+      "
+    >
+      <svg
+        ref={svgRef}
+        viewBox="0 0 340 240"
+        className="w-full h-auto overflow-visible"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* rough.js 배경 */}
+        <g
+          ref={roughGroupRef}
+          style={{ pointerEvents: "none" }}
+        />
 
-        <p className="mt-3 text-4xl font-semibold tracking-[0.08em] text-neutral-900">
+        {/* 제목 */}
+        <text
+          x="170"
+          y="30"
+          textAnchor="middle"
+          fontSize="12"
+          letterSpacing="2"
+          fill="#737373"
+          pointerEvents="none"
+        >
+          DESK TIMER
+        </text>
+
+        {/* 시간 */}
+        <text
+          x="170"
+          y="102"
+          textAnchor="middle"
+          fontSize="38"
+          fontWeight="600"
+          letterSpacing="3"
+          fill="#171717"
+          pointerEvents="none"
+        >
           {formatTime()}
-        </p>
+        </text>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
-          <button
-            onClick={() => setIsRunning(true)}
-            className="rounded-full border border-neutral-900 px-2 py-1.5"
-          >
-            Start
-          </button>
+        {/* START 버튼 */}
+        <g
+          onClick={() => setIsRunning(true)}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ cursor: "pointer" }}
+        >
+          <rect
+            x="36"
+            y="170"
+            width="82"
+            height="34"
+            rx="17"
+            fill="white"
+            stroke="black"
+            strokeWidth="2"
+          />
 
-          <button
-            onClick={() => setIsRunning(false)}
-            className="rounded-full border border-neutral-900 px-2 py-1.5"
+          <text
+            x="77"
+            y="191"
+            textAnchor="middle"
+            fontSize="12"
+            pointerEvents="none"
           >
-            Pause
-          </button>
+            START
+          </text>
+        </g>
 
-          <button
-            onClick={() => {
-              setIsRunning(false);
-              setTime(0);
-            }}
-            className="rounded-full border border-neutral-900 px-2 py-1.5"
+        {/* PAUSE 버튼 */}
+        <g
+          onClick={() => setIsRunning(false)}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ cursor: "pointer" }}
+        >
+          <rect
+            x="129"
+            y="170"
+            width="82"
+            height="34"
+            rx="17"
+            fill="white"
+            stroke="black"
+            strokeWidth="2"
+          />
+
+          <text
+            x="170"
+            y="191"
+            textAnchor="middle"
+            fontSize="12"
+            pointerEvents="none"
           >
-            Reset
-          </button>
-        </div>
-      </div>
+            PAUSE
+          </text>
+        </g>
+
+        {/* RESET 버튼 */}
+        <g
+          onClick={() => {
+            setIsRunning(false);
+            setTime(0);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ cursor: "pointer" }}
+        >
+          <rect
+            x="222"
+            y="170"
+            width="82"
+            height="34"
+            rx="17"
+            fill="white"
+            stroke="black"
+            strokeWidth="2"
+          />
+
+          <text
+            x="263"
+            y="191"
+            textAnchor="middle"
+            fontSize="12"
+            pointerEvents="none"
+          >
+            RESET
+          </text>
+        </g>
+      </svg>
     </section>
   );
 }
