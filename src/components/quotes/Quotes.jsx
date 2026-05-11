@@ -1,36 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import rough from "roughjs";
+import { quotes } from "./quotesData";
 
 function Quotes() {
   const svgRef = useRef(null);
   const roughGroupRef = useRef(null);
 
   // 날짜별 메시지
-  const messages = [
-    "Small progress is still progress.",
-    "Done is better than perfect.",
-    "One more hour for your future self.",
-    "Focus on the process, not the pressure.",
-    "Your consistency creates results.",
-    "Keep showing up every day.",
-    "Start now. Motivation comes later.",
-  ];
-
-  const [message, setMessage] = useState("");
-
-  // 하루마다 다른 메시지 선택
-  useEffect(() => {
+  const message = useMemo(() => {
     const today = new Date();
-
-    // 날짜 기반 index 생성
-    const seed =
-      today.getFullYear() +
-      today.getMonth() +
-      today.getDate();
-
-    const index = seed % messages.length;
-
-    setMessage(messages[index]);
+    const seed = today.getFullYear() + today.getMonth() + today.getDate();
+    const index = seed % quotes.length;
+    return quotes[index];
   }, []);
 
   useEffect(() => {
@@ -59,18 +40,19 @@ function Quotes() {
   return (
     <section
       className="
+        block
         relative
         z-50
         w-[clamp(150px,18vw,240px)]
         aspect-[216/156]
-        rotate-[3deg]
       "
     >
       {/*SVG*/}
       <svg
         ref={svgRef}
+        style={{ pointerEvents: "none" }}
         viewBox="0 0 216 156"
-        className="absolute inset-0 h-full w-full"
+        className="absolute inset-0 block h-full w-full"
         xmlns="http://www.w3.org/2000/svg"
       >
         <g
