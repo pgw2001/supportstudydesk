@@ -45,7 +45,6 @@ function Memo() {
         relative
         w-[clamp(120px,16vw,200px)]
         aspect-[200/220]
-        rotate-[-4deg]
       "
     >
       {/* SVG */}
