@@ -1,166 +1,234 @@
-import { useEffect, useRef, useState } from "react";
-import rough from "roughjs";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TODO_SEED, getLineCount } from "./TodoUtils";
+import TodoItem from "./TodoItem";
+import TodoHeader from "./TodoHeader";
+import TodoNavigation from "./TodoNavigation";
+import { TODO_STYLES } from "./TodoStyles";
+import { createTodo, createTodoList, loadTodoData, saveTodoData } from "./TodoStorage";
 
-const TODO_SEED = 54321; // Todo 리스트 전용 고정 시드
+function TodoList({ className }) {
+  const listSvgRef = useRef(null);
 
-function TodoList({className}) {
-  const svgRef = useRef(null);
-  // 5개의 투두 항목을 위한 상태 관리
-  const [todos, setTodos] = useState([
-    { text: "", completed: false },
-    { text: "", completed: false },
-    { text: "", completed: false },
-    { text: "", completed: false },
-    { text: "", completed: false },
-  ]);
+  const [todoData, setTodoData] = useState(loadTodoData);
+  const [editingIndex, setEditingIndex] = useState(-1);
+  const [hoveredIndex, setHoveredIndex] = useState(-1);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-  const handleTextClick = (index) => {
-    const newText = prompt("할 일을 입력하세요:", todos[index].text);
-    if (newText !== null) {
-      const newTodos = [...todos];
-      newTodos[index].text = newText;
-      setTodos(newTodos);
-    }
-  };
+  const [isWidgetHovered, setIsWidgetHovered] = useState(false); // New state for widget hover
+  const todoLists = todoData.lists;
+  const currentListIndex = todoData.currentListIndex;
+  const currentList = todoLists[currentListIndex];
+  const todos = currentList.todos;
+  const title = currentList.title;
+  const isLastList = currentListIndex === todoLists.length - 1;
+  const hasMultipleLists = todoLists.length > 1;
 
-  const addTodo = () => {
-    if (todos.length < 6) { // 최대 6개까지만 확장 가능하도록 제한 (디자인 유지)
-      setTodos([...todos, { text: "", completed: false }]);
-    }
-  };
+  const updateCurrentList = useCallback((updater) => {
+    setTodoData((prev) => ({
+      ...prev,
+      lists: prev.lists.map((list, index) => (
+        index === prev.currentListIndex ? updater(list) : list
+      )),
+    }));
+  }, []);
 
-  const toggleTodo = (index) => {
-    const newTodos = [...todos];
-    newTodos[index].completed = !newTodos[index].completed;
-    setTodos(newTodos);
-  };
+  const setTodos = useCallback((updater) => {
+    updateCurrentList((list) => ({
+      ...list,
+      todos: typeof updater === "function" ? updater(list.todos) : updater,
+    }));
+  }, [updateCurrentList]);
+
+  const setTitle = useCallback((nextTitle) => {
+    updateCurrentList((list) => ({ ...list, title: nextTitle }));
+  }, [updateCurrentList]);
+
+  const resetInteraction = useCallback(() => {
+    setEditingIndex(-1);
+    setHoveredIndex(-1);
+    setIsEditingTitle(false);
+  }, []);
+
+  const handleTextClick = useCallback((index) => {
+    setEditingIndex(index);
+    setHoveredIndex(-1);
+  }, []);
+
+  const addTodo = useCallback(() => {
+    setTodos((prev) => {
+      const next = [...prev, createTodo()];
+      setEditingIndex(next.length - 1);
+      return next;
+    });
+    setHoveredIndex(-1);
+  }, [setTodos]);
+
+  const toggleTodo = useCallback((index) => {
+    setTodos((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], completed: !next[index].completed };
+      return next;
+    });
+  }, [setTodos]);
+
+  const deleteTodo = useCallback((index) => {
+    setTodos((prev) => prev.filter((_, i) => i !== index));
+    resetInteraction();
+  }, [resetInteraction, setTodos]);
+
+  const createNextTodoList = useCallback((e) => {
+    e.stopPropagation();
+    setTodoData((prev) => {
+      const lists = [...prev.lists, createTodoList(prev.lists.length + 1)];
+      return {
+        ...prev,
+        lists,
+        currentListIndex: lists.length - 1,
+        listCount: lists.length,
+      };
+    });
+    resetInteraction();
+  }, [resetInteraction]);
+
+  const goToPreviousList = useCallback((e) => {
+    e.stopPropagation();
+    setTodoData((prev) => ({
+      ...prev,
+      currentListIndex: Math.max(prev.currentListIndex - 1, 0),
+    }));
+    resetInteraction();
+  }, [resetInteraction]);
+
+  const goToNextList = useCallback((e) => {
+    e.stopPropagation();
+    setTodoData((prev) => ({
+      ...prev,
+      currentListIndex: Math.min(prev.currentListIndex + 1, prev.lists.length - 1),
+    }));
+    resetInteraction();
+  }, [resetInteraction]);
 
   useEffect(() => {
-    if (svgRef.current) {
-        svgRef.current.innerHTML = "";
+    saveTodoData({
+      lists: todoLists,
+      currentListIndex,
+    });
+  }, [currentListIndex, todoLists]);
 
-        const rc = rough.svg(svgRef.current);
+  const handleMouseMove = useCallback((e) => {
+    if (editingIndex !== -1) return;
+    if (!e.currentTarget) return;
 
-        const rect = rc.rectangle(5,5,100,140,{
-          fill: '#fff',
-          fillStyle: 'solid',
-          stroke: '#000',
-          strokeWidth: 2,
-          roughness: 2,
-          bowing: 1,
-          seed: TODO_SEED
-        });
-        svgRef.current.appendChild(rect);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scale = 340 / rect.width;
+    const mouseY = (e.clientY - rect.top + e.currentTarget.scrollTop) * scale;
 
-        // Title: "Todo"
-        const titleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        titleText.setAttribute("x", "15");
-        titleText.setAttribute("y", "25");
-        titleText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 12px; font-weight: bold;");
-        titleText.textContent = "Todo";
-        svgRef.current.appendChild(titleText);
-
-        // Plus Button (+)
-        const plusCircle = rc.circle(90, 20, 12, {
-          stroke: '#000',
-          strokeWidth: 1,
-          roughness: 1,
-          seed: TODO_SEED + 1
-        });
-        svgRef.current.appendChild(plusCircle);
-
-        const plusLine1 = rc.line(86, 20, 94, 20, { strokeWidth: 1, seed: TODO_SEED + 2 });
-        const plusLine2 = rc.line(90, 16, 90, 24, { strokeWidth: 1, seed: TODO_SEED + 3 });
-        svgRef.current.appendChild(plusLine1);
-        svgRef.current.appendChild(plusLine2);
-
-        // Plus Button Hitbox (Invisible)
-        const plusHitbox = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        plusHitbox.setAttribute("cx", "90");
-        plusHitbox.setAttribute("cy", "20");
-        plusHitbox.setAttribute("r", "8");
-        plusHitbox.setAttribute("fill", "transparent");
-        plusHitbox.style.cursor = "pointer";
-        plusHitbox.onpointerdown = (e) => {
-          e.stopPropagation();
-          addTodo();
-        };
-        svgRef.current.appendChild(plusHitbox);
-
-        // Horizontal Lines (Notebook style)
-        todos.forEach((todo, i) => {
-          const y = 45 + (i * 20);
-          
-          // Main line
-          const line = rc.line(10, y, 100, y, {
-            stroke: '#ccc',
-            strokeWidth: 1,
-            roughness: 0.5,
-            seed: TODO_SEED + i + 10
-          });
-          svgRef.current.appendChild(line);
-
-          // Clickable area for text (Native SVG rect for reliable clicking)
-          const textHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-          textHitbox.setAttribute("x", "10");
-          textHitbox.setAttribute("y", (y - 15).toString());
-          textHitbox.setAttribute("width", "70");
-          textHitbox.setAttribute("height", "15");
-          textHitbox.setAttribute("fill", "transparent");
-          textHitbox.style.cursor = "pointer";
-          textHitbox.onpointerdown = (e) => {
-            e.stopPropagation();
-            handleTextClick(i);
-          };
-          svgRef.current.appendChild(textHitbox);
-
-          // User input text
-          if (todo.text) {
-            const todoText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            todoText.setAttribute("x", "12");
-            todoText.setAttribute("y", y - 4);
-            todoText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 8px; pointer-events: none; ${todo.completed ? 'text-decoration: line-through; opacity: 0.5;' : ''}`);
-            todoText.textContent = todo.text;
-            svgRef.current.appendChild(todoText);
-          }
-
-          // Checkbox on the right
-          const checkbox = rc.rectangle(85, y - 12, 8, 8, {
-            roughness: 1.5,
-            stroke: '#555',
-            fill: todo.completed ? 'rgba(0,0,0,0.1)' : undefined,
-            seed: TODO_SEED + i + 20
-          });
-          svgRef.current.appendChild(checkbox);
-
-          // Checkbox Hitbox (Native SVG rect)
-          const checkboxHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-          checkboxHitbox.setAttribute("x", "85");
-          checkboxHitbox.setAttribute("y", (y - 12).toString());
-          checkboxHitbox.setAttribute("width", "8");
-          checkboxHitbox.setAttribute("height", "8");
-          checkboxHitbox.setAttribute("fill", "transparent");
-          checkboxHitbox.style.cursor = "pointer";
-          checkboxHitbox.onpointerdown = (e) => {
-            e.stopPropagation();
-            toggleTodo(i);
-          };
-          svgRef.current.appendChild(checkboxHitbox);
-
-          // Checkmark (X shape)
-          if (todo.completed) {
-            const check1 = rc.line(86, y - 11, 92, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5, seed: TODO_SEED + i + 30 });
-            const check2 = rc.line(92, y - 11, 86, y - 5, { stroke: '#2ecc71', strokeWidth: 1.5, seed: TODO_SEED + i + 40 });
-            svgRef.current.appendChild(check1);
-            svgRef.current.appendChild(check2);
-          }
-        });
+    let itemTop = 45 - 36.4;
+    let foundIndex = -1;
+    for (let i = 0; i < todos.length; i++) {
+      const h = getLineCount(todos[i].text) * 45.5;
+      if (mouseY >= itemTop && mouseY < itemTop + h) {
+        foundIndex = i;
+        break;
       }
-  }, [todos]); // todos가 변경될 때마다 다시 그림
+      itemTop += h;
+    }
+
+    setHoveredIndex((prev) => (foundIndex !== prev ? foundIndex : prev));
+  }, [editingIndex, todos]);
+
+  const completedCount = todos.filter((todo) => todo.completed).length;
+  const totalCount = todos.length;
+
+  const totalLines = todos.reduce((acc, todo) => acc + getLineCount(todo.text), 0);
+  const listHeight = Math.max(260, totalLines * 45.5 + 60);
+
+  const todoPositions = useMemo(() => (
+    todos.map((_, index) =>
+      45 + todos
+        .slice(0, index)
+        .reduce((height, todo) => height + getLineCount(todo.text) * 45.5, 0)
+    )
+  ), [todos]);
 
   return (
-    <svg ref={svgRef} width="100%" className={className} viewBox="0 0 110 150" preserveAspectRatio="xMidYMid meet">
-    </svg>
+    <div
+      className={`${className} todo-list-widget-root`}
+      onMouseEnter={() => setIsWidgetHovered(true)}
+      onMouseLeave={() => setIsWidgetHovered(false)}
+      style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: "340px",
+        aspectRatio: "340 / 385",
+        overflow: "visible",
+      }}
+    >
+      <style>{TODO_STYLES}</style>
+
+      <svg
+        viewBox="0 0 340 385"
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "visible" }}
+      >
+        <TodoHeader
+          currentListIndex={currentListIndex}
+          title={title}
+          setTitle={setTitle}
+          isEditingTitle={isEditingTitle}
+          setIsEditingTitle={setIsEditingTitle}
+          addTodo={addTodo}
+          totalCount={totalCount}
+          completedCount={completedCount}
+        />
+      </svg>
+
+      <TodoNavigation
+        currentListIndex={currentListIndex}
+        todoListsLength={todoLists.length}
+        isWidgetHovered={isWidgetHovered}
+        goToPreviousList={goToPreviousList}
+        goToNextList={goToNextList}
+        isLastList={isLastList}
+        hasMultipleLists={hasMultipleLists}
+        createNextTodoList={createNextTodoList}
+      />
+
+      <div
+        className="todo-list-container"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIndex(-1)}
+        style={{
+          position: "absolute",
+          top: "23.5%",
+          left: "6%",
+          right: "8%",
+          height: "66%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          zIndex: 1,
+        }}
+      >
+        <svg viewBox={`0 0 340 ${listHeight}`} style={{ width: "100%", height: "auto", display: "block" }}>
+          <g ref={listSvgRef}>
+            {todos.map((todo, i) => (
+              <TodoItem
+                key={todo.id}
+                todo={todo}
+                index={i}
+                firstLineY={todoPositions[i]}
+                isEditing={i === editingIndex}
+                isHovered={i === hoveredIndex}
+                handleTextClick={handleTextClick}
+                toggleTodo={toggleTodo}
+                deleteTodo={deleteTodo}
+                setTodos={setTodos}
+                setEditingIndex={setEditingIndex}
+              />
+            ))}
+          </g>
+        </svg>
+      </div>
+    </div>
   );
 }
 

@@ -2,12 +2,13 @@ import { useRef, useState } from "react";
 
 function Draggable({ children, initialLeft = "0%", initialTop = "0%", className = "", style = {} }) {
   const [position, setPosition] = useState({ left: initialLeft, top: initialTop });
+  const [isDragging, setIsDragging] = useState(false);
   const dragging = useRef(false);
   const origin = useRef({ x: 0, y: 0, left: 0, top: 0 });
 
   const onPointerDown = (e) => {
     // 버튼이나 입력 요소에서는 드래그 시작하지 않음
-    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.closest('button, input')) {
+    if (e.target.closest('button, input, textarea, [data-no-drag="true"]')) {
       return;
     }
 
@@ -15,6 +16,7 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
     const parentRect = e.currentTarget.parentElement.getBoundingClientRect();
 
     dragging.current = true;
+    setIsDragging(true);
     origin.current = {
       x: e.clientX,
       y: e.clientY,
@@ -43,7 +45,10 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
 
   const onPointerUp = (e) => {
     dragging.current = false;
-    e.currentTarget.releasePointerCapture(e.pointerId);
+    setIsDragging(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
   };
 
   return (
@@ -54,7 +59,7 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
         left: position.left, 
         top: position.top, 
         touchAction: "none", 
-        cursor: dragging.current ? "grabbing" : "grab" 
+        cursor: isDragging ? "grabbing" : "grab" 
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

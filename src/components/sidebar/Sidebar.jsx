@@ -387,7 +387,7 @@ function Sidebar({
 
                       ${
                         user?.isGuest
-                          ? "bg-[black/30]"
+                          ? "bg-[#f5b400]"
                           : user
                           ? "bg-[#4ade80]"
                           : "bg-[#9ca3af]"
@@ -549,7 +549,7 @@ function Sidebar({
                         onKeyDown={(e) => {
                         if (e.key === "Enter") {
                          handleLogin();
-                          }
+                          } 
                          }}
                         placeholder="••••••••"
                         className="

@@ -111,13 +111,16 @@ function Dashboard() {
             <div className="absolute bottom-[69%] right-[38%] h-[26%] w-[44%] rotate-[20deg] rounded-t-full border-2 border-neutral-700 bg-white" />
           </div>
         </div>
-
-        {/* Todo */}
+        {/* Todo List */}
         <Draggable
           initialLeft="60%"
           initialTop="auto"
           className="z-20"
-          style={{ bottom: "50%", right: "28%", width: "11%" }}
+          style={{
+            bottom: "50%",
+            right: "28%",
+            width: "11%",
+          }}
         >
           <TodoList />
         </Draggable>
