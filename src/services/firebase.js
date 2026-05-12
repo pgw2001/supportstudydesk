@@ -10,29 +10,26 @@ import {
   getFirestore,
 } from "firebase/firestore";
 
-const serviceKey = import.meta.env.VITE_FIREBASE_API_KEY;
-
 const firebaseConfig = {
   apiKey:
-    serviceKey,
+    import.meta.env.VITE_FIREBASE_API_KEY,
 
   authDomain:
-    "supportstudydesk-6506b.firebaseapp.com",
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
 
   projectId:
-    "supportstudydesk-6506b",
+    import.meta.env.VITE_FIREBASE_PROJECT_ID,
 
   storageBucket:
-    "supportstudydesk-6506b.firebasestorage.app",
-
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId:
-    "575460134343",
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
 
   appId:
-    "1:575460134343:web:a4f3957f62c1440f01dde2",
+    import.meta.env.VITE_FIREBASE_APP_ID,
 
   measurementId:
-    "G-PZJNY0SJ52",
+    import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app =
