@@ -1,8 +1,14 @@
 import { initializeApp } from "firebase/app";
 
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth";
 
-import { getFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey:
@@ -32,6 +38,11 @@ const app =
 
 export const auth =
   getAuth(app);
+
+setPersistence(
+  auth,
+  browserLocalPersistence
+);
 
 export const db =
   getFirestore(app);

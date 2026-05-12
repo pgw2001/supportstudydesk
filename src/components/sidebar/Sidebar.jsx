@@ -1,7 +1,7 @@
 import Signup from "./Signup";
-import FindID from "./FindID";
 import FindPW from "./FindPW";
 import Login from "./Login";
+import Guest from "./guest";
 
 import {
   useState,
@@ -10,30 +10,29 @@ import {
 } from "react";
 
 import {
-  Clock3,
-  CheckSquare,
-  StickyNote,
-  Palette,
-  Settings,
   X,
-  ChevronRight,
-  Eye,
-  EyeOff,
 } from "lucide-react";
+
+import {
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+
+import {
+  doc,
+  getDoc,
+} from "firebase/firestore";
+
+import {
+  auth,
+  db,
+} from "../../services/firebase";
 
 import rough from "roughjs";
 
 function Sidebar({
   isOpen,
   setIsOpen,
-  setIsStyleOpen,
 }) {
-  const [selected, setSelected] =
-    useState(null);
-
-  const [hoveredIndex, setHoveredIndex] =
-    useState(null);
-
   const [showPassword, setShowPassword] =
     useState(false);
 
@@ -49,79 +48,25 @@ function Sidebar({
   const [passwordValue, setPasswordValue] =
     useState("");
 
-  const [isLoginHovered, setIsLoginHovered] =
-    useState(false);
+  const [
+    isLoginHovered,
+    setIsLoginHovered,
+  ] = useState(false);
 
   const sidebarSvgRef = useRef(null);
-
-  const menuSvgRefs = useRef([]);
 
   const loginBtnSvgRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) {
-      setSelected(null);
-
       setLoginValue("");
-
       setPasswordValue("");
-
       setShowPassword(false);
-
       setMode("login");
     }
   }, [isOpen]);
 
-  const menus = [
-    {
-      name: "Timer",
-      icon: (
-        <Clock3
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-    },
-    {
-      name: "Todo List",
-      icon: (
-        <CheckSquare
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-    },
-    {
-      name: "Memo",
-      icon: (
-        <StickyNote
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-    },
-    {
-      name: "Style Bar",
-      icon: (
-        <Palette
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-    },
-    {
-      name: "Settings",
-      icon: (
-        <Settings
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-    },
-  ];
-
   useEffect(() => {
-    // Sidebar
     if (sidebarSvgRef.current) {
       sidebarSvgRef.current.innerHTML =
         "";
@@ -137,8 +82,11 @@ function Sidebar({
         window.innerHeight - 8,
         {
           stroke: "#111",
+
           strokeWidth: 2,
+
           roughness: 0.8,
+
           bowing: 1,
 
           fill:
@@ -155,7 +103,6 @@ function Sidebar({
       );
     }
 
-    // Login Button
     if (loginBtnSvgRef.current) {
       loginBtnSvgRef.current.innerHTML =
         "";
@@ -171,12 +118,15 @@ function Sidebar({
         42,
         {
           stroke: "#111",
+
           strokeWidth: 2,
+
           roughness: 0.8,
+
           bowing: 1,
 
           fill: isLoginHovered
-            ? "rgba(253, 137, 137, 0.71)"
+            ? "rgba(253,137,137,0.7)"
             : "rgba(255,255,255,0.98)",
 
           fillStyle: isLoginHovered
@@ -195,84 +145,14 @@ function Sidebar({
         rect
       );
     }
-
-    // Menu
-    menuSvgRefs.current.forEach(
-      (svg, i) => {
-        if (!svg) return;
-
-        svg.innerHTML = "";
-
-        const rc = rough.svg(svg);
-
-        const isSelected =
-          selected === menus[i].name;
-
-        const isHovered =
-          hoveredIndex === i;
-
-        const rect = rc.rectangle(
-          3,
-          3,
-          252,
-          52,
-          {
-            stroke: "#111",
-
-            strokeWidth: isSelected
-              ? 2
-              : 1.4,
-
-            roughness:
-              isSelected || isHovered
-                ? 1.6
-                : 0.8,
-
-            bowing: 1,
-
-            fill: isSelected
-              ? "rgba(255,120,120,0.18)"
-              : isHovered
-              ? "rgba(253, 137, 137, 0.71)"
-              : "rgba(255,255,255,0.98)",
-
-            fillStyle:
-              isHovered || isSelected
-                ? "hachure"
-                : "solid",
-
-            hachureGap: 7,
-
-            fillWeight: 1.2,
-
-            seed: i + 30,
-          }
-        );
-
-        svg.appendChild(rect);
-      });
-  }, [
-    selected,
-    hoveredIndex,
-    isLoginHovered,
+  }, [isLoginHovered,
+    mode,
+    user,
   ]);
-
-  const handleMenuClick = (
-    menuName
-  ) => {
-    setSelected(menuName);
-
-    if (menuName === "Style Bar") {
-      setIsStyleOpen(true);
-      setIsOpen(false);
-    }
-  };
 
   const handleClose = () => {
     setIsOpen(false);
 
-    setSelected(null);
-
     setLoginValue("");
 
     setPasswordValue("");
@@ -282,45 +162,70 @@ function Sidebar({
     setMode("login");
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (
       loginValue.trim() === "" ||
       passwordValue.trim() === ""
     ) {
-      alert("Please enter your ID and password.");
+      alert(
+        "Please enter your email and password."
+      );
+
       return;
     }
 
-    setUser({
-      name: loginValue,
-      type: "user",
-    });
+    try {
+      const userCredential =
+        await signInWithEmailAndPassword(
+          auth,
+          loginValue,
+          passwordValue
+        );
 
-    setLoginValue("");
-    setPasswordValue("");
-    setShowPassword(false);
-    setMode("login");
+      // Firestore에서 username 가져오기
+      const userDoc =
+        await getDoc(
+          doc(
+            db,
+            "users",
+            userCredential.user.uid
+          )
+        );
+
+      const userData =
+        userDoc.data();
+
+      setUser({
+        uid:
+          userCredential.user.uid,
+
+        name:
+          userData?.username ||
+          "User",
+      });
+
+      setLoginValue("");
+      setPasswordValue("");
+      setShowPassword(false);
+
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        "Login failed. Please check your account."
+      );
+    }
   };
 
   const handleGuest = () => {
     setUser({
       name: "Guest",
-      type: "guest",
+      isGuest: true,
     });
 
     setLoginValue("");
     setPasswordValue("");
     setShowPassword(false);
-    setMode("login");
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-
-    setLoginValue("");
-    setPasswordValue("");
-    setShowPassword(false);
-    setMode("login");
   };
 
   return (
@@ -332,6 +237,7 @@ function Sidebar({
           fixed inset-0 z-[998]
           bg-black/10
           transition-all duration-300
+
           ${
             isOpen
               ? "opacity-100"
@@ -344,10 +250,14 @@ function Sidebar({
       <div
         className={`
           fixed top-0 right-0 z-[999]
-          h-screen w-[320px]
+
+          h-screen
+          w-[320px]
+
           transition-all duration-300 ease-out
+
           ${
-            isOpen
+            isOpen 
               ? "translate-x-0"
               : "translate-x-full"
           }
@@ -355,267 +265,248 @@ function Sidebar({
       >
         <div
           className="
-            relative ml-auto
-            flex h-full w-[290px]
+            relative
+            ml-auto
+
+            flex
+            h-full
+            w-[290px]
+
             flex-col
+
+            overflow-hidden
+
             px-4 py-4
             z-10
+
+            z-10
           "
-          style={{
-            transform:
-              "rotate(-0.08deg)",
-          }}
         >
-          {/* Rough Sidebar */}
+          {/* Rough Background */}
           <svg
             ref={sidebarSvgRef}
             className="
               absolute inset-0
-              h-full w-full
+
+              h-full
+              w-full
+
               -z-10
+
               pointer-events-none
             "
           />
 
-          {/* Header */}
-          <div className="relative z-20 flex items-start justify-between">
-            {/* Profile */}
+          {/* Scroll Area */}
+          <div
+            className="
+              flex-1
+
+              overflow-y-auto
+              overflow-x-hidden
+
+              overscroll-contain
+
+              pb-4
+            "
+          >
+            {/* Header */}
             <div
-              className="
-                flex items-start
-                gap-3
-              "
-            >
-              {/* Profile Circle */}
-              <div className="relative">
-                <div
-                  className="
-                    flex items-center
-                    justify-center
-
-                    h-[62px]
-                    w-[62px]
-
-                    rounded-full
-                    border-[2px]
-                    border-black
-
-                    bg-white
-                  "
-                  style={{
-                    transform:
-                      "rotate(-2deg)",
-                  }}
-                >
-                  <svg
-                    width="38"
-                    height="38"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <path
-                      d="M20 21C20 17.6863 16.4183 15 12 15C7.58172 15 4 17.6863 4 21"
-                      stroke="black"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                    />
-
-                    <circle
-                      cx="12"
-                      cy="8"
-                      r="4"
-                      stroke="black"
-                      strokeWidth="1.7"
-                    />
-                  </svg>
-                </div>
-
-                {/* Status DOT */}
-                <div
-                  className={`
-                    absolute
-                    bottom-[2px]
-                    right-[0px]
-
-                    flex items-center
-                    justify-center
-
-                    h-[18px]
-                    w-[18px]
-
-                    rounded-full
-                    border-[2px]
-                    border-black
-
-                    ${
-                      user &&
-                      user.type === "user"
-                        ? "bg-[#4ade80]"
-                        : "bg-[#f59e0b]"
-                    }
-                  `}
-                >
-                  <div
-                    className={`
-                      h-[5px]
-                      w-[5px]
-                      rounded-full
-
-                      ${
-                        user &&
-                        user.type === "user"
-                          ? "bg-[#dcfce7]"
-                          : "bg-[#fde68a]"
-                      }
-                    `}
-                  />
-                </div>
-              </div>
-
-              {/* Username */}
-              <div className="pt-1">
-                <div
-                  className="
-                    font-['Patrick_Hand']
-                    text-[26px]
-                    leading-none
-                  "
-                >
-                  {user
-                    ? user.name
-                    : "Username"}
-                </div>
-
-                <div
-                  className="
-                    mt-2
-                    flex items-center
-                    gap-2
-
-                    text-[10px]
-                    tracking-[0.3em]
-                    text-black/45
-                  "
-                >
-                  <div
-                    className={`
-                      h-[6px]
-                      w-[6px]
-                      rounded-full
-
-                      ${
-                        user &&
-                        user.type === "user"
-                          ? "bg-[#4ade80]"
-                          : "bg-[#f59e0b]"
-                      }
-                    `}
-                  />
-
-                  {user &&
-                  user.type === "user"
-                    ? "ONLINE"
-                    : "GUEST"}
-                </div>
-              </div>
-            </div>
-
-            {/* Close */}
-            <button
-              onClick={handleClose}
               className="
                 relative
                 z-20
-                transition
-                hover:rotate-90
+
+                flex
+                items-start
+                justify-between
               "
             >
-              <X
-                size={28}
-                strokeWidth={2}
-              />
-            </button>
-          </div>
-
-          {/* LOGIN / SIGNUP */}
-          {!user &&
-          mode === "login" ? (
-            <>
-              {/* Inputs */}
               <div
                 className="
-                  relative
-                  z-20
-                  mt-6
-                  flex flex-col
-                  gap-4
+                  flex
+                  items-start
+                  gap-3
                 "
               >
-                {/* Login */}
-                <div className="flex flex-col gap-2">
-                  <label
+                {/* Profile */}
+                <div className="relative">
+                  <div
                     className="
-                      font-['Patrick_Hand']
-                      text-[22px]
-                    "
-                  >
-                    Login
-                  </label>
+                      flex
+                      h-[62px]
+                      w-[62px]
 
-                  <input
-                    type="text"
-                    value={loginValue}
-                    onChange={(e) =>
-                      setLoginValue(
-                        e.target.value
-                      )
-                    }
-                    placeholder="enter your id"
-                    className="
-                      h-[46px]
+                      items-center
+                      justify-center
+
+                      rounded-full
 
                       border-[2px]
-                      border-black/70
+                      border-black
 
                       bg-white
-
-                      px-4
-
-                      text-[16px]
-
-                      outline-none
                     "
+                  >
+                    <svg
+                      width="38"
+                      height="38"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M20 21C20 17.6863 16.4183 15 12 15C7.58172 15 4 17.6863 4 21"
+                        stroke="black"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                      />
+
+                      <circle
+                        cx="12"
+                        cy="8"
+                        r="4"
+                        stroke="black"
+                        strokeWidth="1.7"
+                      />
+                    </svg>
+                  </div>
+
+                  {/* Status Dot */}
+                  <div
+                    className={`
+                      absolute
+                      bottom-[2px]
+                      right-[0px]
+
+                      h-[18px]
+                      w-[18px]
+
+                      rounded-full
+
+                      border-[2px]
+                      border-black
+
+                      ${
+                        user?.isGuest
+                          ? "bg-[black/30]"
+                          : user
+                          ? "bg-[#4ade80]"
+                          : "bg-[#9ca3af]"
+                      }
+                    `}
                   />
                 </div>
 
-                {/* Password */}
-                <div className="flex flex-col gap-2">
-                  <label
+                {/* User Info */}
+                <div className="pt-1">
+                  <div
                     className="
                       font-['Patrick_Hand']
-                      text-[22px]
+                      text-[26px]
+                      leading-none
                     "
                   >
-                    Password
-                  </label>
+                    {user
+                      ? user.name
+                      : "Username"}
+                  </div>
 
-                  <div className="relative">
+                  <div
+                    className="
+                      mt-2
+
+                      flex
+                      items-center
+                      gap-2
+
+                      text-[10px]
+
+                      tracking-[0.3em]
+
+                      text-black/45
+                    "
+                  >
+                    <div
+                      className={`
+                        h-[6px]
+                        w-[6px]
+
+                        rounded-full
+
+                        ${
+                          user?.isGuest
+                            ? "bg-[#f5b400]"
+                            : user
+                            ? "bg-[#4ade80]"
+                            : "bg-black/30"
+                        }
+                      `}
+                    />
+
+                    {user?.isGuest
+                      ?"Guest"
+                      : user
+                      ? "OFFLINE"
+                      : "OFFLINE"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Close */}
+              <button
+                onClick={handleClose}
+                className="
+                  relative
+                  z-20
+
+                  transition
+
+                  hover:rotate-90
+                "
+              >
+                <X size={28} />
+              </button>
+            </div>
+
+            {/* LOGIN */}
+            {!user &&
+            mode === "login" ? (
+              <>
+                {/* Inputs */}
+                <div
+                  className="
+                    relative
+                    z-20
+
+                    mt-6
+
+                    flex
+                    flex-col
+
+                    gap-4
+                  "
+                >
+                  {/* Email */}
+                  <div className="flex flex-col gap-2">
+                    <label
+                      className="
+                        font-['Patrick_Hand']
+                        text-[22px]
+                      "
+                    >
+                      Email
+                    </label>
+
                     <input
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
-                      value={passwordValue}
+                      type="email"
+                      value={loginValue}
                       onChange={(e) =>
-                        setPasswordValue(
+                        setLoginValue(
                           e.target.value
                         )
                       }
-                      placeholder="••••••••"
+                      placeholder="enter your email"
                       className="
                         h-[46px]
-                        w-full
 
                         border-[2px]
                         border-black/70
@@ -623,455 +514,192 @@ function Sidebar({
                         bg-white
 
                         px-4
-                        pr-12
 
                         text-[16px]
 
                         outline-none
                       "
                     />
+                  </div>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPassword(
-                          !showPassword
-                        )
-                      }
+                  {/* Password */}
+                  <div className="flex flex-col gap-2">
+                    <label
                       className="
-                        absolute
-                        right-3
-                        top-1/2
-                        -translate-y-1/2
+                        font-['Patrick_Hand']
+                        text-[22px]
                       "
                     >
-                      {showPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
-                    </button>
+                      Password
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        type={
+                          showPassword
+                            ? "text"
+                            : "password"
+                        }
+                        value={passwordValue}
+                        onChange={(e) =>
+                          setPasswordValue(
+                            e.target.value
+                          )
+                        }
+                        onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                         handleLogin();
+                          }
+                         }}
+                        placeholder="••••••••"
+                        className="
+                          h-[46px]
+                          w-full
+
+                          border-[2px]
+                          border-black/70
+
+                          bg-white
+
+                          px-4
+                          pr-12
+
+                          text-[16px]
+
+                          outline-none
+                        "
+                      />
+
+                      
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Login Button */}
-              <div className="relative mt-6 z-20">
-                <svg
-                  ref={loginBtnSvgRef}
+                {/* Login Button */}
+                <div
                   className="
-                    absolute inset-0
-                    h-full w-full
-                    pointer-events-none
+                    relative
+                    mt-6
+                    z-20
                   "
-                  viewBox="0 0 260 50"
-                  preserveAspectRatio="none"
-                />
+                >
+                  <svg
+                    ref={loginBtnSvgRef}
+                    className="
+                      absolute
+                      inset-0
 
-                <button
-                  onClick={handleLogin}
-                  onMouseEnter={() =>
-                    setIsLoginHovered(true)
-                  }
-                  onMouseLeave={() =>
-                    setIsLoginHovered(false)
-                  }
+                      h-full
+                      w-full
+
+                      pointer-events-none
+                    "
+                    viewBox="0 0 260 50"
+                  />
+
+                  <button
+                    onClick={handleLogin}
+                    onMouseEnter={() =>
+                      setIsLoginHovered(true)
+                    }
+                    onMouseLeave={() =>
+                      setIsLoginHovered(false)
+                    }
+                    className="
+                      relative
+                      z-20
+
+                      h-[48px]
+                      w-full
+
+                      font-['Patrick_Hand']
+                      text-[22px]
+                    "
+                  >
+                    Login
+                  </button>
+                </div>
+
+                {/* Links */}
+                <div
                   className="
                     relative
                     z-20
 
-                    h-[48px]
-                    w-full
+                    mt-4
 
-                    font-['Patrick_Hand']
-                    text-[22px]
-                  "
-                >
-                  Login
-                </button>
-              </div>
-
-              {/* Links */}
-              <div
-                className="
-                  relative
-                  z-20
-
-                  mt-4
-
-                  flex justify-center
-                  gap-3
-
-                  text-[11px]
-                  text-black/35
-                "
-              >
-                <button
-                  onClick={() =>
-                    setMode("findID")
-                  }
-                  className="
-                    transition
-                    hover:text-black
-                    hover:underline
-                  "
-                >
-                  Find ID
-                </button>
-
-                <span>|</span>
-
-                <button
-                  onClick={() =>
-                    setMode("findPW")
-                  }
-                  className="
-                    transition
-                    hover:text-black
-                    hover:underline
-                  "
-                >
-                  Find PW
-                </button>
-
-                <span>|</span>
-
-                <button
-                  onClick={() =>
-                    setMode("signup")
-                  }
-                  className="
-                    transition
-                    hover:text-black
-                    hover:underline
-                  "
-                >
-                  Sign Up
-                </button>
-
-                <span>|</span>
-
-                <button
-                  onClick={handleGuest}
-                  className="
-                    transition
-                    hover:text-black
-                    hover:underline
-                  "
-                >
-                  Guest
-                </button>
-              </div>
-            </>
-          ) : !user &&
-            mode === "signup" ? (
-            <Signup setMode={setMode} />
-          ) : !user &&
-            mode === "findID" ? (
-            <FindID setMode={setMode} />
-          ) : !user &&
-            mode === "findPW" ? (
-            <FindPW setMode={setMode} />
-          ) : (
-            <div
-              className="
-                relative
-                z-20
-
-                mt-6
-
-                rounded-[28px]
-                border-[2px]
-                border-black
-
-                bg-[#fffdf8]
-
-                p-5
-
-                shadow-[4px_4px_0_rgba(0,0,0,0.12)]
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-start
-                  justify-between
-                "
-              >
-                <div>
-                  <div
-                    className="
-                      font-['Patrick_Hand']
-                      text-[30px]
-                      leading-none
-                    "
-                  >
-                    Welcome back,
-                  </div>
-
-                  <div
-                    className="
-                      mt-2
-
-                      font-['Patrick_Hand']
-                      text-[38px]
-
-                      text-[#ef4444]
-                      leading-none
-                    "
-                  >
-                    {user.name}
-                  </div>
-                </div>
-
-                <div
-                  className={`
-                    h-[14px]
-                    w-[14px]
-
-                    rounded-full
-
-                    border-[2px]
-                    border-black
-
-                    ${
-                      user.type === "user"
-                        ? "bg-[#4ade80]"
-                        : "bg-[#f59e0b]"
-                    }
-                  `}
-                />
-              </div>
-
-              <div
-                className="
-                  mt-6
-
-                  flex
-                  flex-col
-                  gap-3
-                "
-              >
-                <div
-                  className="
                     flex
-                    items-center
-                    justify-between
+                    justify-center
 
-                    rounded-[16px]
+                    gap-3
 
-                    border-[2px]
-                    border-black
-
-                    bg-white
-
-                    px-4
-                    py-3
+                    text-[11px]
+                    text-black/35
                   "
                 >
-                  <span
-                    className="
-                      font-['Patrick_Hand']
-                      text-[22px]
-                    "
-                  >
-                    Study Time
-                  </span>
 
-                  <span
-                    className="
-                      text-[14px]
-                      tracking-[0.2em]
-                    "
-                  >
-                    02:14:32
-                  </span>
-                </div>
-
-                <div
+                  <button
+                  onClick={() =>
+                  setMode("findPW")
+                      }
                   className="
-                    flex
-                    items-center
-                    justify-between
-
-                    rounded-[16px]
-
-                    border-[2px]
-                    border-black
-
-                    bg-white
-
-                    px-4
-                    py-3
-                  "
-                >
-                  <span
-                    className="
-                      font-['Patrick_Hand']
-                      text-[22px]
+                    transition-all
+                    hover:underline
+                    hover:text-black/70
                     "
-                  >
-                    Focus
-                  </span>
+                          >
+                    Find PW
+                  </button>
 
-                  <span
-                    className="
-                      text-[14px]
-                      tracking-[0.2em]
-                    "
-                  >
-                    HIGH
-                  </span>
-                </div>
-              </div>
+                  <span>|</span>
 
-              <button
-                onClick={handleLogout}
+                  <button
+                onClick={() =>
+                setMode("signup")
+                   }
                 className="
-                  mt-6
-
-                  flex
-                  items-center
-                  justify-center
-
-                  h-[50px]
-                  w-full
-
-                  rounded-[16px]
-
-                  border-[2px]
-                  border-black
-
-                  bg-white
-
-                  font-['Patrick_Hand']
-                  text-[24px]
-
                   transition-all
+                  hover:underline
+                  hover:text-black/70
+                   "
+                  >
+                  Sign Up
+                  </button>
 
-                  hover:bg-[#ffe4e4]
-                  hover:translate-y-[2px]
+                  <span>|</span>
 
-                  active:translate-y-[4px]
-                "
-              >
-                Logout
-              </button>
-            </div>
-          )}
+                  <button
+               onClick={handleGuest}
+                 className="
+                  transition-all
+                  hover:underline
+                  hover:text-black/70
+                  "
+                  >
+                Guest
+                </button>
+                </div>
+              </>
+            ) : !user &&
+              mode === "signup" ? (
+              <Signup setMode={setMode} />            
+            ) : !user &&
+              mode === "findPW" ? (
+              <FindPW setMode={setMode} />
+            ) : null}
 
-          {/* Menus */}
-          {
-            mode === "login" && (
-              <div
-                className="
-                  relative
-                  z-20
-
-                  mt-8
-
-                  flex flex-col
-                  gap-3
-                "
-              >
-                {menus.map(
-                  (menu, index) => {
-                    return (
-                      <button
-                        key={menu.name}
-                        onClick={() =>
-                          handleMenuClick(
-                            menu.name
-                          )
-                        }
-                        onMouseEnter={() =>
-                          setHoveredIndex(index)
-                        }
-                        onMouseLeave={() =>
-                          setHoveredIndex(null)
-                        }
-                        className={`
-                          relative
-
-                          h-[58px]
-                          w-full
-
-                          text-left
-
-                          transition-all
-                          duration-200
-
-                          hover:translate-x-[2px]
-                          hover:scale-[1.01]
-
-                          ${
-                            selected ===
-                            menu.name
-                              ? "scale-[1.02]"
-                              : ""
-                          }
-                        `}
-                        style={{
-                          transform:
-                            index % 2 === 0
-                              ? "rotate(0.1deg)"
-                              : "rotate(-0.1deg)",
-                        }}
-                      >
-                        <svg
-                          ref={(el) =>
-                            (menuSvgRefs.current[
-                              index
-                            ] = el)
-                          }
-                          className="
-                            absolute inset-0
-                            h-full w-full
-                            pointer-events-none
-                          "
-                          viewBox="0 0 260 58"
-                          preserveAspectRatio="none"
-                        />
-
-                        <div
-                          className="
-                            relative
-
-                            flex h-full
-                            items-center
-                            justify-between
-
-                            px-5
-                          "
-                        >
-                          <div className="flex items-center gap-3">
-                            <div>
-                              {menu.icon}
-                            </div>
-
-                            <span
-                              className="
-                                font-['Patrick_Hand']
-                                text-[20px]
-                              "
-                            >
-                              {menu.name}
-                            </span>
-                          </div>
-
-                          <ChevronRight
-                            size={16}
-                            strokeWidth={1.8}
-                            className="text-black/40"
-                          />
-                        </div>
-                      </button>
-                    );
-                  }
-                )}
-              </div>
-            )
-          }
+            {user?.isGuest ? (
+  <Guest
+    user={user}
+    setUser={setUser}
+  />
+) : user ? (
+  <Login
+    user={user}
+    setUser={setUser}
+  />
+) : null}
+          </div>
         </div>
       </div>
     </>

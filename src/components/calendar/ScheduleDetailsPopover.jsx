@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import rough from 'roughjs';
+import EditIcon from '../../assets/icons/edit';
 
 const SEED = 3333; // Calendar.jsx와 동일한 시드 사용
 
-const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, onDeleteSchedule }) => {
+const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, onDeleteSchedule, onEditSchedule }) => {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -85,12 +86,20 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
                             style={{ color: sched.color, borderLeft: `2px solid ${sched.color}`, paddingLeft: '5px' }}
                         >
                             <span className="truncate">{sched.title}</span>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onDeleteSchedule(sched.id); }}
-                                className="opacity-0 group-hover:opacity-100 hover:scale-125 transition-all px-1 font-bold"
-                            >
-                                ✕
-                            </button>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onEditSchedule(sched); }}
+                                    className="hover:scale-125 transition-transform"
+                                >
+                                    <EditIcon width="14" height="14" />
+                                </button>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); onDeleteSchedule(sched.id); }}
+                                    className="hover:scale-125 transition-transform px-1 font-bold"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
                     ))
                 ) : (

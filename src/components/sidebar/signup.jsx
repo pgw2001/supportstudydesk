@@ -5,6 +5,12 @@ import {
 } from "firebase/auth";
 
 import {
+  getFirestore,
+  doc,
+  setDoc,
+} from "firebase/firestore";
+
+import {
   useState,
   useEffect,
   useRef,
@@ -12,11 +18,10 @@ import {
 
 import rough from "roughjs";
 
+const db = getFirestore();
+
 function Signup({ setMode }) {
   const [username, setUsername] =
-    useState("");
-
-  const [id, setId] =
     useState("");
 
   const [name, setName] =
@@ -99,7 +104,6 @@ function Signup({ setMode }) {
     async () => {
       if (
         username.trim() === "" ||
-        id.trim() === "" ||
         name.trim() === "" ||
         phone.trim() === "" ||
         birth.trim() === "" ||
@@ -133,6 +137,25 @@ function Signup({ setMode }) {
             password
           );
 
+        await setDoc(
+          doc(
+            db,
+            "users",
+            userCredential.user.uid
+          ),
+          {
+            username,
+            name,
+            phone,
+            birth,
+            email,
+            password,
+
+            createdAt:
+              new Date(),
+          }
+        );
+
         console.log(
           "Account created successfully:",
           userCredential.user
@@ -141,6 +164,7 @@ function Signup({ setMode }) {
         setMessage(
           "Account created successfully!"
         );
+
       } catch (error) {
         console.error(error);
 
@@ -207,30 +231,6 @@ function Signup({ setMode }) {
         />
       </div>
 
-      {/* ID */}
-      <div className="flex flex-col gap-1">
-        <label
-          className="
-            font-['Patrick_Hand']
-            text-[16px]
-          "
-        >
-          ID
-        </label>
-
-        <input
-          type="text"
-          value={id}
-          onChange={(e) =>
-            setId(
-              e.target.value
-            )
-          }
-          placeholder="your id"
-          className={inputStyle}
-        />
-      </div>
-
       {/* Name */}
       <div className="flex flex-col gap-1">
         <label
@@ -291,13 +291,14 @@ function Signup({ setMode }) {
         </label>
 
         <input
-          type="date"
+          type="text"
           value={birth}
           onChange={(e) =>
             setBirth(
               e.target.value
             )
           }
+          placeholder="yyyy-mm-dd"
           className={inputStyle}
         />
       </div>

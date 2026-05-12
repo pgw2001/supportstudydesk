@@ -6,13 +6,6 @@ import {
 
 import rough from "roughjs";
 
-import {
-  doc,
-  setDoc,
-  getDoc,
-} from "firebase/firestore";
-
-import { db } from "../../services/firebase";
 
 import {
   Clock3,
@@ -23,7 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-function Login({ user, setUser }) {
+function Guest({ user, setUser }) {
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
 
@@ -170,57 +163,7 @@ function Login({ user, setUser }) {
     );
   }, []);
 
-  // 저장된 목표 불러오기
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const loadGoal =
-      async () => {
-        if (!user?.uid){
-          return;
-        }
-        try {
-          const userRef = doc(
-            db,
-            "studyData",
-            user.uid
-          );
-
-          const snapshot =
-            await getDoc(userRef);
-
-          if (snapshot.exists()) {
-            const data =
-              snapshot.data();
-
-            if (
-              data.dailyGoal !== undefined
-            ) {
-              setDailyGoal(
-                data.dailyGoal
-              );
-
-              setGoalInput(
-                String(
-                  data.dailyGoal
-                )
-              );
-            }
-            if (data.tasks !== undefined) {
-              setTasks(data.tasks);
-            }
-            if(data.focusTime !== undefined){
-              setFocusTime(data.focusTime);
-            }
-          }
-        } catch (error) {
-          console.log(error);
-        }
-      };
-
-    loadGoal();
-  }, [user]);
-
+ 
   // 타이머
   useEffect(() => {
     if (!isRunning) return;
@@ -267,7 +210,7 @@ function Login({ user, setUser }) {
             bowing: 1,
 
             fill: isHovered
-              ? "rgb(165, 255, 113)"
+              ? "rgb(255, 234, 113)"
               : "rgba(255,255,255,0.98)",
 
             fillStyle:
@@ -423,33 +366,10 @@ if (taskSvgRef.current) {
       ),
       100
     );
-  const saveStudyData =
-  async (updatedTasks) => {
-    if (!user?.uid) return;
-
-    try {
-      const userRef = doc(
-        db,
-        "studyData",
-        user.uid
-      );
-
-      await setDoc(
-        userRef,
-        {
-          dailyGoal,
-          focusTime,
-          tasks: updatedTasks,
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  
   // Save 버튼
   const handleSaveGoal =
-    async () => {
+     () => {
       const value =
         Number(goalInput);
 
@@ -469,26 +389,6 @@ if (taskSvgRef.current) {
       // 시작
       setIsRunning(true);
 
-      // firebase 저장
-      try {
-        const userRef = doc(
-          db,
-          "studyData",
-          user.uid
-        );
-
-        await setDoc(
-          userRef,
-          {
-            dailyGoal: value,
-            tasks: tasks,
-            focusTime: focusTime,
-          },
-          { merge: true }
-        );
-      } catch (error) {
-        console.log(error);
-      }
     };
 
   return (
@@ -584,8 +484,8 @@ if (taskSvgRef.current) {
             "
           >
             <div className="h-[10px] w-[5px] rounded-full bg-black/10" />
-            <div className="h-[18px] w-[5px] rounded-full bg-[#4ade80]" />
-            <div className="h-[34px] w-[5px] rounded-full bg-[#4ade80]" />
+            <div className="h-[18px] w-[5px] rounded-full bg-[#f5b400]" />
+            <div className="h-[34px] w-[5px] rounded-full bg-[#f5b400]" />
             <div className="h-[22px] w-[5px] rounded-full bg-black/10" />
             <div className="h-[36px] w-[5px] rounded-full bg-black/10" />
           </div>
@@ -658,7 +558,7 @@ if (taskSvgRef.current) {
                   border-[2px]
                   border-black
 
-                  bg-[#4ade80]
+                  bg-[#f5b400]
 
                   px-3
                   py-1
@@ -736,7 +636,7 @@ if (taskSvgRef.current) {
 
                 rounded-full
 
-                bg-[#4ade80]
+                bg-[#f5b400]
 
                 transition-all
                 duration-500
@@ -792,7 +692,6 @@ if (taskSvgRef.current) {
       py-4
     "
   >
-  <div className="relative z-10">
     {/* title */}
     <div
       className="
@@ -819,7 +718,7 @@ if (taskSvgRef.current) {
 
           text-[20px]
 
-          text-[#4ade80]
+          text-[#f5b400]
         "
       >
         ✦
@@ -882,7 +781,7 @@ if (taskSvgRef.current) {
         px-2
         py-2
         transition-all
-        hover:bg-[#4ade80]/10
+        hover:bg-[#f5b400]/10
       "
     >
       <div
@@ -908,9 +807,7 @@ if (taskSvgRef.current) {
 
             setTasks(updatedTasks);
 
-            saveStudyData(
-              updatedTasks
-            );
+          
           }}
           className={`
             flex
@@ -924,7 +821,7 @@ if (taskSvgRef.current) {
             transition-all
             ${
               task.completed
-                ? "bg-[#4ade80]"
+                ? "bg-[#f5b400]"
                 : "bg-white"
             }
           `}
@@ -999,9 +896,7 @@ if (taskSvgRef.current) {
                     updatedTasks
                   );
 
-                  saveStudyData(
-                    updatedTasks
-                  );
+                
 
                   setEditingTaskId(
                     null
@@ -1009,7 +904,7 @@ if (taskSvgRef.current) {
                 }}
                 className="
                   rounded-[6px]
-                  bg-[#4ade80]
+                  bg-[#f5b400]
                   px-2
                   py-[2px]
                   text-[12px]
@@ -1039,11 +934,11 @@ if (taskSvgRef.current) {
                   <span
                     className="
                       rounded-full
-                      bg-[#4ade80]/15
+                      bg-[#f5b400]/15
                       px-2
                       py-[2px]
                       text-[11px]
-                      text-[#16a34a]
+                      text-[#d89b00]
                     "
                   >
                     {task.time}
@@ -1071,7 +966,7 @@ if (taskSvgRef.current) {
                     text-[11px]
                     text-black/35
                     transition-all
-                    hover:text-[#4ade80]
+                    hover:text-[#f5b400]
                   "
                 >
                   edit
@@ -1090,9 +985,7 @@ if (taskSvgRef.current) {
                       updatedTasks
                     );
 
-                    saveStudyData(
-                      updatedTasks
-                    );
+                  
                   }}
                   className="
                     text-[11px]
@@ -1207,7 +1100,7 @@ if (taskSvgRef.current) {
         border-[2px]
         border-black
 
-        bg-[#4ade80]
+        bg-[#f5b400]
 
         px-4
 
@@ -1223,7 +1116,6 @@ if (taskSvgRef.current) {
   </div>
 </div>
 
-</div>
 </div>
 </section>
 
@@ -1355,27 +1247,8 @@ if (taskSvgRef.current) {
 
   <button
    onClick={async () => {
-  if (user?.uid) {
-    try {
-      const userRef = doc(
-        db,
-        "studyData",
-        user.uid
-      );
-
-      await setDoc(
-        userRef,
-        {
-          dailyGoal,
-          focusTime,
-          tasks,
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      console.log(error);
-    }
-  }
+    setUser(null);
+  
 
   setUser(null);
 }}
@@ -1405,4 +1278,4 @@ if (taskSvgRef.current) {
 );
 }
 
-export default Login;
+export default Guest;

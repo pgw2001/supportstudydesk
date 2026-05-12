@@ -6,6 +6,16 @@ import {
 
 import rough from "roughjs";
 
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+
+const db = getFirestore();
+
 function FindPW({ setMode }) {
   const [username, setUsername] =
     useState("");
@@ -17,6 +27,9 @@ function FindPW({ setMode }) {
     useState("");
 
   const [birth, setBirth] =
+    useState("");
+
+  const [message, setMessage] =
     useState("");
 
   const [
@@ -72,6 +85,79 @@ function FindPW({ setMode }) {
     }
   }, [isFindHovered]);
 
+  const handleFindPW =
+    async () => {
+      if (
+        username.trim() === "" ||
+        email.trim() === "" ||
+        phone.trim() === "" ||
+        birth.trim() === ""
+      ) {
+        setMessage(
+          "Fill all fields."
+        );
+
+        return;
+      }
+
+      try {
+        const q = query(
+          collection(db, "users"),
+
+          where(
+            "username",
+            "==",
+            username
+          ),
+
+          where(
+            "email",
+            "==",
+            email
+          ),
+
+          where(
+            "phone",
+            "==",
+            phone
+          ),
+
+          where(
+            "birth",
+            "==",
+            birth
+          )
+        );
+
+        const querySnapshot =
+          await getDocs(q);
+
+        if (
+          querySnapshot.empty
+        ) {
+          setMessage(
+            "Incorrect user information."
+          );
+
+          return;
+        }
+
+        querySnapshot.forEach(
+          (doc) => {
+            setMessage(
+              `Password : ${doc.data().password || "Not available"}`
+            );
+          }
+        );
+      } catch (error) {
+        console.error(error);
+
+        setMessage(
+          "Something went wrong."
+        );
+      }
+    };
+
   const inputStyle = `
     w-full
 
@@ -102,7 +188,7 @@ function FindPW({ setMode }) {
 
         mt-4
 
-        min-h-[620px]
+        min-h-[720px]
 
         flex
         flex-col
@@ -166,6 +252,7 @@ function FindPW({ setMode }) {
           )}
         </div>
       </div>
+
 
       {/* Email */}
       <div className="flex flex-col gap-1">
@@ -275,13 +362,14 @@ function FindPW({ setMode }) {
         </label>
 
         <input
-          type="date"
+          type="text"
           value={birth}
           onChange={(e) =>
             setBirth(
               e.target.value
             )
           }
+          placeholder="yyyy-mm-dd"
           className={inputStyle}
         />
       </div>
@@ -310,6 +398,7 @@ function FindPW({ setMode }) {
         />
 
         <div
+          onClick={handleFindPW}
           onMouseEnter={() =>
             setIsFindHovered(
               true
@@ -340,6 +429,59 @@ function FindPW({ setMode }) {
           Find My Password
         </div>
       </div>
+
+      {/* Message */}
+      {message && (
+        <div
+          className="
+            relative
+
+            mt-2
+
+            border-[2px]
+            border-black
+
+            bg-[#fff8dc]
+
+            px-3
+            py-2
+
+            shadow-[3px_3px_0_rgba(0,0,0,0.18)]
+          "
+          style={{
+            transform:
+              "rotate(-0.5deg)",
+          }}
+        >
+          <button
+            onClick={() =>
+              setMessage("")
+            }
+            className="
+              absolute
+              right-2
+              top-1
+
+              text-[16px]
+            "
+          >
+            ×
+          </button>
+
+          <div
+            className="
+              mt-1
+
+              font-['Patrick_Hand']
+              text-[15px]
+
+              text-black/70
+            "
+          >
+            {message}
+          </div>
+        </div>
+      )}
 
       {/* Back */}
       <button
