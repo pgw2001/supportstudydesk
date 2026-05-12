@@ -10,9 +10,11 @@ import {
   getFirestore,
 } from "firebase/firestore";
 
+const serviceKey = import.meta.env.VITE_FIREBASE_API_KEY;
+
 const firebaseConfig = {
   apiKey:
-    "AIzaSyBBKBTYzV0gJLTuMm3mOQIWPRvMcdqsP-8",
+    serviceKey,
 
   authDomain:
     "supportstudydesk-6506b.firebaseapp.com",
