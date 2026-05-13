@@ -10,6 +10,7 @@ import Quotes from "../components/quotes/Quotes";
 import deskSvg from "../assets/desk.svg";
 import windowSvg from "../assets/window.svg";
 import Calendar from "../components/calendar/Calendar";
+import PlannerButton from "../components/planner/PlannerButton";
 import Draggable from "../utils/Draggable";
 
 function Dashboard() {
@@ -82,6 +83,18 @@ function Dashboard() {
           style={{ bottom: "19%" }}
         >
           <Timer />
+        </Draggable>
+
+        {/* Planner */}
+        <Draggable
+          initialLeft="70%"
+          initialTop="80%"
+          className="z-[999]"
+          style={{ width: "20%" }}
+        >
+          <div className="p-2">
+            <PlannerButton />
+          </div>
         </Draggable>
 
         {/* 자명종 시계 */}
