@@ -7,7 +7,6 @@ import deskSvg from "../assets/desk.svg";
 import windowSvg from "../assets/window.svg";
 import Calendar from "../components/calendar/Calendar";
 import Draggable from "../utils/Draggable";
-// import MusicPlayer from "../components/musicPlayer/MusicPlayer";
 
 function Dashboard() {
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
@@ -34,11 +33,6 @@ function Dashboard() {
           <Calendar onExpandStateChange={setIsCalendarExpanded} />
         </Draggable>
         
-        {/* Music Player
-        <Draggable initialLeft="35%" initialTop="10%" className="z-10" style={{ width: '22%' }}>
-          <MusicPlayer />
-        </Draggable> */}
-
         {/* Memo */}
         <Draggable initialLeft="61%" initialTop="18%" className="z-10" style={{ width: '16%' }}>
           <Memo />

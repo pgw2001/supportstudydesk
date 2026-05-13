@@ -1,165 +1,273 @@
-import React, { useState } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import * as assets from "./boomboxAssets";
-import { useMusicPlayer } from "./useMusicPlayer";
-
-// 버튼 좌표 (body.svg의 viewBox가 0 0 400 251 이라고 가정할 때의 예시 좌표)
-const BUTTON_MAP = {
-  play: { x: 184.5, y: 35, w: 30, h: 19 },
-  prev: { x: 151.5, y: 35, w: 30, h: 19 },
-  next: { x: 217.5, y: 35, w: 30, h: 19 },
-  repeat: {x: 250.5, y: 35, w: 30, h: 19 },
-  shuffle: {x: 118.5, y: 35, w: 30, h: 19 }
-};
+import { useMusicPlayer } from "./hooks/useMusicPlayer";
+import { 
+  BUTTON_MAP, 
+  VIEWBOX, 
+  VOLUME_SENSITIVITY, 
+  DEFAULT_MARQUEE_TEXT,
+  MARQUEE_STYLE 
+} from "./constants";
 
 function MusicPlayer({ className }) {
-  const { isPlaying, togglePlay, nextTrack, prevTrack, currentTrack } = useMusicPlayer();
+  const {
+    isPlaying,
+    isRepeating,
+    isShuffling,
+    volume,
+    togglePlay,
+    nextTrack,
+    prevTrack,
+    toggleRepeat,
+    toggleShuffle,
+    setVolume,
+    currentTrack,
+    currentTime,
+    duration,
+    handleVolumePointerDown,
+    controlBarMode,
+    toggleControlBarMode,
+  } = useMusicPlayer();
+
+  const formatTime = (seconds) => {
+    const secsTotal = Math.max(0, Math.floor(seconds));
+    const minutes = Math.floor(secsTotal / 60);
+    const secs = secsTotal % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
 
   // 일반 좌표를 %로 변환하는 함수 (버튼용)
   const getStyle = (pos) => ({
     position: "absolute",
-    left: `${(pos.x / 400) * 100}%`,
-    top: `${(pos.y / 251) * 100}%`,
-    width: `${(pos.w / 400) * 100}%`,
-    height: `${(pos.h / 251) * 100}%`,
+    left: `${(pos.x / VIEWBOX.WIDTH) * 100}%`,
+    top: `${(pos.y / VIEWBOX.HEIGHT) * 100}%`,
+    width: `${(pos.w / VIEWBOX.WIDTH) * 100}%`,
+    height: `${(pos.h / VIEWBOX.HEIGHT) * 100}%`,
   });
 
   // 중심 좌표 기준 스타일
   const getCenterStyle = (cx, cy, w, h, flip = false) => ({
     position: "absolute",
-    left: `${(cx / 400) * 100}%`,
-    top: `${(cy / 251) * 100}%`,
-    width: `${(w / 400) * 100}%`,
-    height: `${(h / 251) * 100}%`,
+    left: `${(cx / VIEWBOX.WIDTH) * 100}%`,
+    top: `${(cy / VIEWBOX.HEIGHT) * 100}%`,
+    width: `${(w / VIEWBOX.WIDTH) * 100}%`,
+    height: `${(h / VIEWBOX.HEIGHT) * 100}%`,
     transform: `translate(-50%, -50%) ${flip ? "scaleX(-1)" : ""}`,
   });
 
   // SVG 문자열에서 불필요한 고정 크기 속성을 제거하는 처리 (선택 사항)
   // 만약 SVG 파일 자체에 width/height가 없다면 이 과정도 생략 가능합니다.
   const cleanSvg = (svgStr) => {
-    return svgStr
-      .replace(/width="S*?"/g, 'width="100%"')
-      .replace(/height="S*?"/g, 'height="100%"');
+    // <svg> 태그 내부의 width, height만 찾아서 100%로 바꾸고, 
+    // 내부의 rect, circle 등의 속성은 건드리지 않도록 수정합니다.
+    return svgStr.replace(/<svg([^>]+)>/, (match, contents) => {
+      // 기존 preserveAspectRatio 속성이 있다면 제거하고 새로 추가
+      const updatedContents = contents
+      .replace(/\bwidth="[^"]*"/, 'width="100%"')
+        .replace(/\bheight="[^"]*"/, 'height="100%"')
+        .replace(/\bpreserveAspectRatio="[^"]*"/, '');
+      return `<svg${updatedContents} preserveAspectRatio="none">`;
+    });
   };
+
+
+
+  const marqueeTextRef = useRef(null);
+  const marqueeContainerRef = useRef(null);
+  const [shouldMarquee, setShouldMarquee] = useState(false);
+
+  useEffect(() => {
+    if (marqueeTextRef.current && marqueeContainerRef.current) {
+      const textWidth = marqueeTextRef.current.scrollWidth;
+      const containerWidth = marqueeContainerRef.current.clientWidth;
+
+      // 텍스트가 컨테이너보다 길면 마퀴 활성화 (여유 공간 5px)
+      if (textWidth > containerWidth + 5) {
+        setShouldMarquee(true);
+      } else {
+        setShouldMarquee(false);
+      }
+    }
+  }, [currentTrack, isPlaying, controlBarMode]); // 곡 정보나 재생 상태, 모드 변경 시 다시 측정
 
   return (
     <div className={`relative w-full aspect-[400/251] ${className}`}>
+      {/* 3. 상태 표시 아이콘 레이어 (재생, 반복 등) - z-index를 낮추고 가장 먼저 렌더링하여 뒤로 보냄 */}
+      <div
+        style={getStyle(BUTTON_MAP.play)}
+        className="pointer-events-none z-0"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(isPlaying ? assets.pauseBtnSvg : assets.playBtnSvg) }}
+      />
+      <div
+        style={getStyle(BUTTON_MAP.prev)}
+        className="pointer-events-none z-0"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.prevSongBtnSvg) }}
+      />
+      <div
+        style={{
+          ...getStyle(BUTTON_MAP.next),
+          transform: "scaleX(-1)"
+        }}
+        className="pointer-events-none z-0"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.prevSongBtnSvg) }}
+      />
+      <div
+        style={getStyle(BUTTON_MAP.repeat)}
+        className="pointer-events-none z-0"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(isRepeating ? assets.activateRepeatBtnSvg : assets.repeatBtnSvg) }}
+      />
+      <div
+        style={getStyle(BUTTON_MAP.shuffle)}
+        className="pointer-events-none z-0"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(isShuffling ? assets.activateShuffleBtnSvg : assets.shuffleBtnSvg) }}
+      />
 
-          {/* 재생/일시정지 버튼 아이콘 */}
-        <div
-            style={getStyle(BUTTON_MAP.play)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(isPlaying ? assets.pauseBtnSvg : assets.playBtnSvg) }}
-        />
+      {/* 1. 디자인 배경 (Body) */}
+      <div 
+        className="absolute inset-0 w-full h-full pointer-events-none z-10"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.bodySvg) }}
+      />
 
-        {/* 이전 곡 버튼 아이콘 */}
-        <div
-            style={getStyle(BUTTON_MAP.prev)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.prevSongBtnSvg) }}
-        />
+      {/* 2. 장식 및 베이스 레이어 (스피커, 컨트롤바, 곡 목록 등) */}
+      <div
+        style={getCenterStyle(66.5, 173.5, 124, 124)}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.speakerSvg) }}
+      />
+      <div
+        style={getCenterStyle(333.5, 173.5, 124, 124, true)}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.speakerSvg) }}
+      />
+      <div
+        style={getStyle({ x: 49.5, y: 58.5, w: 302, h: 25 })}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.controlBarSvg) }}
+      />
 
-        {/* 다음 곡 버튼 아이콘 (이전 곡 버튼 좌우 반전) */}
-        <div
+      <div
+        ref={marqueeContainerRef}
+        style={{
+          ...getStyle({ x: 55, y: 58.5, w: 262, h: 25 }),
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+        className="z-20 pointer-events-none"
+      >
+        <style>{`
+          @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+          }
+        `}</style>
+        {controlBarMode === "title" ? (
+          <div
+            ref={marqueeTextRef}
+            className="whitespace-nowrap font-mono font-bold"
             style={{
-            ...getStyle(BUTTON_MAP.next),
-            transform: "scaleX(-1)"
+              animation: shouldMarquee ? "marquee 12s linear infinite" : "none",
+              fontSize: "10px",
+              color: "#16a34a",
+              display: "inline-block",
+              whiteSpace: "nowrap",
             }}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.prevSongBtnSvg) }}
-        />
+          >
+            {isPlaying
+              ? `${currentTrack.title} - ${currentTrack.artist} 🎵 `
+              : "BOOMBOX READY - SUPPORT STUDY DESK"}
+          </div>
+        ) : (
+          <div className="w-full px-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="truncate text-[9px] font-mono font-bold text-[#16a34a]">
+                {currentTrack.title}
+              </div>
+              <div className="text-[8px] text-[#16a34a] tabular-nums">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </div>
+            </div>
+            <div className="mt-1 h-[4px] w-full overflow-hidden rounded-full bg-black/20">
+              <div
+                className="h-full rounded-full bg-[#16a34a]"
+                style={{
+                  width: `${duration ? Math.min(100, (currentTime / duration) * 100) : 0}%`,
+                  transition: "width 0.2s linear",
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
-        {/* 반복 버튼 아이콘 */}
-        <div
-            style={getStyle(BUTTON_MAP.repeat)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.repeatBtnSvg) }}
-        />
+      <button
+        type="button"
+        style={getStyle({ x: 330, y: 59, w: 18, h: 8 })}
+        onClick={toggleControlBarMode}
+        title="Swap control view"
+        className="pointer-events-auto z-30 flex items-center justify-center rounded-sm text-[10px] text-black transition hover:bg-slate-100"
+      >
+        ▲
+      </button>
+      <button
+        type="button"
+        style={getStyle({ x: 330, y: 71, w: 18, h: 8 })}
+        onClick={toggleControlBarMode}
+        title="Swap control view"
+        className="pointer-events-auto z-30 flex items-center justify-center rounded-sm text-[10px] text-black transition hover:bg-slate-100"
+      >
+        ▼
+      </button>
 
-        {/* 셔플 버튼 아이콘 */}
-        <div
-            style={getStyle(BUTTON_MAP.shuffle)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.shuffleBtnSvg) }}
-        />
+      <div
+        style={getCenterStyle(24, 73, 27, 27)}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.songListSvg) }}
+      />
 
-    
-        {/* 1. 디자인 배경 (Body) */}
-        <div 
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.bodySvg) }}
-        />
-            
-        {/* 스피커 레이어 */}
-        <div
-            style={getCenterStyle(66.5, 173.5, 124, 124)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.speakerSvg) }}
-        />
-        <div
-            style={getCenterStyle(333.5, 173.5, 124, 124, true)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.speakerSvg) }}
-        />
-        
-        {/* 컨트롤 바 레이어 */}
-        <div
-            style={getStyle({ x: 49.5, y: 58.5, w: 301, h: 25 })}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.controlBarSvg) }}
-        />
+      {/* 4. 인터랙티브 볼륨 노브 레이어 */}
+      <div
+        style={{
+          ...getCenterStyle(377, 73, 27, 27),
+          transform: `${getCenterStyle(377, 73, 27, 27).transform} rotate(${(volume * 270) - 135}deg)`,
+          cursor: "ns-resize"
+        }}
+        className="pointer-events-auto z-30"
+        onPointerDown={handleVolumePointerDown}
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.volumeKnobSvg) }}
+      />
 
-        {/* 볼륨 노브 레이어 */}
-        <div
-            style={getCenterStyle(377, 73 , 27, 27)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.volumeKnobSvg) }}
-        />
-        
-        {/* 곡 목록 레이어 */}
-        <div
-            style={getCenterStyle(24, 73, 27, 27)}
-            className="pointer-events-none"
-            dangerouslySetInnerHTML={{ __html: cleanSvg(assets.songListSvg) }}
-        />
-
-
-      {/* 2. 인터랙티브 버튼 레이어 */}
-      <div className="absolute inset-0 w-full h-full">
-        {/* 재생 버튼 */}
+      {/* 5. 인터랙티브 버튼 히트박스 레이어 (가장 앞) */}
+      <div className="absolute inset-0 w-full h-full pointer-events-none z-40">
         <button
           style={getStyle(BUTTON_MAP.play)}
-          className="bg-transparent hover:bg-black/10 rounded-full transition-colors"
+          className="bg-transparent hover:bg-black/10 rounded-full transition-colors pointer-events-auto"
           onClick={togglePlay}
           title="Play/Pause"
         />
-        {/* 이전 곡 버튼 */}
         <button
           style={getStyle(BUTTON_MAP.prev)}
-          className="bg-transparent hover:bg-black/10 rounded-sm"
+          className="bg-transparent hover:bg-black/10 rounded-sm pointer-events-auto"
           onClick={prevTrack}
           title="Previous"
         />
-        {/* 다음 곡 버튼 */}
         <button
           style={getStyle(BUTTON_MAP.next)}
-          className="bg-transparent hover:bg-black/10 rounded-sm"
+          className="bg-transparent hover:bg-black/10 rounded-sm pointer-events-auto"
           onClick={nextTrack}
           title="Next"
         />
-
-        {/* 반복 버튼 */}
         <button
           style={getStyle(BUTTON_MAP.repeat)}
-          className="bg-transparent hover:bg-black/10 rounded-sm"
-          onClick={togglePlay}
+          className="bg-transparent hover:bg-black/10 rounded-sm pointer-events-auto"
+          onClick={toggleRepeat}
           title="Repeat"
         />
-
-        {/* 셔플 버튼 */}
         <button
           style={getStyle(BUTTON_MAP.shuffle)}
-          className="bg-transparent hover:bg-black/10 rounded-sm"
-          onClick={togglePlay}
+          className="bg-transparent hover:bg-black/10 rounded-sm pointer-events-auto"
+          onClick={toggleShuffle}
           title="Shuffle"
         />
       </div>
