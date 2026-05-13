@@ -1,0 +1,12 @@
+import React from "react";
+
+const Boombox1VolumeKnob = ({ width = "28", height = "28", color = "black", ...props }) => (
+
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+<circle cx="14" cy="14" r="13.5" fill="white" stroke="black"/>
+<rect x="9.5" y="0.5" width="9" height="27" fill="white" stroke="black"/>
+<path d="M14 2L16.5981 6.5H11.4019L14 2Z" fill="black"/>
+</svg>
+);
+
+export default Boombox1VolumeKnob;
