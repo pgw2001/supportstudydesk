@@ -90,7 +90,7 @@ function Dashboard() {
           initialLeft="70%"
           initialTop="80%"
           className="z-[999]"
-          style={{ width: "20%" }}
+          style={{ width: "25%" }}
         >
           <div className="p-2">
             <PlannerButton />
