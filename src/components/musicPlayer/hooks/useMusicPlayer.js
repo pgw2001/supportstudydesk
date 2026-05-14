@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { DEFAULT_VOLUME, VIEWBOX } from "../constants";
-
+ 
 const songModules = import.meta.glob("../songs/*.mp3", { eager: true });
 
 const parseSongMetadata = (path, module, index) => {
@@ -23,7 +23,7 @@ const parseSongMetadata = (path, module, index) => {
   };
 };
 
-const SONG_PLAYLIST = Object.entries(songModules)
+export const SONG_PLAYLIST = Object.entries(songModules) // Export SONG_PLAYLIST
   .sort(([a], [b]) => a.localeCompare(b))
   .map(([path, module], index) => parseSongMetadata(path, module, index));
 
@@ -37,8 +37,23 @@ export const useMusicPlayer = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  const playlist = SONG_PLAYLIST;
-  const currentTrack = playlist[currentTrackIndex];
+  // 플레이리스트 관련 상태
+  const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
+  const [userPlaylists, setUserPlaylists] = useState(() => {
+    const saved = localStorage.getItem("boombox_playlists");
+    return saved ? JSON.parse(saved) : [{ id: 'all', name: 'All Tracks', songIds: SONG_PLAYLIST.map(s => s.id), isSystem: true }];
+  });
+  const [activePlaylistId, setActivePlaylistId] = useState('all');
+
+  // 현재 선택된 플레이리스트의 곡 목록 필터링
+  const playlist = useMemo(() => {
+    const currentList = userPlaylists.find(p => p.id === activePlaylistId) || userPlaylists[0];
+    return SONG_PLAYLIST.filter(song => currentList.songIds.includes(song.id));
+  }, [userPlaylists, activePlaylistId]);
+
+  const currentTrack = useMemo(() => playlist[currentTrackIndex] || playlist[0] || SONG_PLAYLIST[0], 
+    [playlist, currentTrackIndex]);
+
   const audioRef = useRef(new Audio());
 
   useEffect(() => {
@@ -50,6 +65,11 @@ export const useMusicPlayer = () => {
   useEffect(() => {
     audioRef.current.volume = volume;
   }, [volume]);
+
+  // 로컬 스토리지 저장
+  useEffect(() => {
+    localStorage.setItem("boombox_playlists", JSON.stringify(userPlaylists));
+  }, [userPlaylists]);
 
   const nextTrack = useCallback(() => {
     setCurrentTrackIndex((prev) => {
@@ -140,6 +160,44 @@ export const useMusicPlayer = () => {
     setControlBarMode((prev) => (prev === 'title' ? 'progress' : 'title'));
   }, []);
 
+  const togglePlaylistWindow = useCallback(() => {
+    setIsPlaylistOpen((prev) => !prev);
+  }, []);
+
+  // 플레이리스트 커스텀 기능
+  const createPlaylist = useCallback((name) => {
+    const newList = { id: Date.now(), name, songIds: [] };
+    setUserPlaylists(prev => [...prev, newList]);
+  }, []);
+
+  const deletePlaylist = useCallback((id) => {
+    setUserPlaylists(prev => {
+      const filtered = prev.filter(p => p.id !== id || p.isSystem);
+      if (activePlaylistId === id) setActivePlaylistId('all');
+      return filtered;
+    });
+  }, [activePlaylistId]);
+
+  const toggleSongInPlaylist = useCallback((playlistId, songId) => {
+    setUserPlaylists(prev => prev.map(p => {
+      if (p.id === playlistId && !p.isSystem) {
+        const hasSong = p.songIds.includes(songId);
+        return {
+          ...p,
+          songIds: hasSong 
+            ? p.songIds.filter(id => id !== songId) 
+            : [...p.songIds, songId]
+        };
+      }
+      return p;
+    }));
+  }, []);
+
+  const selectPlaylist = useCallback((id) => {
+    setActivePlaylistId(id);
+    setCurrentTrackIndex(0);
+  }, []);
+
   const formatTime = useCallback((seconds) => {
     const secsTotal = Math.max(0, Math.floor(seconds));
     const minutes = Math.floor(secsTotal / 60);
@@ -211,6 +269,15 @@ export const useMusicPlayer = () => {
     toggleControlBarMode,
     handleProgressBarClick,
     formatTime,
+    // 새 기능들
+    isPlaylistOpen,
+    togglePlaylistWindow,
+    userPlaylists,
+    activePlaylistId,
+    createPlaylist,
+    deletePlaylist,
+    toggleSongInPlaylist,
+    selectPlaylist,
     getStyle,
     getCenterStyle,
     cleanSvg,

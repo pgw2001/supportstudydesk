@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import * as assets from "./boomboxAssets";
-import { useMusicPlayer } from "./hooks/useMusicPlayer";
+import { useMusicPlayer, SONG_PLAYLIST } from "./hooks/useMusicPlayer"; // Import SONG_PLAYLIST
+import PlaylistFloatingWindow from "./hooks/PlaylistFloatingWindow"; // Import PlaylistFloatingWindow
 import { 
   BUTTON_MAP, 
   VIEWBOX, 
@@ -32,6 +33,15 @@ function MusicPlayer({ className }) {
     getStyle,
     getCenterStyle,
     cleanSvg,
+    // New playlist features
+    isPlaylistOpen,
+    togglePlaylistWindow,
+    userPlaylists,
+    activePlaylistId,
+    createPlaylist,
+    deletePlaylist,
+    toggleSongInPlaylist,
+    selectPlaylist,
   } = useMusicPlayer();
 
   const marqueeTextRef = useRef(null);
@@ -113,6 +123,12 @@ function MusicPlayer({ className }) {
         style={getStyle({ x: 49.5, y: 58.5, w: 302, h: 25 })}
         className="pointer-events-none z-20"
         dangerouslySetInnerHTML={{ __html: cleanSvg(assets.controlBarSvg) }}
+      />
+
+      <div
+        style={getCenterStyle(24, 73, 27, 27)}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.songListSvg) }}
       />
 
       <div
@@ -205,12 +221,6 @@ function MusicPlayer({ className }) {
         </svg>
       </button>
 
-      <div
-        style={getCenterStyle(24, 73, 27, 27)}
-        className="pointer-events-none z-20"
-        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.songListSvg) }}
-      />
-
       {/* 4. 인터랙티브 볼륨 노브 레이어 */}
       <div
         style={{
@@ -255,9 +265,31 @@ function MusicPlayer({ className }) {
           onClick={toggleShuffle}
           title="Shuffle"
         />
+        {/* Song List Button (clickable area over the visual SVG) */}
+        <button
+          style={getCenterStyle(24, 73, 27, 27)} // Use the same style as the visual songListSvg
+          className="bg-transparent hover:bg-black/10 rounded-sm pointer-events-auto"
+          onClick={togglePlaylistWindow}
+          title="Song List"
+        />
       </div>
+
+      {/* Playlist Floating Window */}
+      <PlaylistFloatingWindow
+        isOpen={isPlaylistOpen}
+        onClose={togglePlaylistWindow}
+        userPlaylists={userPlaylists}
+        activePlaylistId={activePlaylistId}
+        selectPlaylist={selectPlaylist}
+        createPlaylist={createPlaylist}
+        deletePlaylist={deletePlaylist}
+        toggleSongInPlaylist={toggleSongInPlaylist}
+        allSongs={SONG_PLAYLIST} // Pass the full list of songs
+        currentTrack={currentTrack} // Pass current track to highlight
+      />
     </div>
   );
 }
+
 
 export default MusicPlayer;

@@ -12,6 +12,7 @@ export const BUTTON_MAP = {
   next: { x: 217.5, y: 35, w: 30, h: 19 },
   repeat: { x: 250.5, y: 35, w: 30, h: 19 },
   shuffle: { x: 118.5, y: 35, w: 30, h: 19 },
+  songList: { x: 85.5, y: 35, w: 30, h: 19 },
 };
 
 export const DEFAULT_MARQUEE_TEXT = "BOOMBOX READY - SUPPORT STUDY DESK";
