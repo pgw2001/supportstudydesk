@@ -14,6 +14,7 @@ const PlaylistFloatingWindow = ({
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [isSongAddMode, setIsSongAddMode] = useState(false);
 
   if (!isOpen) return null;
 
@@ -94,16 +95,31 @@ const PlaylistFloatingWindow = ({
       </div>
 
       {/* Songs in Active Playlist */}
-      <div className="flex-grow overflow-y-auto border-t border-gray-200 pt-4">
-        <h4 className="font-semibold mb-2">
-          {activePlaylist ? activePlaylist.name : 'Select a Playlist'} ({activePlaylist ? activePlaylist.songIds.length : 0} songs)
-        </h4>
+      <div className="flex-grow overflow-y-auto border-t border-gray-200 pt-4 flex flex-col">
+        {/* Playlist Header with Add Button */}
+        <div className="flex justify-between items-center mb-2 sticky top-0 bg-white pb-2">
+          <h4 className="font-semibold">
+            {activePlaylist ? activePlaylist.name : 'Select a Playlist'} ({activePlaylist ? activePlaylist.songIds.length : 0} songs)
+          </h4>
+          {activePlaylist && !activePlaylist.isSystem && (
+            <button
+              onClick={() => setIsSongAddMode(!isSongAddMode)}
+              className="ml-2 text-lg leading-none bg-blue-500 hover:bg-blue-600 text-white w-6 h-6 rounded flex items-center justify-center transition-all active:scale-95"
+              title={isSongAddMode ? 'Cancel' : 'Add Song'}
+            >
+              {isSongAddMode ? '✕' : '+'}
+            </button>
+          )}
+        </div>
+
+        {/* Song List or Add Mode */}
         {activePlaylist && (
-          <ul>
-            {allSongs.map(song => (
-              <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
-                <span>{song.title} - {song.artist}</span>
-                {!activePlaylist.isSystem && (
+          <ul className="flex-grow overflow-y-auto">
+            {isSongAddMode ? (
+              // Song Add Mode - Show all songs with Add/Remove buttons
+              allSongs.map(song => (
+                <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
+                  <span>{song.title} - {song.artist}</span>
                   <button
                     onClick={() => toggleSongInPlaylist(activePlaylist.id, song.id)}
                     className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
@@ -112,9 +128,24 @@ const PlaylistFloatingWindow = ({
                   >
                     {activePlaylist.songIds.includes(song.id) ? 'Remove' : 'Add'}
                   </button>
-                )}
-              </li>
-            ))}
+                </li>
+              ))
+            ) : (
+              // Normal Mode - Show only songs in the playlist
+              activePlaylist.songIds.length > 0 ? (
+                allSongs
+                  .filter(song => activePlaylist.songIds.includes(song.id))
+                  .map(song => (
+                    <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
+                      <span>{song.title} - {song.artist}</span>
+                    </li>
+                  ))
+              ) : (
+                <li className="py-2 px-2 text-sm text-gray-500">
+                  No songs yet. Click + to add songs.
+                </li>
+              )
+            )}
           </ul>
         )}
       </div>
