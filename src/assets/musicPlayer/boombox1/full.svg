@@ -1,0 +1,63 @@
+<svg width="400" height="251" viewBox="0 0 400 251" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="118.5" y="35" width="30" height="19" rx="1.5" fill="white" stroke="black"/>
+<path d="M139 46.1933H136.847C135.544 46.1933 134.323 45.4798 133.574 44.2811L132.198 42.0789C131.449 40.8802 130.228 40.1667 128.925 40.1667L127 40.1667" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M139 40.1666H136.847C135.544 40.1666 134.323 40.9559 133.574 42.2819L132.198 44.718C131.449 46.0441 130.228 46.8333 128.925 46.8333L127 46.8333" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M137.667 38.1667L139.667 40.1667L137.667 42.1667" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M137.667 44.1667L139.667 46.1667L137.667 48.1667" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<rect x="151.5" y="35" width="30" height="19" rx="1.5" fill="white" stroke="black"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M162.979 43.1107C162.256 43.4828 162.256 44.5172 162.979 44.8893L169.636 48.313C170.302 48.6553 171.094 48.1721 171.094 47.4237V40.5763C171.094 39.8279 170.302 39.3447 169.636 39.687L162.979 43.1107Z" stroke="black" stroke-linejoin="round"/>
+<path d="M161.25 48.5V39.5" stroke="black" stroke-linecap="round"/>
+<rect x="184.5" y="35" width="30" height="19" rx="1.5" fill="white" stroke="black"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M195.333 38.6667V49.3334H198V38.6667H195.333Z" stroke="black" stroke-linecap="round" stroke-linejoin="round"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M202 38.6667V49.3334H204.667V38.6667H202Z" stroke="black" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="217.5" y="35" width="30" height="19" rx="1.5" fill="white" stroke="black"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M236.021 43.1107C236.744 43.4828 236.744 44.5172 236.021 44.8893L229.364 48.313C228.698 48.6553 227.906 48.1721 227.906 47.4237V40.5763C227.906 39.8279 228.698 39.3447 229.364 39.687L236.021 43.1107Z" stroke="black" stroke-linejoin="round"/>
+<path d="M237.75 48.5V39.5" stroke="black" stroke-linecap="round"/>
+<rect x="250.5" y="35" width="30" height="19" rx="1.5" fill="white" stroke="black"/>
+<path d="M259.25 45.15V43.875C259.25 41.8039 260.929 40.125 263 40.125H271.125V40.125" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M269.875 38.25L271.75 40.125L269.875 42" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M271.75 43.2375V44.5125C271.75 46.5836 270.071 48.2625 268 48.2625H259.875V48.2625" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M261.125 50.125L259.25 48.25L261.125 46.375" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
+<path d="M266.081 42.4648V46H265.441V43.085H265.422L264.597 43.6123V43.0312L265.471 42.4648H266.081Z" fill="black"/>
+<rect x="35.5" y="7.5" width="13" height="48" fill="white" stroke="black"/>
+<rect x="352.5" y="7.5" width="13" height="48" fill="white" stroke="black"/>
+<path d="M35 2C35 0.89543 35.8954 0 37 0H364C365.105 0 366 0.895431 366 2V13H35V2Z" fill="black"/>
+<rect x="0.5" y="51.5" width="399" height="199" rx="1.5" fill="white"/>
+<rect x="0.5" y="51.5" width="399" height="199" rx="1.5" stroke="black"/>
+<rect x="0.5" y="93.5" width="139" height="157" rx="1.5" fill="white" stroke="black"/>
+<rect x="260.5" y="93.5" width="139" height="157" rx="1.5" fill="white" stroke="black"/>
+<rect x="143.5" y="177.5" width="112" height="68" rx="1.5" fill="white" stroke="black"/>
+<rect x="140.5" y="93.5" width="119" height="79" rx="1.5" fill="white" stroke="black"/>
+<rect x="145.5" y="97.5" width="110" height="71" rx="1.5" fill="white" stroke="black"/>
+<rect x="156.5" y="108.5" width="87" height="43" fill="white" stroke="black"/>
+<rect x="166.5" y="119.5" width="67" height="20" rx="10" fill="white" stroke="black"/>
+<circle cx="177" cy="129.5" r="8" fill="white" stroke="black"/>
+<rect x="188" y="122.5" width="24" height="14" fill="white" stroke="black"/>
+<circle cx="223" cy="129.5" r="8" fill="white" stroke="black"/>
+<circle cx="368" cy="60" r="1" fill="black"/>
+<circle cx="371.2" cy="57.2" r="1.2" fill="black"/>
+<circle cx="375.4" cy="55.4" r="1.4" fill="black"/>
+<circle cx="380.5" cy="55.5" r="1.5" fill="black"/>
+<circle cx="385.65" cy="57.65" r="1.65" fill="black"/>
+<circle cx="66.5" cy="173.5" r="62" fill="white" stroke="black"/>
+<circle cx="66.5" cy="174" r="55.5" fill="white" stroke="black"/>
+<circle cx="66.5" cy="174" r="53.5" fill="white" stroke="black"/>
+<circle cx="76.5" cy="170" r="13.5" fill="white" stroke="black"/>
+<circle cx="76.5" cy="170" r="10.5" fill="white" stroke="black"/>
+<circle cx="62.5" cy="62.5" r="62" transform="matrix(-1 0 0 1 396 111)" fill="white" stroke="black"/>
+<circle cx="56" cy="56" r="55.5" transform="matrix(-1 0 0 1 389.5 118)" fill="white" stroke="black"/>
+<circle cx="54" cy="54" r="53.5" transform="matrix(-1 0 0 1 387.5 120)" fill="white" stroke="black"/>
+<circle cx="14" cy="14" r="13.5" transform="matrix(-1 0 0 1 339.5 156)" fill="white" stroke="black"/>
+<circle cx="11" cy="11" r="10.5" transform="matrix(-1 0 0 1 336.5 159)" fill="white" stroke="black"/>
+<rect x="49.5" y="58.5" width="302" height="29" rx="1.5" fill="white" stroke="black"/>
+<circle cx="377" cy="73" r="13.5" fill="white" stroke="black"/>
+<rect x="372.5" y="59.5" width="9" height="27" fill="white" stroke="black"/>
+<path d="M377 61L379.598 65.5H374.402L377 61Z" fill="black"/>
+<circle cx="24" cy="73" r="13.5" fill="white" stroke="black"/>
+<path d="M22.5 69.25H28.5" stroke="black" stroke-linecap="round"/>
+<path d="M22.5 73H28.5" stroke="black" stroke-linecap="round"/>
+<path d="M22.5 76.75H28.5" stroke="black" stroke-linecap="round"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M19.5 70C19.9142 70 20.25 69.6642 20.25 69.25C20.25 68.8358 19.9142 68.5 19.5 68.5C19.0858 68.5 18.75 68.8358 18.75 69.25C18.75 69.6642 19.0858 70 19.5 70Z" fill="black"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M19.5 73.75C19.9142 73.75 20.25 73.4142 20.25 73C20.25 72.5858 19.9142 72.25 19.5 72.25C19.0858 72.25 18.75 72.5858 18.75 73C18.75 73.4142 19.0858 73.75 19.5 73.75Z" fill="black"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M19.5 77.5C19.9142 77.5 20.25 77.1642 20.25 76.75C20.25 76.3358 19.9142 76 19.5 76C19.0858 76 18.75 76.3358 18.75 76.75C18.75 77.1642 19.0858 77.5 19.5 77.5Z" fill="black"/>
+</svg>
