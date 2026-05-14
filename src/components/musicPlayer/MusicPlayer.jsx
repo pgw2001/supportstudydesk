@@ -53,7 +53,7 @@ function MusicPlayer({ className }) {
   }, [currentTrack, isPlaying, controlBarMode]); // 곡 정보나 재생 상태, 모드 변경 시 다시 측정
 
   return (
-    <div className={`relative w-full aspect-[400/251] ${className}`}>
+    <div className={`relative w-full aspect-[400/252] ${className}`}>
       {/* 3. 상태 표시 아이콘 레이어 (재생, 반복 등) - z-index를 낮추고 가장 먼저 렌더링하여 뒤로 보냄 */}
       <div
         style={getStyle(BUTTON_MAP.play)}
@@ -92,12 +92,20 @@ function MusicPlayer({ className }) {
 
       {/* 2. 장식 및 베이스 레이어 (스피커, 컨트롤바, 곡 목록 등) */}
       <div
-        style={getCenterStyle(66.5, 173.5, 124, 124)}
+        style={{
+          ...getCenterStyle(66.5, 173.5, 124, 124),
+          animation: isPlaying ? "speaker-pump 0.8s ease-in-out infinite" : "none",
+          "--speaker-scale": 1 + (volume * 0.1)
+        }}
         className="pointer-events-none z-20"
         dangerouslySetInnerHTML={{ __html: cleanSvg(assets.speakerSvg) }}
       />
       <div
-        style={getCenterStyle(333.5, 173.5, 124, 124, true)}
+        style={{
+          ...getCenterStyle(333.5, 173.5, 124, 124, true),
+          animation: isPlaying ? "speaker-pump-flip 0.8s ease-in-out infinite" : "none",
+          "--speaker-scale": 1 + (volume * 0.1)
+        }}
         className="pointer-events-none z-20"
         dangerouslySetInnerHTML={{ __html: cleanSvg(assets.speakerSvg) }}
       />
@@ -122,6 +130,14 @@ function MusicPlayer({ className }) {
           @keyframes marquee {
             0% { transform: translateX(100%); }
             100% { transform: translateX(-100%); }
+          }
+          @keyframes speaker-pump {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(var(--speaker-scale, 1.05)); }
+          }
+          @keyframes speaker-pump-flip {
+            0%, 100% { transform: translate(-50%, -50%) scaleX(-1) scale(1); }
+            50% { transform: translate(-50%, -50%) scaleX(-1) scale(var(--speaker-scale, 1.05)); }
           }
         `}</style>
         {controlBarMode === "title" ? (
