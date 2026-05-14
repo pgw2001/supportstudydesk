@@ -33,10 +33,6 @@ const PlaylistFloatingWindow = ({
 
   const handlePointerDown = (e) => {
     e.stopPropagation(); // Prevent event from bubbling up to parent elements
-
-    // 버튼이나 입력창을 클릭한 경우 드래그 로직을 건너뜁니다.
-    if (e.target.closest('button') || e.target.closest('input')) return;
-
     const handle = e.target.closest('.drag-handle');
     if (handle) {
       isDragging.current = true;
@@ -99,7 +95,7 @@ const PlaylistFloatingWindow = ({
               key={playlist.id}
               onClick={() => {
                 selectPlaylist(playlist.id);
-                setIsSongAddMode(false); // 다른 플레이리스트 선택 시 곡 추가 모드 해제
+                setIsSongAddMode(false);
               }}
               className={`px-3 py-1 rounded-full text-sm ${
                 activePlaylistId === playlist.id ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
@@ -163,21 +159,19 @@ const PlaylistFloatingWindow = ({
           <ul className="flex-grow">
             {isSongAddMode ? (
               // 곡 추가 모드: 전체 곡 목록을 보여주고 추가/제거 버튼 제공
-          allSongs.filter(song => !activePlaylist.songIds.includes(song.id)).length > 0 ? (
-            allSongs.filter(song => !activePlaylist.songIds.includes(song.id)).map(song => (
-              <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
-                <span className="truncate">{song.title} - {song.artist}</span>
-                <button
-                  onClick={() => toggleSongInPlaylist(activePlaylist.id, song.id)}
-                  className="ml-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 bg-green-500 text-white hover:bg-green-600 transition-colors active:scale-90"
-                >
-                  +
-                </button>
-              </li>
-            ))
-          ) : (
-            <li className="text-xs text-gray-500 py-4 text-center">All available songs are added!</li>
-          )
+              allSongs.map(song => (
+                <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
+                  <span className="truncate">{song.title} - {song.artist}</span>
+                  <button
+                    onClick={() => toggleSongInPlaylist(activePlaylist.id, song.id)}
+                    className={`ml-2 px-2 py-0.5 rounded-full text-xs flex-shrink-0 ${
+                      activePlaylist.songIds.includes(song.id) ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+                    }`}
+                  >
+                    {activePlaylist.songIds.includes(song.id) ? 'Remove' : 'Add'}
+                  </button>
+                </li>
+              ))
             ) : (
               // 일반 모드: 현재 플레이리스트에 포함된 곡만 표시
               <>

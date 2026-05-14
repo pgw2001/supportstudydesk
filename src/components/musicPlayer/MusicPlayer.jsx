@@ -174,17 +174,15 @@ function MusicPlayer({ className }) {
           </div>
         ) : (
           <div className="w-full px-1">
-            <div className="flex items-center justify-between gap-2">
-              <div className="truncate text-[9px] font-mono font-bold text-[#16a34a]">
-                {currentTrack.title}
-              </div>
-              <div className="text-[8px] text-[#16a34a] tabular-nums">
+            <div className="flex items-center justify-center">
+              <div className="text-[9px] font-mono font-bold text-[#16a34a] tabular-nums">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
             <div 
-              className="mt-1 h-[4px] w-full overflow-hidden rounded-full bg-black/20 cursor-pointer pointer-events-auto" 
+              className="mt-0.5 h-[7px] w-full overflow-hidden rounded-full bg-black/20 cursor-pointer pointer-events-auto" 
               onClick={handleProgressBarClick}
+              data-no-drag="true"
             >
               <div
                 className="h-full rounded-full bg-[#16a34a]"
