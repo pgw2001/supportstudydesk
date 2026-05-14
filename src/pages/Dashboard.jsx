@@ -10,6 +10,7 @@ import Quotes from "../components/quotes/Quotes";
 import deskSvg from "../assets/desk.svg";
 import windowSvg from "../assets/window.svg";
 import Calendar from "../components/calendar/Calendar";
+import PlannerButton from "../components/planner/PlannerButton";
 import Draggable from "../utils/Draggable";
 import MusicPlayer from "../components/musicPlayer/MusicPlayer";
 
@@ -85,6 +86,19 @@ function Dashboard() {
           <Timer />
         </Draggable>
         
+
+        {/* Planner */}
+        <Draggable
+          initialLeft="70%"
+          initialTop="80%"
+          className="z-[999]"
+          style={{ width: "25%" }}
+        >
+          <div className="p-2">
+            <PlannerButton />
+          </div>
+        </Draggable>
+
         {/* Desk */}
         <div className="absolute top-[82%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
 
