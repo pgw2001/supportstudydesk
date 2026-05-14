@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 const PlaylistFloatingWindow = ({
   isOpen,
@@ -14,7 +14,9 @@ const PlaylistFloatingWindow = ({
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
-  const [isSongAddMode, setIsSongAddMode] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
 
   if (!isOpen) return null;
 
@@ -28,11 +30,50 @@ const PlaylistFloatingWindow = ({
     }
   };
 
+  const handlePointerDown = (e) => {
+    e.stopPropagation(); // Prevent event from bubbling up to parent elements
+    const handle = e.target.closest('.drag-handle');
+    if (handle) {
+      isDragging.current = true;
+      dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging.current) return;
+    setPosition({
+      x: e.clientX - dragStart.current.x,
+      y: e.clientY - dragStart.current.y,
+    });
+  };
+
+  const handlePointerUp = () => {
+    isDragging.current = false;
+  };
+
   return (
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[400px] bg-white border-2 border-black rounded-lg shadow-lg z-50 p-4 flex flex-col font-mono">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold">Playlists</h3>
-        <button onClick={onClose} className="text-xl font-bold hover:text-red-500">✕</button>
+    <div 
+      className="absolute top-1/2 left-1/2 w-[300px] h-[400px] bg-white border-2 border-black rounded-lg shadow-lg z-50 p-4 flex flex-col font-mono select-none"
+      style={{
+        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+        touchAction: 'none'
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
+      <div className="flex justify-between items-center mb-4 drag-handle cursor-move">
+        <h3 className="text-lg font-bold pointer-events-none">Playlists</h3>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }} 
+          className="text-xl font-bold hover:text-red-500 p-1"
+        >
+          ✕
+        </button>
       </div>
 
       {/* Playlist Management */}
@@ -95,31 +136,16 @@ const PlaylistFloatingWindow = ({
       </div>
 
       {/* Songs in Active Playlist */}
-      <div className="flex-grow overflow-y-auto border-t border-gray-200 pt-4 flex flex-col">
-        {/* Playlist Header with Add Button */}
-        <div className="flex justify-between items-center mb-2 sticky top-0 bg-white pb-2">
-          <h4 className="font-semibold">
-            {activePlaylist ? activePlaylist.name : 'Select a Playlist'} ({activePlaylist ? activePlaylist.songIds.length : 0} songs)
-          </h4>
-          {activePlaylist && !activePlaylist.isSystem && (
-            <button
-              onClick={() => setIsSongAddMode(!isSongAddMode)}
-              className="ml-2 text-lg leading-none bg-blue-500 hover:bg-blue-600 text-white w-6 h-6 rounded flex items-center justify-center transition-all active:scale-95"
-              title={isSongAddMode ? 'Cancel' : 'Add Song'}
-            >
-              {isSongAddMode ? '✕' : '+'}
-            </button>
-          )}
-        </div>
-
-        {/* Song List or Add Mode */}
+      <div className="flex-grow overflow-y-auto border-t border-gray-200 pt-4">
+        <h4 className="font-semibold mb-2">
+          {activePlaylist ? activePlaylist.name : 'Select a Playlist'} ({activePlaylist ? activePlaylist.songIds.length : 0} songs)
+        </h4>
         {activePlaylist && (
-          <ul className="flex-grow overflow-y-auto">
-            {isSongAddMode ? (
-              // Song Add Mode - Show all songs with Add/Remove buttons
-              allSongs.map(song => (
-                <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
-                  <span>{song.title} - {song.artist}</span>
+          <ul>
+            {allSongs.map(song => (
+              <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
+                <span>{song.title} - {song.artist}</span>
+                {!activePlaylist.isSystem && (
                   <button
                     onClick={() => toggleSongInPlaylist(activePlaylist.id, song.id)}
                     className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
@@ -128,24 +154,9 @@ const PlaylistFloatingWindow = ({
                   >
                     {activePlaylist.songIds.includes(song.id) ? 'Remove' : 'Add'}
                   </button>
-                </li>
-              ))
-            ) : (
-              // Normal Mode - Show only songs in the playlist
-              activePlaylist.songIds.length > 0 ? (
-                allSongs
-                  .filter(song => activePlaylist.songIds.includes(song.id))
-                  .map(song => (
-                    <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
-                      <span>{song.title} - {song.artist}</span>
-                    </li>
-                  ))
-              ) : (
-                <li className="py-2 px-2 text-sm text-gray-500">
-                  No songs yet. Click + to add songs.
-                </li>
-              )
-            )}
+                )}
+              </li>
+            ))}
           </ul>
         )}
       </div>
