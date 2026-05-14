@@ -203,21 +203,25 @@ function MusicPlayer({ className }) {
 
       <button
         type="button"
-        style={getStyle({ x: 330, y: 59, w: 18, h: 8 })}
+        style={getStyle({ x: 330, y: 61, w: 18, h: 8 })}
         onClick={toggleControlBarMode}
         title="Swap control view"
         className="pointer-events-auto z-30 flex items-center justify-center rounded-sm text-[10px] text-black transition hover:bg-slate-100"
       >
-        ▲
+        <svg viewBox="0 0 10 6" className="w-2.5 h-1.5 fill-current">
+          <path d="M5 0L10 6H0L5 0Z" />
+        </svg>
       </button>
       <button
         type="button"
-        style={getStyle({ x: 330, y: 71, w: 18, h: 8 })}
+        style={getStyle({ x: 330, y: 70, w: 18, h: 8 })}
         onClick={toggleControlBarMode}
         title="Swap control view"
         className="pointer-events-auto z-30 flex items-center justify-center rounded-sm text-[10px] text-black transition hover:bg-slate-100"
       >
-        ▼
+        <svg viewBox="0 0 10 6" className="w-2.5 h-1.5 fill-current">
+          <path d="M5 6L0 0H10L5 6Z" />
+        </svg>
       </button>
 
       <div

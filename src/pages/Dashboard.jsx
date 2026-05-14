@@ -87,6 +87,7 @@ function Dashboard() {
           <TodoList />
         </Draggable>
 
+        {/* Music Player */}
         <Draggable initialLeft="70%" initialTop="50%" className="z-20" style={{ width: '26%'}}>
           <MusicPlayer />
         </Draggable>
