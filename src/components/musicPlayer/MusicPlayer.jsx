@@ -26,51 +26,13 @@ function MusicPlayer({ className }) {
     duration,
     handleVolumePointerDown,
     controlBarMode,
+    handleProgressBarClick,
     toggleControlBarMode,
+    formatTime,
+    getStyle,
+    getCenterStyle,
+    cleanSvg,
   } = useMusicPlayer();
-
-  const formatTime = (seconds) => {
-    const secsTotal = Math.max(0, Math.floor(seconds));
-    const minutes = Math.floor(secsTotal / 60);
-    const secs = secsTotal % 60;
-    return `${minutes}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  // 일반 좌표를 %로 변환하는 함수 (버튼용)
-  const getStyle = (pos) => ({
-    position: "absolute",
-    left: `${(pos.x / VIEWBOX.WIDTH) * 100}%`,
-    top: `${(pos.y / VIEWBOX.HEIGHT) * 100}%`,
-    width: `${(pos.w / VIEWBOX.WIDTH) * 100}%`,
-    height: `${(pos.h / VIEWBOX.HEIGHT) * 100}%`,
-  });
-
-  // 중심 좌표 기준 스타일
-  const getCenterStyle = (cx, cy, w, h, flip = false) => ({
-    position: "absolute",
-    left: `${(cx / VIEWBOX.WIDTH) * 100}%`,
-    top: `${(cy / VIEWBOX.HEIGHT) * 100}%`,
-    width: `${(w / VIEWBOX.WIDTH) * 100}%`,
-    height: `${(h / VIEWBOX.HEIGHT) * 100}%`,
-    transform: `translate(-50%, -50%) ${flip ? "scaleX(-1)" : ""}`,
-  });
-
-  // SVG 문자열에서 불필요한 고정 크기 속성을 제거하는 처리 (선택 사항)
-  // 만약 SVG 파일 자체에 width/height가 없다면 이 과정도 생략 가능합니다.
-  const cleanSvg = (svgStr) => {
-    // <svg> 태그 내부의 width, height만 찾아서 100%로 바꾸고, 
-    // 내부의 rect, circle 등의 속성은 건드리지 않도록 수정합니다.
-    return svgStr.replace(/<svg([^>]+)>/, (match, contents) => {
-      // 기존 preserveAspectRatio 속성이 있다면 제거하고 새로 추가
-      const updatedContents = contents
-      .replace(/\bwidth="[^"]*"/, 'width="100%"')
-        .replace(/\bheight="[^"]*"/, 'height="100%"')
-        .replace(/\bpreserveAspectRatio="[^"]*"/, '');
-      return `<svg${updatedContents} preserveAspectRatio="none">`;
-    });
-  };
-
-
 
   const marqueeTextRef = useRef(null);
   const marqueeContainerRef = useRef(null);
@@ -188,7 +150,10 @@ function MusicPlayer({ className }) {
                 {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
-            <div className="mt-1 h-[4px] w-full overflow-hidden rounded-full bg-black/20">
+            <div 
+              className="mt-1 h-[4px] w-full overflow-hidden rounded-full bg-black/20 cursor-pointer pointer-events-auto" 
+              onClick={handleProgressBarClick}
+            >
               <div
                 className="h-full rounded-full bg-[#16a34a]"
                 style={{

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { DEFAULT_VOLUME } from "../constants";
+import { DEFAULT_VOLUME, VIEWBOX } from "../constants";
 
 const songModules = import.meta.glob("../songs/*.mp3", { eager: true });
 
@@ -66,6 +66,13 @@ export const useMusicPlayer = () => {
   }, [isShuffling, playlist.length]);
 
   const prevTrack = useCallback(() => {
+    if (currentTime > 3) {
+      // 3초가 넘었을 때 누르면 현재 곡을 처음부터 다시 시작
+      audioRef.current.currentTime = 0;
+      setCurrentTime(0);
+      return;
+    }
+
     setCurrentTrackIndex((prev) => {
       if (isShuffling && playlist.length > 1) {
         let next = prev;
@@ -77,7 +84,7 @@ export const useMusicPlayer = () => {
       return (prev - 1 + playlist.length) % playlist.length;
     });
     console.log("Previous track playing...");
-  }, [isShuffling, playlist.length]);
+  }, [isShuffling, playlist.length, currentTime]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -114,7 +121,7 @@ export const useMusicPlayer = () => {
     if (isPlaying) {
       audio.play().catch(() => {});
     }
-  }, [currentTrack.src, isPlaying]);
+  }, [currentTrack.src]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -131,6 +138,50 @@ export const useMusicPlayer = () => {
 
   const toggleControlBarMode = useCallback(() => {
     setControlBarMode((prev) => (prev === 'title' ? 'progress' : 'title'));
+  }, []);
+
+  const formatTime = useCallback((seconds) => {
+    const secsTotal = Math.max(0, Math.floor(seconds));
+    const minutes = Math.floor(secsTotal / 60);
+    const secs = secsTotal % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
+  const getStyle = useCallback((pos) => ({
+    position: "absolute",
+    left: `${(pos.x / VIEWBOX.WIDTH) * 100}%`,
+    top: `${(pos.y / VIEWBOX.HEIGHT) * 100}%`,
+    width: `${(pos.w / VIEWBOX.WIDTH) * 100}%`,
+    height: `${(pos.h / VIEWBOX.HEIGHT) * 100}%`,
+  }), []);
+
+  const getCenterStyle = useCallback((cx, cy, w, h, flip = false) => ({
+    position: "absolute",
+    left: `${(cx / VIEWBOX.WIDTH) * 100}%`,
+    top: `${(cy / VIEWBOX.HEIGHT) * 100}%`,
+    width: `${(w / VIEWBOX.WIDTH) * 100}%`,
+    height: `${(h / VIEWBOX.HEIGHT) * 100}%`,
+    transform: `translate(-50%, -50%) ${flip ? "scaleX(-1)" : ""}`,
+  }), []);
+
+  const cleanSvg = useCallback((svgStr) => {
+    return svgStr.replace(/<svg([^>]+)>/, (match, contents) => {
+      const updatedContents = contents
+        .replace(/\bwidth="[^"]*"/, 'width="100%"')
+        .replace(/\bheight="[^"]*"/, 'height="100%"')
+        .replace(/\bpreserveAspectRatio="[^"]*"/, '');
+      return `<svg${updatedContents} preserveAspectRatio="none">`;
+    });
+  }, []);
+
+  const handleProgressBarClick = useCallback((e) => {
+    const audio = audioRef.current;
+    if (!audio.duration) return;
+
+    const progressBar = e.currentTarget;
+    const clickX = e.clientX - progressBar.getBoundingClientRect().left;
+    const newTime = (clickX / progressBar.offsetWidth) * audio.duration;
+    audio.currentTime = newTime;
   }, []);
 
   const toggleRepeat = useCallback(() => {
@@ -158,6 +209,11 @@ export const useMusicPlayer = () => {
     playlist,
     controlBarMode,
     toggleControlBarMode,
+    handleProgressBarClick,
+    formatTime,
+    getStyle,
+    getCenterStyle,
+    cleanSvg,
     handleVolumePointerDown: useCallback((e) => {
       e.preventDefault();
       const startY = e.clientY;
