@@ -59,14 +59,14 @@ function MusicPlayer({ className }) {
     const ctx = canvas.getContext("2d");
 
     // Web Audio API 초기화 (사용자 상호작용 후 재생 시점에 생성)
-    if (isPlaying && audioRef && !audioContextRef.current) {
+    if (isPlaying && audioRef?.current && !audioContextRef.current) {
       try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext();
         const analyserNode = audioCtx.createAnalyser();
         analyserNode.fftSize = 256;
 
-        const source = audioCtx.createMediaElementSource(audioRef);
+        const source = audioCtx.createMediaElementSource(audioRef.current);
         source.connect(analyserNode);
         source.connect(audioCtx.destination);
         analyserNode.connect(audioCtx.destination);
