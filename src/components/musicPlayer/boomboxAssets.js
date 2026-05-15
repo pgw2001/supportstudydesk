@@ -10,6 +10,7 @@ import repeatBtnSvg from "../../assets/musicPlayer/boombox1/beforeRepeatBtn.svg?
 import activateRepeatBtnSvg from "../../assets/musicPlayer/boombox1/afterRepeatBtn.svg?raw";
 import shuffleBtnSvg from "../../assets/musicPlayer/boombox1/beforeShuffleBtn.svg?raw";
 import activateShuffleBtnSvg from "../../assets/musicPlayer/boombox1/afterShuffleBtn.svg?raw";
+import cassetteGearSvg from "../../assets/musicPlayer/boombox1/cassetteGear.svg?raw";
 
 export {
   bodySvg,
@@ -24,4 +25,5 @@ export {
   activateRepeatBtnSvg,
   shuffleBtnSvg,
   activateShuffleBtnSvg,
+  cassetteGearSvg,
 };

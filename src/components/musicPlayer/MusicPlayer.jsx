@@ -42,11 +42,81 @@ function MusicPlayer({ className }) {
     deletePlaylist,
     toggleSongInPlaylist,
     selectPlaylist,
+    audioRef,
   } = useMusicPlayer();
 
   const marqueeTextRef = useRef(null);
   const marqueeContainerRef = useRef(null);
   const [shouldMarquee, setShouldMarquee] = useState(false);
+  const visualizerCanvasRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+
+  // Visualizer Animation Logic
+  useEffect(() => {
+    const canvas = visualizerCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    // Web Audio API 초기화 (사용자 상호작용 후 재생 시점에 생성)
+    if (isPlaying && audioRef?.current && !audioContextRef.current) {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        const analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 256;
+
+        const source = audioCtx.createMediaElementSource(audioRef.current);
+        source.connect(analyserNode);
+        source.connect(audioCtx.destination);
+        analyserNode.connect(audioCtx.destination);
+
+        audioContextRef.current = audioCtx;
+        analyserRef.current = analyserNode;
+      } catch (e) {
+        console.error("AudioContext initialization failed:", e);
+      }
+    }
+
+    let animationId;
+    const barCount = 12;
+    const barGap = 3;
+    const heights = new Array(barCount).fill(2);
+
+    const render = () => {
+      // 브라우저 정책에 따라 오디오 컨텍스트 재개
+      if (audioContextRef.current?.state === "suspended" && isPlaying) {
+        audioContextRef.current.resume();
+      }
+
+      // dataArray를 render 함수 내에서 생성하여 매번 새로운 데이터를 받음
+      if (analyserRef.current && isPlaying) {
+        const bufferLength = analyserRef.current.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyserRef.current.getByteFrequencyData(dataArray);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const barWidth = (canvas.width - (barGap * (barCount - 1))) / barCount;
+
+        for (let i = 0; i < barCount; i++) {
+          // 저역대(0-30%)에서 데이터 샘플링
+          const sampleIdx = Math.floor((i / barCount) * (bufferLength * 0.3));
+          const target = (dataArray[sampleIdx] / 255) * canvas.height * 0.85 + 2;
+          heights[i] += (target - heights[i]) * 0.3;
+          
+          ctx.fillStyle = "#16a34a";
+          ctx.fillRect(i * (barWidth + barGap), canvas.height - heights[i], barWidth, heights[i]);
+        }
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      animationId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => cancelAnimationFrame(animationId);
+  }, [isPlaying]);
 
   useEffect(() => {
     if (marqueeTextRef.current && marqueeContainerRef.current) {
@@ -64,6 +134,25 @@ function MusicPlayer({ className }) {
 
   return (
     <div className={`relative w-full aspect-[400/252] ${className}`}>
+      <style>{`
+        @keyframes rotate-gear {
+          0% { transform: translate(-50%, -50%) rotate(0deg); }
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @keyframes marquee {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        @keyframes speaker-pump {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); }
+          50% { transform: translate(-50%, -50%) scale(var(--speaker-scale, 1.05)); }
+        }
+        @keyframes speaker-pump-flip {
+          0%, 100% { transform: translate(-50%, -50%) scaleX(-1) scale(1); }
+          50% { transform: translate(-50%, -50%) scaleX(-1) scale(var(--speaker-scale, 1.05)); }
+        }
+      `}</style>
+
       {/* 3. 상태 표시 아이콘 레이어 (재생, 반복 등) - z-index를 낮추고 가장 먼저 렌더링하여 뒤로 보냄 */}
       <div
         style={getStyle(BUTTON_MAP.play)}
@@ -141,21 +230,7 @@ function MusicPlayer({ className }) {
           overflow: "hidden",
         }}
         className="z-20 pointer-events-none"
-      >
-        <style>{`
-          @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-          }
-          @keyframes speaker-pump {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(var(--speaker-scale, 1.05)); }
-          }
-          @keyframes speaker-pump-flip {
-            0%, 100% { transform: translate(-50%, -50%) scaleX(-1) scale(1); }
-            50% { transform: translate(-50%, -50%) scaleX(-1) scale(var(--speaker-scale, 1.05)); }
-          }
-        `}</style>
+    >
         {controlBarMode === "title" ? (
           <div
             ref={marqueeTextRef}
@@ -271,6 +346,36 @@ function MusicPlayer({ className }) {
           title="Song List"
         />
       </div>
+  
+      {/* Cassette Gears */}
+      <div
+        style={{
+          ...getCenterStyle(177, 130, 17, 17),
+          animation: isPlaying ? "rotate-gear 4s linear infinite" : "none"
+        }}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.cassetteGearSvg) }}
+      />
+      <div
+        style={{
+          ...getCenterStyle(223, 130, 17, 17),
+          animation: isPlaying ? "rotate-gear 4s linear infinite" : "none"
+        }}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.cassetteGearSvg) }}
+      />
+
+      {/* 이퀄라이저 바 */}
+      <canvas
+        ref={visualizerCanvasRef}
+        width={113}
+        height={69}
+        style={{
+          ...getCenterStyle(200, 211, 113, 69),
+          imageRendering: "pixelated",
+        }}
+        className="pointer-events-none z-30"
+      />
 
       {/* Playlist Floating Window */}
       <PlaylistFloatingWindow
