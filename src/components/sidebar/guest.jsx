@@ -6,6 +6,8 @@ import {
 
 import rough from "roughjs";
 
+import StudyPlant from "../study-plant/StudyPlant";
+
 
 import {
   Clock3,
@@ -89,6 +91,8 @@ function Guest({ user, setUser }) {
 
   const focusSvgRef =
   useRef(null);
+
+  const plantSvgRef = useRef(null);
 
   const taskSvgRef =
   useRef(null);
@@ -258,6 +262,27 @@ function Guest({ user, setUser }) {
   );
 }
 
+if (plantSvgRef.current) {
+  plantSvgRef.current.innerHTML = "";
+  const rc = rough.svg(plantSvgRef.current);
+  const rect = rc.rectangle(
+    3,
+    3,
+    250,
+    180,
+    {
+      stroke: "#111",
+      strokeWidth: 2,
+      roughness: 1.2,
+      bowing: 1,
+      fill: "white",
+      fillStyle: "solid",
+      seed: 50,
+    }
+  );
+  plantSvgRef.current.appendChild(rect);
+}
+
 if (taskSvgRef.current) {
   taskSvgRef.current.innerHTML =
     "";
@@ -410,6 +435,32 @@ if (taskSvgRef.current) {
       >
         {todayMessage}
       </div>
+
+      {/* STUDY PLANT WIDGET */}
+      <section className="relative h-[180px]">
+        <svg
+          ref={plantSvgRef}
+          className="absolute inset-0 h-full w-full pointer-events-none"
+          viewBox="0 0 260 180"
+        />
+        <div className="relative z-10 px-4 py-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Palette
+              size={18}
+              strokeWidth={1.8}
+              className="text-[#f5b400]"
+            />
+            <span className="font-['Patrick_Hand'] text-[18px]">My Garden</span>
+          </div>
+          <div className="flex justify-center mt-2">
+            {/* 
+               plantType을 assets 폴더명과 일치시켜주세요. 
+               예: "flower", "monstera" 등
+            */}
+            <StudyPlant focusTime={focusTime} plantType="cactus" />
+          </div>
+        </div>
+      </section>
 
       {/* TODAY FOCUS */}
 <section

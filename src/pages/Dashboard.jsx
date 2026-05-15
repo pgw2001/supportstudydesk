@@ -13,6 +13,7 @@ import Calendar from "../components/calendar/Calendar";
 import PlannerButton from "../components/planner/PlannerButton";
 import Draggable from "../utils/Draggable";
 import MusicPlayer from "../components/musicPlayer/MusicPlayer";
+import StudyPlant from "../components/study-plant/StudyPlant";
 
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -124,6 +125,16 @@ function Dashboard() {
           <TodoList />
         </Draggable>
 
+        {/* Music Player */}
+        <Draggable initialLeft="70%" initialTop="50%" className="z-20" style={{ width: '26%'}}>
+          <MusicPlayer />
+        </Draggable>
+
+        {/* Study-Plant */}
+        <Draggable initialLeft="30%" initialTop="60%" className="z-20" style={{ width: '7%'}}>
+          <StudyPlant />
+        </Draggable>
+
         {/* Sidebar */}
         <Sidebar
           isOpen={isSidebarOpen}
@@ -139,10 +150,6 @@ function Dashboard() {
           setIsStyleOpen={setIsStyleOpen}
         />
 
-        {/* Music Player */}
-        <Draggable initialLeft="70%" initialTop="50%" className="z-20" style={{ width: '26%'}}>
-          <MusicPlayer />
-        </Draggable>
       </main>
     </div>
   );
