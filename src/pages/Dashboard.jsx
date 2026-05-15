@@ -53,8 +53,8 @@ function Dashboard() {
 
         {/* Calendar */}
         <Draggable
-          initialLeft="8%"
-          initialTop="7%"
+          initialLeft="28%"
+          initialTop="8%"
           className={isCalendarExpanded ? "z-[9999]" : "z-20"}
           style={{ width: "28%" }}
         >
