@@ -281,6 +281,7 @@ export const useMusicPlayer = () => {
     getStyle,
     getCenterStyle,
     cleanSvg,
+    audioRef,
     handleVolumePointerDown: useCallback((e) => {
       e.preventDefault();
       const startY = e.clientY;
