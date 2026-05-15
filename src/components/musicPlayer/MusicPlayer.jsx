@@ -143,6 +143,10 @@ function MusicPlayer({ className }) {
         className="z-20 pointer-events-none"
       >
         <style>{`
+          @keyframes rotate-gear {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+          }
           @keyframes marquee {
             0% { transform: translateX(100%); }
             100% { transform: translateX(-100%); }
@@ -271,6 +275,24 @@ function MusicPlayer({ className }) {
           title="Song List"
         />
       </div>
+  
+      {/* Cassette Gears */}
+      <div
+        style={{
+          ...getCenterStyle(177, 130, 17, 17),
+          animation: isPlaying ? "rotate-gear 4s linear infinite" : "none"
+        }}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.cassetteGearSvg) }}
+      />
+      <div
+        style={{
+          ...getCenterStyle(223, 130, 17, 17),
+          animation: isPlaying ? "rotate-gear 4s linear infinite" : "none"
+        }}
+        className="pointer-events-none z-20"
+        dangerouslySetInnerHTML={{ __html: cleanSvg(assets.cassetteGearSvg) }}
+      />
 
       {/* Playlist Floating Window */}
       <PlaylistFloatingWindow
