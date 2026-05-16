@@ -5,8 +5,14 @@ function Timer() {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
 
+  // normal | pomodoro
+  const [mode, setMode] = useState("normal");
+
   const svgRef = useRef(null);
   const roughGroupRef = useRef(null);
+
+  // 뽀모도로 기본값 (25분)
+  const POMODORO_TIME = 25 * 60;
 
   // 타이머 동작
   useEffect(() => {
@@ -14,12 +20,26 @@ function Timer() {
 
     if (isRunning) {
       timer = setInterval(() => {
-        setTime((prev) => prev + 1);
+        setTime((prev) => {
+          // 일반 모드 → 증가
+          if (mode === "normal") {
+            return prev + 1;
+          }
+
+          // 뽀모도로 모드 → 감소
+          if (prev <= 0) {
+            clearInterval(timer);
+            setIsRunning(false);
+            return 0;
+          }
+
+          return prev - 1;
+        });
       }, 1000);
     }
 
     return () => clearInterval(timer);
-  }, [isRunning]);
+  }, [isRunning, mode]);
 
   // rough.js SVG 렌더링
   useEffect(() => {
@@ -74,6 +94,19 @@ function Timer() {
     return `${minutes}:${seconds}`;
   };
 
+  // 모드 변경
+  const toggleMode = () => {
+    setIsRunning(false);
+
+    if (mode === "normal") {
+      setMode("pomodoro");
+      setTime(POMODORO_TIME);
+    } else {
+      setMode("normal");
+      setTime(0);
+    }
+  };
+
   return (
     <section
       className="
@@ -102,8 +135,37 @@ function Timer() {
           fill="#737373"
           pointerEvents="none"
         >
-          DESK TIMER
+          {mode === "normal" ? "DESK TIMER" : "POMODORO TIMER"}
         </text>
+
+        {/* 모드 변경 버튼 */}
+        <g
+          onClick={toggleMode}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ cursor: "pointer" }}
+        >
+          <rect
+            x="258"
+            y="14"
+            width="56"
+            height="22"
+            rx="11"
+            fill="#f5f5f5"
+            stroke="black"
+            strokeWidth="1.5"
+          />
+
+          <text
+            x="286"
+            y="28"
+            textAnchor="middle"
+            fontSize="9"
+            fill="#171717"
+            pointerEvents="none"
+          >
+            {mode === "normal" ? "POMO" : "NORMAL"}
+          </text>
+        </g>
 
         {/* 시간 */}
         <text
@@ -179,7 +241,12 @@ function Timer() {
         <g
           onClick={() => {
             setIsRunning(false);
-            setTime(0);
+
+            if (mode === "pomodoro") {
+              setTime(POMODORO_TIME);
+            } else {
+              setTime(0);
+            }
           }}
           onPointerDown={(e) => e.stopPropagation()}
           style={{ cursor: "pointer" }}
