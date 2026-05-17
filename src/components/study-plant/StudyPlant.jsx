@@ -1,58 +1,61 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Sparkles } from "lucide-react";
+import { useStudyPlant } from "./useStudyPlant";
+import Modal from "../common/modal";
 
 function StudyPlant({ focusTime = 0, plantType = "rose" }) {
-  /**
-   * 학습 시간(초)에 따른 성장 단계 계산 (예시 임계값)
-   * Lv 1: 0분 ~ 10분 미만
-   * Lv 2: 10분 ~ 30분 미만
-   * Lv 3: 30분 ~ 1시간 미만
-   * Lv 4: 1시간 ~ 2시간 미만
-   * Lv 5: 2시간 이상
-   */
-  const getLevel = (seconds) => {
-    const mins = seconds / 60;
-    if (mins < 10) return 1;
-    if (mins < 30) return 2;
-    if (mins < 60) return 3;
-    if (mins < 120) return 4;
-    return 5;
-  };
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { 
+    displayedLevel, 
+    isLevelUpAnimation, 
+    svgSrc, 
+    progress, 
+    remainingTimeText, 
+    isMaxLevel 
+  } = useStudyPlant(focusTime, plantType);
 
-  // 현재 화면에 표시될 레벨 (애니메이션 중에는 이전 레벨을 유지)
-  const [displayedLevel, setDisplayedLevel] = useState(getLevel(focusTime));
-  // 레벨업 애니메이션 활성화 여부
-  const [isLevelUpAnimation, setIsLevelUpAnimation] = useState(false);
+  // 모달 탭 정의: return 문 이전에 정의해야 합니다.
+  const plantTabs = [
+    {
+      id: 'status', 
+      label: '성장상태', 
+      title: `${plantType.toUpperCase()} 성장 정보`,
+      color: '#fef3c7', // 노란색 포스트잇
+      content: (
+        <div className="flex flex-col gap-4 py-2 font-['Patrick_Hand']">
+          <div className="text-lg">현재 등급: <span className="font-bold text-green-600">Lv.{displayedLevel}</span></div>
+          
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span>성장도</span>
+              <span>{Math.floor(progress)}%</span>
+            </div>
+            {/* 끝이 둥근 프로그레스 바 */}
+            <div className="w-full h-4 bg-gray-100 rounded-full border border-black/10 overflow-hidden">
+              <div 
+                className="h-full bg-green-400 rounded-full transition-all duration-500" 
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
 
-  useEffect(() => {
-    const newCalculatedLevel = getLevel(focusTime);
-
-    // 레벨이 상승했을 때만 애니메이션 및 효과음 재생
-    if (newCalculatedLevel > displayedLevel) {
-      setIsLevelUpAnimation(true);
-      
-      // 효과음 재생 (public/assets/sounds/level-up.mp3 경로에 파일이 있어야 합니다)
-      const audio = new Audio("/assets/sounds/level-up.mp3");
-      audio.volume = 0.5;
-      audio.play().catch(() => console.log("Sound play interaction required"));
-
-      // 애니메이션이 끝난 후 displayedLevel 업데이트 및 애니메이션 상태 초기화
-      const timer = setTimeout(() => {
-        setIsLevelUpAnimation(false);
-        setDisplayedLevel(newCalculatedLevel);
-      }, 2000); // 애니메이션 지속 시간
-      return () => clearTimeout(timer);
-    } else if (newCalculatedLevel < displayedLevel) {
-      // focusTime이 감소하여 레벨이 내려갔을 경우 즉시 업데이트 (예: 타이머 리셋)
-      setDisplayedLevel(newCalculatedLevel);
-    } else if (newCalculatedLevel === displayedLevel && !isLevelUpAnimation) {
-      // 레벨이 같고 애니메이션이 실행 중이 아니라면, displayedLevel을 현재 계산된 레벨로 동기화
-      setDisplayedLevel(newCalculatedLevel);
+          {!isMaxLevel && (
+            <div className="text-sm text-gray-500">
+              다음 레벨까지: <span className="text-black">{remainingTimeText}</span> 남음
+            </div>
+          )}
+          {isMaxLevel && <div className="text-sm text-blue-500 font-bold">최대 레벨에 도달했습니다! 🎉</div>}
+        </div>
+      )
+    },
+    { 
+      id: 'collection', 
+      label: '컬렉션', 
+      title: '나의 화분 컬렉션',
+      color: '#dcfce7', // 초록색 포스트잇
+      content: <div className="p-4 font-['Patrick_Hand'] text-gray-600">아직 컬렉션 기능은 준비 중입니다!</div> 
     }
-  }, [focusTime, displayedLevel, isLevelUpAnimation]); // focusTime이 변경될 때마다 레벨을 다시 계산하고, displayedLevel과 비교
-
-  // 이미지 경로는 public 폴더를 기준으로 설정하는 것이 안정적입니다.
-  const svgSrc = `assets/study-plants/${plantType}/${plantType}_lv${displayedLevel}.svg`;
+  ];
 
   return (
     <div className="flex flex-col items-center justify-center transition-all duration-500 pointer-events-none">
@@ -69,6 +72,8 @@ function StudyPlant({ focusTime = 0, plantType = "rose" }) {
           <img
             src={svgSrc}
             alt={`${plantType} level ${displayedLevel}`}
+            onClick={() => setIsModalOpen(true)}
+            data-no-drag="true"
             className="max-h-full max-w-full object-contain transition-transform duration-700 transform hover:scale-110 filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)] pointer-events-auto cursor-pointer"
             onError={(e) => {
               e.target.style.opacity = '0'; // 이미지 로딩 실패 시 이미지를 숨김
@@ -77,6 +82,14 @@ function StudyPlant({ focusTime = 0, plantType = "rose" }) {
           />
         </div>
       </div>
+
+      {/* 화분 정보 플로팅 창 */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        tabs={plantTabs}
+      >
+      </Modal>
     </div>
   );
 }
