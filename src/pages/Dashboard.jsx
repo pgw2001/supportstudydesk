@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar from "../components/sidebar/Sidebar";
 import StyleBar from "../components/stylebar/StyleBar";
 import menubar from "../assets/menubar.svg";
+import { Layout, Check } from "lucide-react";
 
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
@@ -13,9 +14,13 @@ import Calendar from "../components/calendar/Calendar";
 import PlannerButton from "../components/planner/PlannerButton";
 import Draggable from "../utils/Draggable";
 import MusicPlayer from "../components/musicPlayer/MusicPlayer";
+import StudyPlant from "../components/study-plant/StudyPlant";
 
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // 배치 수정 모드 상태
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // StyleBar 상태
   const [isStyleOpen, setIsStyleOpen] = useState(false);
@@ -30,16 +35,29 @@ function Dashboard() {
 
         {/* 메뉴 버튼 */}
         {!isSidebarOpen && (
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-3 right-3 z-[999]"
-          >
-            <img
-              src={menubar}
-              alt="menu"
-              className="w-8 h-8 opacity-70 hover:opacity-100 transition"
-            />
-          </button>
+          <div className="absolute top-3 right-3 z-[999] flex gap-2">
+            {/* 배치 수정 버튼 */}
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`flex items-center justify-center w-10 h-10 rounded-full transition shadow-sm ${
+                isEditMode ? "bg-green-500 text-white" : "bg-white/80 text-gray-700 hover:bg-white"
+              }`}
+              title={isEditMode ? "배치 완료" : "배치 수정"}
+            >
+              {isEditMode ? <Check size={20} /> : <Layout size={20} />}
+            </button>
+            
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className=""
+            >
+              <img
+                src={menubar}
+                alt="menu"
+                className="w-8 h-8 opacity-70 hover:opacity-100 transition"
+              />
+            </button>
+          </div>
         )}
 
         {/* Window */}
@@ -57,6 +75,7 @@ function Dashboard() {
           initialTop="8%"
           className={isCalendarExpanded ? "z-[9999]" : "z-20"}
           style={{ width: "28%" }}
+          disabled={!isEditMode}
         >
           <Calendar onExpandStateChange={setIsCalendarExpanded} />
         </Draggable>
@@ -67,12 +86,13 @@ function Dashboard() {
           initialTop="18%"
           className="z-10"
           style={{ width: "16%" }}
+          disabled={!isEditMode}
         >
           <Memo />
         </Draggable>
         
         {/* Quotes */}
-        <Draggable initialLeft="80%" initialTop="25%" className="z-10" style={{ width: '18%' }}>
+        <Draggable initialLeft="80%" initialTop="25%" className="z-10" style={{ width: '18%' }} disabled={!isEditMode}>
           <Quotes />
         </Draggable>
         
@@ -82,6 +102,7 @@ function Dashboard() {
           initialTop="auto"
           className="z-20"
           style={{ bottom: "19%" }}
+          disabled={!isEditMode}
         >
           <Timer />
         </Draggable>
@@ -93,6 +114,7 @@ function Dashboard() {
           initialTop="80%"
           className="z-[999]"
           style={{ width: "25%" }}
+          disabled={!isEditMode}
         >
           <div className="p-2">
             <PlannerButton />
@@ -120,9 +142,21 @@ function Dashboard() {
             right: "28%",
             width: "11%",
           }}
+          disabled={!isEditMode}
         >
           <TodoList />
         </Draggable>
+
+        {/* Music Player */}
+        <Draggable initialLeft="70%" initialTop="50%" className="z-20" style={{ width: '26%'}} disabled={!isEditMode}>
+          <MusicPlayer />
+        </Draggable>
+
+        {/* Study-Plant: 다시 Draggable로 감싸고 z-index를 높여 클릭 우선순위 확보 */}
+        <Draggable initialLeft="45%" initialTop="68%" className="z-30" disabled={!isEditMode}>
+          <StudyPlant />
+        </Draggable>
+
 
         {/* Sidebar */}
         <Sidebar
@@ -139,10 +173,6 @@ function Dashboard() {
           setIsStyleOpen={setIsStyleOpen}
         />
 
-        {/* Music Player */}
-        <Draggable initialLeft="70%" initialTop="50%" className="z-20" style={{ width: '26%'}}>
-          <MusicPlayer />
-        </Draggable>
       </main>
     </div>
   );
