@@ -11,7 +11,6 @@ import {
   Clock3,
   CheckSquare,
   StickyNote,
-  Palette,
   Settings,
   ChevronRight,
 } from "lucide-react";
@@ -125,17 +124,6 @@ function Guest({ user, setUser }) {
         />
       ),
       info: "12 notes",
-    },
-
-    {
-      name: "Style Bar",
-      icon: (
-        <Palette
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-      info: "",
     },
 
     {

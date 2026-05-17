@@ -1,32 +1,31 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { DEFAULT_VOLUME, VIEWBOX } from "../constants";
  
-const songModules = import.meta.glob("../songs/*.mp3", { eager: true });
-
-const parseSongMetadata = (path, module, index) => {
-  const fileName = path.split("/").pop().replace(/\.mp3$/, "");
-  const [artistTag, ...titleParts] = fileName.split("-");
-  const artist = artistTag.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-  const title = titleParts
-    .join(" ")
-    .replace(/x27/g, "'")
-    .replace(/\s\d+$/, "")
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-    .trim();
-
-  return {
-    id: index + 1,
-    title,
-    artist,
-    src: module.default,
+export const SONG_PLAYLIST = [
+  {
+    id: 1,
+    title: "A Boy Who Only Dreams",
+    artist: "Eddie Lee",
+    src: "https://firebasestorage.googleapis.com/v0/b/supportstudydesk-6506b.firebasestorage.app/o/music%2Feddie_lee_kr-a-boy-who-only-dreams-291359.mp3?alt=media&token=0e71195d-99cc-4a41-bc61-a19272917b93",
     duration: 0,
-  };
-};
+  },
 
-export const SONG_PLAYLIST = Object.entries(songModules) // Export SONG_PLAYLIST
-  .sort(([a], [b]) => a.localeCompare(b))
-  .map(([path, module], index) => parseSongMetadata(path, module, index));
+  {
+    id: 2,
+    title: "Search One's Memory",
+    artist: "Eddie Lee",
+    src: "https://firebasestorage.googleapis.com/v0/b/supportstudydesk-6506b.firebasestorage.app/o/music%2Feddie_lee_kr-search-onex27s-memory-291354.mp3?alt=media&token=85277fe9-3712-4d52-b619-e183838bf193",
+    duration: 0,
+  },
 
+  {
+    id: 3,
+    title: "To My Precious Person",
+    artist: "Eddie Lee",
+    src: "https://firebasestorage.googleapis.com/v0/b/supportstudydesk-6506b.firebasestorage.app/o/music%2Feddie_lee_kr-to-my-precious-person-291357.mp3?alt=media&token=a12a68ea-4353-4156-867d-e3e4b4901165",
+    duration: 0,
+  },
+];
 export const useMusicPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
@@ -54,7 +53,10 @@ export const useMusicPlayer = () => {
   const currentTrack = useMemo(() => playlist[currentTrackIndex] || playlist[0] || SONG_PLAYLIST[0], 
     [playlist, currentTrackIndex]);
 
-  const audioRef = useRef(new Audio());
+  const audio = new Audio();
+  audio.crossOrigin = "anonymous";
+
+  const audioRef = useRef(audio);
 
   useEffect(() => {
     const audio = audioRef.current;

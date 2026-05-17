@@ -274,7 +274,7 @@ function Sidebar({
 
             flex-col
 
-            overflow-hidden
+            overflow-visible
 
             px-4 py-4
             z-10
@@ -303,7 +303,7 @@ function Sidebar({
               flex-1
 
               overflow-y-auto
-              overflow-x-hidden
+              overflow-x-visible
 
               overscroll-contain
 
@@ -445,7 +445,7 @@ function Sidebar({
                     {user?.isGuest
                       ?"Guest"
                       : user
-                      ? "OFFLINE"
+                      ? "ONLINE"
                       : "OFFLINE"}
                   </div>
                 </div>

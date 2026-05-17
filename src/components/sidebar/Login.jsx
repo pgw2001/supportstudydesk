@@ -1,3 +1,5 @@
+import Group from "../group/group";
+
 import {
   useState,
   useEffect,
@@ -18,7 +20,7 @@ import {
   Clock3,
   CheckSquare,
   StickyNote,
-  Palette,
+  Users,
   Settings,
   ChevronRight,
 } from "lucide-react";
@@ -30,6 +32,11 @@ function Login({ user, setUser }) {
   const [
     isLogoutHovered,
     setIsLogoutHovered,
+  ] = useState(false);
+
+  const [
+  isGroupOpen,
+  setIsGroupOpen,
   ] = useState(false);
 
   // 응원 문구
@@ -135,9 +142,9 @@ function Login({ user, setUser }) {
     },
 
     {
-      name: "Style Bar",
+      name: "Group",
       icon: (
-        <Palette
+        <Users
           size={18}
           strokeWidth={1.8}
         />
@@ -1240,20 +1247,29 @@ if (taskSvgRef.current) {
     (item, index) => (
       <button
         key={item.name}
-        onMouseEnter={() =>
-          setHoveredMenu(
-            item.name
-          )
-        }
-        onMouseLeave={() =>
-          setHoveredMenu(null)
-        }
-        className="
-          relative
 
-          h-[58px]
-          w-full
-        "
+  onClick={() => {
+  if (item.name === "group") {
+    return;
+  }
+}}
+
+  onMouseEnter={() =>
+    setHoveredMenu(
+      item.name
+    )
+  }
+
+  onMouseLeave={() =>
+    setHoveredMenu(null)
+  }
+
+  className="
+    relative
+
+    h-[58px]
+    w-full
+  "
       >
         <svg
           ref={(el) =>
@@ -1401,6 +1417,16 @@ if (taskSvgRef.current) {
 </div>
 
 <div className="h-[30px]" />
+
+{
+  isGroupOpen && (
+    <Group
+      setIsGroupOpen={
+        setIsGroupOpen
+      }
+    />
+  )
+}
 </div>
 );
 }

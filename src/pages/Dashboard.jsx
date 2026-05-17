@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Sidebar from "../components/sidebar/Sidebar";
-import StyleBar from "../components/stylebar/StyleBar";
 import menubar from "../assets/menubar.svg";
 
 import Timer from "../components/timer/Timer";
@@ -128,14 +127,6 @@ function Dashboard() {
         <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
-          setIsStyleOpen={setIsStyleOpen}
-        />
-
-        {/* StyleBar */}
-        <StyleBar
-          isOpen={isStyleOpen}
-          selectedStyle={selectedStyle}
-          setSelectedStyle={setSelectedStyle}
           setIsStyleOpen={setIsStyleOpen}
         />
 
