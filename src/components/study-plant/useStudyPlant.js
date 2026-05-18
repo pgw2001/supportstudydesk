@@ -4,19 +4,20 @@ const handlePlantClick = (e) => {
   e.stopPropagation(); // 드래그 이벤트가 발생하는 것을 방지
   setIsOpen(true);    // 플로팅 창 열기
 };
-const LEVEL_THRESHOLDS = [0, 600, 1800, 3600, 7200]; // 초 단위 (0, 10분, 30분, 1시간, 2시간)
+export const LEVEL_THRESHOLDS = [0, 600, 1800, 3600, 7200]; // 초 단위 (0, 10분, 30분, 1시간, 2시간)
 
-export function useStudyPlant(focusTime = 0, plantType = "rose") {
+export const getLevel = (seconds) => {
   /**
    * 학습 시간(초)에 따른 성장 단계 계산 (예시 임계값)
    */
-  const getLevel = (seconds) => {
-    if (seconds < LEVEL_THRESHOLDS[1]) return 1;
-    if (seconds < LEVEL_THRESHOLDS[2]) return 2;
-    if (seconds < LEVEL_THRESHOLDS[3]) return 3;
-    if (seconds < LEVEL_THRESHOLDS[4]) return 4;
-    return 5;
-  };
+  if (seconds < LEVEL_THRESHOLDS[1]) return 1;
+  if (seconds < LEVEL_THRESHOLDS[2]) return 2;
+  if (seconds < LEVEL_THRESHOLDS[3]) return 3;
+  if (seconds < LEVEL_THRESHOLDS[4]) return 4;
+  return 5;
+};
+
+export function useStudyPlant(focusTime = 0, plantType = "rose") {
 
   // 현재 화면에 표시될 레벨 (애니메이션 중에는 이전 레벨을 유지)
   const [displayedLevel, setDisplayedLevel] = useState(getLevel(focusTime));
@@ -49,7 +50,7 @@ export function useStudyPlant(focusTime = 0, plantType = "rose") {
   }, [newCalculatedLevel]); // focusTime 대신 레벨 수치가 바뀔 때만 실행하여 타이머가 취소되지 않게 함
 
   // 이미지 경로는 public 폴더를 기준으로 설정하는 것이 안정적입니다.
-  const svgSrc = `assets/study-plants/${plantType}/${plantType}_lv${displayedLevel}.svg`;
+  const svgSrc = `/assets/study-plants/${plantType}/${plantType}_lv${displayedLevel}.svg`;
 
   // 성장 정보 계산
   const currentLevel = getLevel(focusTime);
