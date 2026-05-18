@@ -163,10 +163,6 @@ function Dashboard() {
           setIsOpen={setIsSidebarOpen}
           setIsStyleOpen={setIsStyleOpen}
         />
-        {/* Music Player */}
-        <Draggable initialLeft="70%" initialTop="50%" className="z-20" style={{ width: '26%'}}>
-          <MusicPlayer />
-        </Draggable>
 
       </main>
     </div>
