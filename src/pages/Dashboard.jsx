@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Sidebar from "../components/sidebar/Sidebar";
 import menubar from "../assets/menubar.svg";
 import { Layout, Check } from "lucide-react";
@@ -18,12 +18,19 @@ import StudyPlant from "../components/study-plant/StudyPlant";
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const [totalFocusTime, setTotalFocusTime] = useState(0);
+
   // 배치 수정 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
 
   // StyleBar 상태
   const [isStyleOpen, setIsStyleOpen] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState(1);
+
+  // 타이머 틱 핸들러 (메모이제이션)
+  const handleTick = useCallback(() => {
+    setTotalFocusTime(prev => prev + 1);
+  }, []);
 
   // Calendar 확대 상태
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
@@ -103,7 +110,7 @@ function Dashboard() {
           style={{ bottom: "19%" }}
           disabled={!isEditMode}
         >
-          <Timer />
+          <Timer onTick={handleTick} />
         </Draggable>
         
 
@@ -153,7 +160,7 @@ function Dashboard() {
 
         {/* Study-Plant: 다시 Draggable로 감싸고 z-index를 높여 클릭 우선순위 확보 */}
         <Draggable initialLeft="45%" initialTop="68%" className="z-30" disabled={!isEditMode}>
-          <StudyPlant />
+          <StudyPlant focusTime={totalFocusTime} />
         </Draggable>
 
 

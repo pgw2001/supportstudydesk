@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import TimerFrame from "./TimerFrame";
 
-function NormalTimer({ switchMode }) {
+function NormalTimer({ switchMode, onTick }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -16,6 +16,13 @@ function NormalTimer({ switchMode }) {
 
     return () => clearInterval(timer);
   }, [isRunning]);
+
+  // 시간이 실제로 변경될 때만 화분 성장에 반영 (Strict Mode 중복 호출 방지)
+  useEffect(() => {
+    if (isRunning && time > 0 && onTick) {
+      onTick();
+    }
+  }, [time, isRunning, onTick]);
 
   const formatTime = () => {
     const minutes = String(Math.floor(time / 60)).padStart(2, "0");
