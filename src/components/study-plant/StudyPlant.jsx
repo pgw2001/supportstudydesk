@@ -53,7 +53,32 @@ function StudyPlant({ focusTime = 0, plantType = "rose" }) {
       label: '컬렉션', 
       title: '나의 화분 컬렉션',
       color: '#dcfce7', // 초록색 포스트잇
-      content: <div className="p-4 font-['Patrick_Hand'] text-gray-600">아직 컬렉션 기능은 준비 중입니다!</div> 
+      content: (
+        <div className="py-2">
+          <div className="flex gap-4 overflow-x-auto pb-4 px-2 scrollbar-thin">
+            {['rose', 'sunflower', 'hydrangea', 'lilyOfTheValley', 'hyacinth'].map((type) => (
+              <div 
+                key={type} 
+                className="flex-shrink-0 w-20 h-24 bg-gray-50 border-2 border-black/5 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all hover:bg-white shadow-sm"
+              >
+                <div className="w-12 h-12 flex items-center justify-center">
+                  <img 
+                    src={`/assets/study-plants/${type}/${type}_lv1.svg`} 
+                    alt={type}
+                    className="max-w-full max-h-full object-contain filter grayscale brightness-0 opacity-20"
+                    onError={(e) => { 
+                      // 이미지 경로를 찾지 못할 경우 숨김 처리
+                      e.target.style.opacity = '0';
+                    }}
+                  />
+                </div>
+                <span className="font-['Patrick_Hand'] text-[10px] text-gray-400 uppercase tracking-tighter">{type}</span>
+              </div>
+            ))}
+          </div>
+          <p className="font-['Patrick_Hand'] text-[10px] text-center text-gray-400 mt-2 italic">성장시켜서 새로운 식물을 해제하세요!</p>
+        </div>
+      ) 
     }
   ];
 
