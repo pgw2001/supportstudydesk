@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Sidebar from "../components/sidebar/Sidebar";
 import menubar from "../assets/menubar.svg";
 import { Layout, Check } from "lucide-react";
@@ -18,7 +18,26 @@ import StudyPlant from "../components/study-plant/StudyPlant";
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const [totalFocusTime, setTotalFocusTime] = useState(0);
+  // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
+  const [plantProgress, setPlantProgress] = useState(() => {
+    const savedProgress = localStorage.getItem("plantProgress");
+    return savedProgress ? JSON.parse(savedProgress) : {
+      rose: 0,
+      sunflower: 0,
+      hydrangea: 0,
+      lilyOfTheValley: 0,
+      hyacinth: 0
+    };
+  });
+  const [activePlantType, setActivePlantType] = useState(() => {
+    return localStorage.getItem("activePlantType") || 'rose';
+  });
+
+  // 데이터 변경 시 로컬 스토리지에 자동 저장
+  useEffect(() => {
+    localStorage.setItem("plantProgress", JSON.stringify(plantProgress));
+    localStorage.setItem("activePlantType", activePlantType);
+  }, [plantProgress, activePlantType]);
 
   // 배치 수정 모드 상태
   const [isEditMode, setIsEditMode] = useState(false);
@@ -29,8 +48,11 @@ function Dashboard() {
 
   // 타이머 틱 핸들러 (메모이제이션)
   const handleTick = useCallback(() => {
-    setTotalFocusTime(prev => prev + 1);
-  }, []);
+    setPlantProgress(prev => ({
+      ...prev,
+      [activePlantType]: (prev[activePlantType] || 0) + 1
+    }));
+  }, [activePlantType]);
 
   // Calendar 확대 상태
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
@@ -160,7 +182,11 @@ function Dashboard() {
 
         {/* Study-Plant: 다시 Draggable로 감싸고 z-index를 높여 클릭 우선순위 확보 */}
         <Draggable initialLeft="45%" initialTop="68%" className="z-30" disabled={!isEditMode}>
-          <StudyPlant focusTime={totalFocusTime} />
+          <StudyPlant 
+            plantProgress={plantProgress} 
+            activePlantType={activePlantType} 
+            onPlantChange={setActivePlantType} 
+          />
         </Draggable>
 
 

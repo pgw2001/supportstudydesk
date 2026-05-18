@@ -1,10 +1,18 @@
 import React, { useState } from "react";
 import { Sparkles } from "lucide-react";
-import { useStudyPlant } from "./useStudyPlant";
+import { useStudyPlant, getLevel, LEVEL_THRESHOLDS } from "./useStudyPlant";
 import Modal from "../common/modal";
 
-function StudyPlant({ focusTime = 0, plantType = "rose" }) {
+const PLANT_SEQUENCE = ['rose', 'sunflower', 'hydrangea', 'lilyOfTheValley', 'hyacinth'];
+const MAX_TIME_PER_PLANT = LEVEL_THRESHOLDS[4]; // 한 화분당 최고 레벨(Lv.5)까지 걸리는 시간 (useStudyPlant의 LEVEL_THRESHOLDS와 동기화)
+
+function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChange }) {
+  // 현재 선택된 화분의 개별 진행 시간
+  const currentPlantFocusTime = plantProgress[activePlantType] || 0;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // hook에 현재 화분 정보와 계산된 시간을 전달
   const { 
     displayedLevel, 
     isLevelUpAnimation, 
@@ -12,14 +20,14 @@ function StudyPlant({ focusTime = 0, plantType = "rose" }) {
     progress, 
     remainingTimeText, 
     isMaxLevel 
-  } = useStudyPlant(focusTime, plantType);
+  } = useStudyPlant(currentPlantFocusTime, activePlantType);
 
   // 모달 탭 정의: return 문 이전에 정의해야 합니다.
   const plantTabs = [
     {
       id: 'status', 
       label: '성장상태', 
-      title: `${plantType.toUpperCase()} 성장 정보`,
+      title: `${activePlantType.toUpperCase()} 성장 정보`,
       color: '#fef3c7', // 노란색 포스트잇
       content: (
         <div className="flex flex-col gap-4 py-2 font-['Patrick_Hand']">
@@ -56,25 +64,42 @@ function StudyPlant({ focusTime = 0, plantType = "rose" }) {
       content: (
         <div className="py-2">
           <div className="flex gap-4 overflow-x-auto pb-4 px-2 scrollbar-thin">
-            {['rose', 'sunflower', 'hydrangea', 'lilyOfTheValley', 'hyacinth'].map((type) => (
-              <div 
-                key={type} 
-                className="flex-shrink-0 w-20 h-24 bg-gray-50 border-2 border-black/5 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all hover:bg-white shadow-sm"
-              >
-                <div className="w-12 h-12 flex items-center justify-center">
-                  <img 
-                    src={`/assets/study-plants/${type}/${type}_lv1.svg`} 
-                    alt={type}
-                    className="max-w-full max-h-full object-contain filter grayscale brightness-0 opacity-20"
-                    onError={(e) => { 
-                      // 이미지 경로를 찾지 못할 경우 숨김 처리
-                      e.target.style.opacity = '0';
-                    }}
-                  />
+            {PLANT_SEQUENCE.map((type, index) => {
+              const time = plantProgress[type] || 0;
+              // 해금 조건: 첫 번째 화분이거나, 이전 화분의 누적 시간이 만렙(7200초) 이상일 때
+              const prevPlantType = index > 0 ? PLANT_SEQUENCE[index - 1] : null;
+              const isUnlocked = index === 0 || (plantProgress[prevPlantType] >= MAX_TIME_PER_PLANT);
+              
+              const level = getLevel(time); // useStudyPlant에서 가져온 getLevel 함수 사용
+              return (
+                <div 
+                  key={type} 
+                  onClick={() => isUnlocked && onPlantChange && onPlantChange(type)}
+                  className={`flex-shrink-0 w-20 h-24 border-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-sm ${
+                    isUnlocked 
+                      ? (activePlantType === type ? "bg-green-50 border-green-500 scale-105" : "bg-white border-green-200 cursor-pointer hover:border-green-400") 
+                      : "bg-gray-50 border-black/5 opacity-60"
+                  }`}
+                >
+                  <div className="w-12 h-12 flex items-center justify-center">
+                    <img 
+                      src={`/assets/study-plants/${type}/${type}_lv${level}.svg`} 
+                      alt={type}
+                      className={`max-w-full max-h-full object-contain transition-all ${
+                        isUnlocked ? "opacity-100" : "filter grayscale brightness-0 opacity-20"
+                      }`}
+                      onError={(e) => { e.target.style.opacity = '0'; }}
+                    />
+                  </div>
+                  <span className={`font-['Patrick_Hand'] text-[10px] uppercase tracking-tighter ${
+                    isUnlocked ? "text-green-700 font-bold" : "text-gray-400"
+                  }`}>
+                    {isUnlocked ? type : 'Locked'}
+                  </span>
+                  {isUnlocked && <span className="text-[9px] text-green-500 font-bold">Lv.{level}</span>}
                 </div>
-                <span className="font-['Patrick_Hand'] text-[10px] text-gray-400 uppercase tracking-tighter">{type}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <p className="font-['Patrick_Hand'] text-[10px] text-center text-gray-400 mt-2 italic">성장시켜서 새로운 식물을 해제하세요!</p>
         </div>
@@ -96,7 +121,7 @@ function StudyPlant({ focusTime = 0, plantType = "rose" }) {
         <div className={`w-24 h-24 flex items-center justify-center transition-all duration-500 ${isLevelUpAnimation ? 'scale-110' : ''}`}>
           <img
             src={svgSrc}
-            alt={`${plantType} level ${displayedLevel}`}
+            alt={`${activePlantType} level ${displayedLevel}`}
             onClick={() => setIsModalOpen(true)}
             data-no-drag="true"
             className="max-h-full max-w-full object-contain transition-transform duration-700 transform hover:scale-110 filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)] pointer-events-auto cursor-pointer"
