@@ -2,6 +2,7 @@ import Signup from "./Signup";
 import FindPW from "./FindPW";
 import Login from "./Login";
 import Guest from "./guest";
+import Group from "../group/group";
 
 import {
   useState,
@@ -51,6 +52,11 @@ function Sidebar({
   const [
     isLoginHovered,
     setIsLoginHovered,
+  ] = useState(false);
+
+  const [
+    isGroupOpen,
+    setIsGroupOpen,
   ] = useState(false);
 
   const sidebarSvgRef = useRef(null);
@@ -145,7 +151,8 @@ function Sidebar({
         rect
       );
     }
-  }, [isLoginHovered,
+  }, [
+    isLoginHovered,
     mode,
     user,
   ]);
@@ -182,7 +189,6 @@ function Sidebar({
           passwordValue
         );
 
-      // Firestore에서 username 가져오기
       const userDoc =
         await getDoc(
           doc(
@@ -257,7 +263,7 @@ function Sidebar({
           transition-all duration-300 ease-out
 
           ${
-            isOpen 
+            isOpen
               ? "translate-x-0"
               : "translate-x-full"
           }
@@ -277,7 +283,6 @@ function Sidebar({
             overflow-visible
 
             px-4 py-4
-            z-10
 
             z-10
           "
@@ -443,7 +448,7 @@ function Sidebar({
                     />
 
                     {user?.isGuest
-                      ?"Guest"
+                      ? "Guest"
                       : user
                       ? "ONLINE"
                       : "OFFLINE"}
@@ -547,10 +552,13 @@ function Sidebar({
                           )
                         }
                         onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                         handleLogin();
-                          } 
-                         }}
+                          if (
+                            e.key ===
+                            "Enter"
+                          ) {
+                            handleLogin();
+                          }
+                        }}
                         placeholder="••••••••"
                         className="
                           h-[46px]
@@ -569,8 +577,6 @@ function Sidebar({
                           outline-none
                         "
                       />
-
-                      
                     </div>
                   </div>
                 </div>
@@ -637,71 +643,83 @@ function Sidebar({
                     text-black/35
                   "
                 >
-
                   <button
-                  onClick={() =>
-                  setMode("findPW")
-                      }
-                  className="
-                    transition-all
-                    hover:underline
-                    hover:text-black/70
+                    onClick={() =>
+                      setMode("findPW")
+                    }
+                    className="
+                      transition-all
+                      hover:underline
+                      hover:text-black/70
                     "
-                          >
+                  >
                     Find PW
                   </button>
 
                   <span>|</span>
 
                   <button
-                onClick={() =>
-                setMode("signup")
-                   }
-                className="
-                  transition-all
-                  hover:underline
-                  hover:text-black/70
-                   "
+                    onClick={() =>
+                      setMode("signup")
+                    }
+                    className="
+                      transition-all
+                      hover:underline
+                      hover:text-black/70
+                    "
                   >
-                  Sign Up
+                    Sign Up
                   </button>
 
                   <span>|</span>
 
                   <button
-               onClick={handleGuest}
-                 className="
-                  transition-all
-                  hover:underline
-                  hover:text-black/70
-                  "
+                    onClick={handleGuest}
+                    className="
+                      transition-all
+                      hover:underline
+                      hover:text-black/70
+                    "
                   >
-                Guest
-                </button>
+                    Guest
+                  </button>
                 </div>
               </>
             ) : !user &&
               mode === "signup" ? (
-              <Signup setMode={setMode} />            
+              <Signup setMode={setMode} />
             ) : !user &&
               mode === "findPW" ? (
               <FindPW setMode={setMode} />
             ) : null}
 
             {user?.isGuest ? (
-  <Guest
-    user={user}
-    setUser={setUser}
-  />
-) : user ? (
-  <Login
-    user={user}
-    setUser={setUser}
-  />
-) : null}
+              <Guest
+                user={user}
+                setUser={setUser}
+              />
+            ) : user ? (
+              <Login
+                user={user}
+                setUser={setUser}
+                setIsGroupOpen={
+                  setIsGroupOpen
+                }
+              />
+            ) : null}
           </div>
         </div>
       </div>
+
+      {
+        isGroupOpen && (
+          <Group
+            setIsGroupOpen={
+              setIsGroupOpen
+            }
+          />
+        )
+      }
     </>
   );
 }

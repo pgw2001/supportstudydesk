@@ -15,6 +15,7 @@ import {
   StickyNote,
   Settings,
   ChevronRight,
+  Palette,
 } from "lucide-react";
 
 function Guest({ user, setUser }) {

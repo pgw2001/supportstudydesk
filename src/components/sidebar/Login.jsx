@@ -12,11 +12,11 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
+  collection,
 } from "firebase/firestore";
 
 import { db } from "../../services/firebase";
-
-import StudyPlant from "../study-plant/StudyPlant";
 
 import {
   Clock3,
@@ -27,7 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-function Login({ user, setUser }) {
+function Login({ user, setUser, setIsGroupOpen }) {
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
 
@@ -36,10 +36,6 @@ function Login({ user, setUser }) {
     setIsLogoutHovered,
   ] = useState(false);
 
-  const [
-  isGroupOpen,
-  setIsGroupOpen,
-  ] = useState(false);
 
   // 응원 문구
   const messages = [
@@ -105,8 +101,6 @@ function Login({ user, setUser }) {
 
   const focusSvgRef =
   useRef(null);
-
-  const plantSvgRef = useRef(null);
 
   const taskSvgRef =
   useRef(null);
@@ -326,27 +320,6 @@ function Login({ user, setUser }) {
   );
 }
 
-if (plantSvgRef.current) {
-  plantSvgRef.current.innerHTML = "";
-  const rc = rough.svg(plantSvgRef.current);
-  const rect = rc.rectangle(
-    3,
-    3,
-    250,
-    180,
-    {
-      stroke: "#111",
-      strokeWidth: 2,
-      roughness: 1.2,
-      bowing: 1,
-      fill: "white",
-      fillStyle: "solid",
-      seed: 50,
-    }
-  );
-  plantSvgRef.current.appendChild(rect);
-}
-
 if (taskSvgRef.current) {
   taskSvgRef.current.innerHTML =
     "";
@@ -524,6 +497,7 @@ if (taskSvgRef.current) {
     };
 
   return (
+    <>
     <div
       className="
         mt-5
@@ -542,32 +516,6 @@ if (taskSvgRef.current) {
       >
         {todayMessage}
       </div>
-
-      {/* STUDY PLANT WIDGET */}
-      <section className="relative h-[180px]">
-        <svg
-          ref={plantSvgRef}
-          className="absolute inset-0 h-full w-full pointer-events-none"
-          viewBox="0 0 260 180"
-        />
-        <div className="relative z-10 px-4 py-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Palette
-              size={18}
-              strokeWidth={1.8}
-              className="text-[#4ade80]"
-            />
-            <span className="font-['Patrick_Hand'] text-[18px]">My Garden</span>
-          </div>
-          <div className="flex justify-center mt-2">
-            {/* 
-               plantType을 assets 폴더명과 일치시켜주세요. 
-               예: "flower", "monstera" 등
-            */}
-            <StudyPlant focusTime={focusTime} plantType="cactus" />
-          </div>
-        </div>
-      </section>
 
       {/* TODAY FOCUS */}
 <section
@@ -1300,10 +1248,12 @@ if (taskSvgRef.current) {
         key={item.name}
 
   onClick={() => {
-  if (item.name === "group") {
-    return;
-  }
-}}
+    if (item.name === "Group") {
+      setIsGroupOpen(
+        (prev) => !prev
+      );
+    }
+  }}
 
   onMouseEnter={() =>
     setHoveredMenu(
@@ -1421,9 +1371,10 @@ if (taskSvgRef.current) {
   />
 
   <button
-   onClick={async () => {
+    onClick={async () => {
   if (user?.uid) {
     try {
+      // studyData 저장
       const userRef = doc(
         db,
         "studyData",
@@ -1439,6 +1390,34 @@ if (taskSvgRef.current) {
         },
         { merge: true }
       );
+
+      // 그룹 offline 처리
+      const groupsSnapshot =
+        await getDocs(
+          collection(
+            db,
+            "groups"
+          )
+        );
+
+      for (const groupDoc of groupsSnapshot.docs) {
+        await setDoc(
+          doc(
+            db,
+            "groups",
+            groupDoc.id,
+            "members",
+            user.uid
+          ),
+          {
+            online: false,
+            studying: false,
+            updatedAt:
+              Date.now(),
+          },
+          { merge: true }
+        );
+      }
     } catch (error) {
       console.log(error);
     }
@@ -1446,12 +1425,15 @@ if (taskSvgRef.current) {
 
   setUser(null);
 }}
+
     onMouseEnter={() =>
       setIsLogoutHovered(true)
     }
+
     onMouseLeave={() =>
       setIsLogoutHovered(false)
     }
+
     className="
       relative
       z-10
@@ -1468,17 +1450,8 @@ if (taskSvgRef.current) {
 </div>
 
 <div className="h-[30px]" />
-
-{
-  isGroupOpen && (
-    <Group
-      setIsGroupOpen={
-        setIsGroupOpen
-      }
-    />
-  )
-}
-</div>
+    </div>
+  </>
 );
 }
 
