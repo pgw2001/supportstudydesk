@@ -1,4 +1,14 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import {
+  auth,
+  db,
+} from "../../services/firebase";
+
+import {
+  doc,
+  getDoc,
+} from "firebase/firestore";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TODO_SEED, getLineCount } from "./TodoUtils";
 import TodoItem from "./TodoItem";
 import TodoHeader from "./TodoHeader";
@@ -6,10 +16,17 @@ import TodoNavigation from "./TodoNavigation";
 import { TODO_STYLES } from "./TodoStyles";
 import { createTodo, createTodoList, loadTodoData, saveTodoData } from "./TodoStorage";
 
+
 function TodoList({ className }) {
   const listSvgRef = useRef(null);
 
-  const [todoData, setTodoData] = useState(loadTodoData);
+  const [todoData, setTodoData] =
+  useState({
+    lists: [
+      createTodoList(1),
+    ],
+    currentListIndex: 0,
+  });
   const [editingIndex, setEditingIndex] = useState(-1);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -18,6 +35,37 @@ function TodoList({ className }) {
   const todoLists = todoData.lists;
   const currentListIndex = todoData.currentListIndex;
   const currentList = todoLists[currentListIndex];
+  useEffect(() => {
+  const loadData =
+    async () => {
+      const user =
+        auth.currentUser;
+
+      if (!user?.uid)
+        return;
+
+      try {
+        const snap =
+          await getDoc(
+            doc(
+              db,
+              "todoData",
+              user.uid
+            )
+          );
+
+        if (snap.exists()) {
+          setTodoData(
+            snap.data()
+          );
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+  loadData();
+}, []);
   const todos = currentList.todos;
   const title = currentList.title;
   const isLastList = currentListIndex === todoLists.length - 1;

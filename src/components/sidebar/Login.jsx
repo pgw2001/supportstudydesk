@@ -1422,6 +1422,11 @@ if (taskSvgRef.current) {
       console.log(error);
     }
   }
+  if (user?.isGuest) {
+  localStorage.removeItem(
+    "support-study-desk:todo-lists"
+  );
+}
 
   setUser(null);
 }}
