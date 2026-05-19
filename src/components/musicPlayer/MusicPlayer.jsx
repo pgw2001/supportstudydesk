@@ -139,6 +139,10 @@ function MusicPlayer({ className }) {
           0% { transform: translate(-50%, -50%) rotate(0deg); }
           100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
+        @keyframes rotate-gear-reverse {
+          0% { transform: translate(-50%, -50%) rotate(360deg); }
+          100% { transform: translate(-50%, -50%) rotate(0deg); }
+        }
         @keyframes marquee {
           0% { transform: translateX(100%); }
           100% { transform: translateX(-100%); }
@@ -359,7 +363,7 @@ function MusicPlayer({ className }) {
       <div
         style={{
           ...getCenterStyle(223, 130, 17, 17),
-          animation: isPlaying ? "rotate-gear 4s linear infinite" : "none"
+          animation: isPlaying ? "rotate-gear-reverse 4s linear infinite" : "none"
         }}
         className="pointer-events-none z-20"
         dangerouslySetInnerHTML={{ __html: cleanSvg(assets.cassetteGearSvg) }}
