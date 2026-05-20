@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Sidebar from "../components/sidebar/Sidebar";
 import menubar from "../assets/menubar.svg";
-import { Layout, Check } from "lucide-react";
+import { Layout, Check, ImagePlus, RotateCcw, Upload } from "lucide-react";
 
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
@@ -15,6 +15,63 @@ import PlannerButton from "../components/planner/PlannerButton";
 import Draggable from "../utils/Draggable";
 import MusicPlayer from "../components/musicPlayer/MusicPlayer";
 import StudyPlant from "../components/study-plant/StudyPlant";
+import Modal from "../components/common/modal";
+import { useWindow } from "../components/window/useWindow";
+
+const DEFAULT_WINDOW_BG = "/assets/window/window_bg.png";
+const DASHBOARD_ASPECT_RATIO = 16 / 9;
+const WINDOW_LAYOUT = {
+  leftPercent: -38,
+  topPercent: -53,
+  widthPercent: 65,
+  aspectWidth: 370,
+  aspectHeight: 687,
+};
+const WINDOW_MASK_URL = 'url("/assets/window/mask.svg")';
+const WINDOW_MASK_STYLE = {
+  WebkitMaskImage: WINDOW_MASK_URL,
+  maskImage: WINDOW_MASK_URL,
+  WebkitMaskSize: "100% 100%",
+  maskSize: "100% 100%",
+  WebkitMaskRepeat: "no-repeat",
+  maskRepeat: "no-repeat",
+  WebkitMaskPosition: "center",
+  maskPosition: "center",
+  WebkitMaskMode: "alpha",
+  maskMode: "alpha",
+};
+
+const getVisibleWindowCrop = () => {
+  const viewportWidth = 100 * DASHBOARD_ASPECT_RATIO;
+  const viewportHeight = 100;
+  const windowWidth = (WINDOW_LAYOUT.widthPercent / 100) * viewportWidth;
+  const windowHeight =
+    windowWidth * (WINDOW_LAYOUT.aspectHeight / WINDOW_LAYOUT.aspectWidth);
+  const windowLeft = (WINDOW_LAYOUT.leftPercent / 100) * viewportWidth;
+  const windowTop = (WINDOW_LAYOUT.topPercent / 100) * viewportHeight;
+  const visibleLeft = Math.max(0, windowLeft);
+  const visibleTop = Math.max(0, windowTop);
+  const visibleRight = Math.min(viewportWidth, windowLeft + windowWidth);
+  const visibleBottom = Math.min(viewportHeight, windowTop + windowHeight);
+
+  return {
+    x: (visibleLeft - windowLeft) / windowWidth,
+    y: (visibleTop - windowTop) / windowHeight,
+    width: Math.max(0, visibleRight - visibleLeft) / windowWidth,
+    height: Math.max(0, visibleBottom - visibleTop) / windowHeight,
+  };
+};
+
+const WINDOW_VISIBLE_CROP = getVisibleWindowCrop();
+const WINDOW_VISIBLE_PREVIEW_STYLE = {
+  width: `${100 / WINDOW_VISIBLE_CROP.width}%`,
+  height: `${100 / WINDOW_VISIBLE_CROP.height}%`,
+  left: `${(-WINDOW_VISIBLE_CROP.x / WINDOW_VISIBLE_CROP.width) * 100}%`,
+  top: `${(-WINDOW_VISIBLE_CROP.y / WINDOW_VISIBLE_CROP.height) * 100}%`,
+};
+const WINDOW_VISIBLE_PREVIEW_ASPECT =
+  (WINDOW_VISIBLE_CROP.width * WINDOW_LAYOUT.aspectWidth) /
+  (WINDOW_VISIBLE_CROP.height * WINDOW_LAYOUT.aspectHeight);
 
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -58,6 +115,28 @@ function Dashboard() {
   // Calendar 확대 상태
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
 
+  const {
+    fileInputRef,
+    windowBg,
+    isWindowModalOpen,
+    draftBg,
+    openWindowEditor,
+    closeWindowEditor,
+    applyWindowBackground,
+    resetDraftWindowBackground,
+    draftScale,
+    updateDraftScale,
+    minScale,
+    maxScale,
+    triggerFilePicker,
+    handleWindowBgChange,
+    previewPointerHandlers,
+    windowFrameRef,
+    previewFrameRef,
+    windowImageStyle,
+    previewImageStyle,
+  } = useWindow(DEFAULT_WINDOW_BG);
+
   return (
     <div className="flex min-h-screen items-center justify-center overflow-visible bg-[#f4f1ec]">
       <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden bg-[#fcfbf8]">
@@ -75,6 +154,16 @@ function Dashboard() {
             >
               {isEditMode ? <Check size={20} /> : <Layout size={20} />}
             </button>
+
+            {isEditMode && (
+              <button
+                onClick={openWindowEditor}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-white"
+                title="창 배경 수정"
+              >
+                <ImagePlus size={18} />
+              </button>
+            )}
             
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -90,21 +179,43 @@ function Dashboard() {
         )}
 
         {/* Window */}
-        <div className="absolute left-[-38%] top-[-53%] w-[65%] aspect-[370/687] z-0 flex items-center justify-center">
-          <img
-            src={windowLayerSvg}
-            alt="window"
-            className="absolute left-[4%] h-full w-full object-contain fill-none"
-          />
+        <div 
+          className={`absolute left-[-38%] top-[-53%] w-[65%] aspect-[370/687] transition-all duration-300 ${isEditMode ? "z-50" : "z-10"}`}
+          style={{ pointerEvents: isEditMode ? 'auto' : 'none' }}
+        >
+          {/* 1. 사용자 배경 레이어 (가장 뒤) */}
+          <div className="absolute left-[4%] top-0 h-full w-full z-0 pointer-events-none">
+            <div
+              ref={windowFrameRef}
+              className="absolute inset-0 overflow-hidden"
+              style={WINDOW_MASK_STYLE}
+            >
+              <img
+                src={windowBg}
+                alt="user window background"
+                className="absolute max-w-none select-none"
+                style={windowImageStyle}
+                draggable={false}
+              />
+            </div>
+            {/* RoughJS 스타일의 외곽선 틀을 배경 레이어에도 추가 */}
+            <img
+              src={windowLayerSvg}
+              alt="window background frame outline"
+              className="absolute inset-0 h-full w-full object-contain fill-none"
+            />
+          </div>
+          {/* 2. 유리 레이어 */}
           <img
             src={windowGlassLayerSvg}
             alt="windowGlass"
-            className="absolute left-[7%] opacity-60 h-full w-full object-contain"
+            className="absolute left-[7%] opacity-60 h-full w-full object-contain z-10 pointer-events-none"
           />
+          {/* 3. 창틀 레이어 (가장 앞) */}
           <img
             src={windowLayerSvg}
             alt="window"
-            className="absolute left-[10%] h-full w-full object-contain fill-none"
+            className="absolute left-[10%] h-full w-full object-contain fill-none z-20 pointer-events-none"
           />
         </div>
 
@@ -207,6 +318,114 @@ function Dashboard() {
           setIsOpen={setIsSidebarOpen}
           setIsStyleOpen={setIsStyleOpen}
         />
+
+        <Modal
+          isOpen={isWindowModalOpen}
+          onClose={closeWindowEditor}
+          title="창 배경 꾸미기"
+          width="min(92vw, 720px)"
+          className="font-['Patrick_Hand']"
+        >
+          <div className="flex flex-col gap-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleWindowBgChange}
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-black/65">
+                이미지를 올린 뒤, 미리보기 안에서 드래그해서 창 안 위치를 맞춰주세요.
+              </p>
+              <button
+                type="button"
+                onClick={triggerFilePicker}
+                className="inline-flex items-center gap-2 rounded-full border border-black/15 bg-[#f7efe2] px-4 py-2 text-sm transition hover:-translate-y-0.5 hover:bg-[#f3e6d3]"
+              >
+                <Upload size={16} />
+                이미지 불러오기
+              </button>
+            </div>
+
+            <div className="rounded-[28px] border border-black/10 bg-[#f8f3ea] p-5">
+              <div
+                className="mx-auto relative w-full max-w-[220px] overflow-hidden rounded-[24px] border border-black/10 bg-white"
+                style={{ aspectRatio: `${WINDOW_VISIBLE_PREVIEW_ASPECT}` }}
+              >
+                <div
+                  className="absolute"
+                  style={WINDOW_VISIBLE_PREVIEW_STYLE}
+                >
+                  <div
+                    ref={previewFrameRef}
+                    className="absolute left-[4%] top-0 h-full w-full overflow-hidden cursor-grab active:cursor-grabbing touch-none z-10"
+                    style={WINDOW_MASK_STYLE}
+                    {...previewPointerHandlers}
+                  >
+                    <img
+                      src={draftBg}
+                      alt="window preview"
+                      className="absolute max-w-none select-none pointer-events-none"
+                      style={previewImageStyle}
+                      draggable={false}
+                    />
+                  </div>
+                  <img
+                    src={windowLayerSvg}
+                    alt="window preview frame back"
+                    className="absolute left-[4%] h-full w-full object-contain pointer-events-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between text-sm text-black/65">
+                  <span>배경 배율</span>
+                  <span>{draftScale.toFixed(2)}x</span>
+                </div>
+                <input
+                  type="range"
+                  min={minScale}
+                  max={maxScale}
+                  step="0.01"
+                  value={draftScale}
+                  onChange={(event) => updateDraftScale(Number(event.target.value))}
+                  className="w-full accent-[#2f7d32]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={resetDraftWindowBackground}
+                className="inline-flex items-center gap-2 rounded-full border border-black/15 px-4 py-2 text-sm transition hover:bg-black/5"
+              >
+                <RotateCcw size={16} />
+                기본 배경으로 되돌리기
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={closeWindowEditor}
+                  className="rounded-full border border-black/15 px-4 py-2 text-sm transition hover:bg-black/5"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={applyWindowBackground}
+                  className="rounded-full bg-[#2f7d32] px-4 py-2 text-sm text-white transition hover:bg-[#27682a]"
+                >
+                  적용
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
 
       </main>
     </div>
