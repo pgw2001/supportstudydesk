@@ -8,7 +8,8 @@ import TodoList from "../components/todo/TodoList";
 import Memo from "../components/memo/Memo";
 import Quotes from "../components/quotes/Quotes";
 import deskSvg from "../assets/desk.svg";
-import windowSvg from "../assets/window.svg";
+import windowLayerSvg from "/assets/window/window_layer.svg";
+import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg"
 import Calendar from "../components/calendar/Calendar";
 import PlannerButton from "../components/planner/PlannerButton";
 import Draggable from "../utils/Draggable";
@@ -59,7 +60,7 @@ function Dashboard() {
 
   return (
     <div className="flex min-h-screen items-center justify-center overflow-visible bg-[#f4f1ec]">
-      <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-visible bg-[#fcfbf8]">
+      <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden bg-[#fcfbf8]">
 
         {/* 메뉴 버튼 */}
         {!isSidebarOpen && (
@@ -89,11 +90,21 @@ function Dashboard() {
         )}
 
         {/* Window */}
-        <div className="absolute left-[0%] top-[0%] w-[30%] aspect-[370/687] z-0">
+        <div className="absolute left-[-38%] top-[-53%] w-[65%] aspect-[370/687] z-0 flex items-center justify-center">
           <img
-            src={windowSvg}
+            src={windowLayerSvg}
             alt="window"
-            className="h-full w-full object-contain"
+            className="absolute left-[4%] h-full w-full object-contain fill-none"
+          />
+          <img
+            src={windowGlassLayerSvg}
+            alt="windowGlass"
+            className="absolute left-[7%] opacity-60 h-full w-full object-contain"
+          />
+          <img
+            src={windowLayerSvg}
+            alt="window"
+            className="absolute left-[10%] h-full w-full object-contain fill-none"
           />
         </div>
 
@@ -152,7 +163,7 @@ function Dashboard() {
         {/* Desk */}
         <div className="absolute top-[82%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
 
-        <div className="absolute bottom-[0%] left-[19%] w-[81%] aspect-[1594/390] z-0">
+        <div className="absolute bottom-[0%] left-[17%] w-[100%] aspect-[2244/389] z-0">
           <img
             src={deskSvg}
             alt="desk"
