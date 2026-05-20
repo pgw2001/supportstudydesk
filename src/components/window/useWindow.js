@@ -3,8 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 const WINDOW_BG_STORAGE_KEY = "windowBg";
 const WINDOW_BG_POSITION_STORAGE_KEY = "windowBgPosition";
 const WINDOW_BG_SCALE_STORAGE_KEY = "windowBgScale";
-const DEFAULT_POSITION = { x: 0.5, y: 0.5 };
-const DEFAULT_SCALE = 1;
+
+// x, y는 0.0(왼쪽/위)에서 1.0(오른쪽/아래) 사이의 값입니다.
+const DEFAULT_POSITION = { x: 0, y: 0.4676540687776643 }; // 예: y를 0.4로 하면 이미지가 약간 위로 올라감
+const DEFAULT_SCALE = 0.4; // 1.0보다 크면 기본 상태에서 더 확대됩니다.
+
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 2.5;
 
