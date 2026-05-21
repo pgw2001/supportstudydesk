@@ -21,6 +21,18 @@ import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg";
 const DEFAULT_WINDOW_BG = "/assets/window/window_bg.png";
 const WINDOW_RAIN_STORAGE_KEY = "windowRainEnabled";
 const WINDOW_RAIN_INTENSITY_KEY = "windowRainIntensity";
+const WIDGET_POSITIONS_KEY = "widgetPositions";
+
+const DEFAULT_POSITIONS = {
+  calendar: { left: "28%", top: "8%" },
+  memo: { left: "61%", top: "18%" },
+  quotes: { left: "80%", top: "25%" },
+  timer: { left: "34%", top: "auto" }, // style에서 bottom 사용 중
+  planner: { left: "70%", top: "80%" },
+  todo: { left: "60%", top: "auto" }, // style에서 bottom, right 사용 중
+  music: { left: "70%", top: "50%" },
+  plant: { left: "45%", top: "68%" },
+};
 
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -33,6 +45,19 @@ function Dashboard() {
     const saved = localStorage.getItem(WINDOW_RAIN_INTENSITY_KEY);
     return saved ? parseFloat(saved) : 0.5;
   });
+
+  const [widgetPositions, setWidgetPositions] = useState(() => {
+    const saved = localStorage.getItem(WIDGET_POSITIONS_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_POSITIONS;
+  });
+
+  const handleDragEnd = (id, pos) => {
+    setWidgetPositions(prev => {
+      const next = { ...prev, [id]: pos };
+      localStorage.setItem(WIDGET_POSITIONS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const [deskTimerTime, setDeskTimerTime] =
   useState(0);
@@ -227,8 +252,9 @@ function Dashboard() {
         </div>
 
         <Draggable
-          initialLeft="28%"
-          initialTop="8%"
+          initialLeft={widgetPositions.calendar.left}
+          initialTop={widgetPositions.calendar.top}
+          onDragEnd={(pos) => handleDragEnd("calendar", pos)}
           className={isCalendarExpanded ? "z-[9999]" : "z-20"}
           style={{ width: "28%" }}
           disabled={!isEditMode}
@@ -237,8 +263,9 @@ function Dashboard() {
         </Draggable>
 
         <Draggable
-          initialLeft="61%"
-          initialTop="18%"
+          initialLeft={widgetPositions.memo.left}
+          initialTop={widgetPositions.memo.top}
+          onDragEnd={(pos) => handleDragEnd("memo", pos)}
           className="z-10"
           style={{ width: "16%" }}
           disabled={!isEditMode}
@@ -247,8 +274,9 @@ function Dashboard() {
         </Draggable>
 
         <Draggable
-          initialLeft="80%"
-          initialTop="25%"
+          initialLeft={widgetPositions.quotes.left}
+          initialTop={widgetPositions.quotes.top}
+          onDragEnd={(pos) => handleDragEnd("quotes", pos)}
           className="z-10"
           style={{ width: "18%" }}
           disabled={!isEditMode}
@@ -257,10 +285,15 @@ function Dashboard() {
         </Draggable>
 
         <Draggable
-          initialLeft="34%"
-          initialTop="auto"
+          initialLeft={widgetPositions.timer.left}
+          initialTop={widgetPositions.timer.top}
+          onDragEnd={(pos) => handleDragEnd("timer", pos)}
           className="z-20"
-          style={{ bottom: "19%" }}
+          style={
+            widgetPositions.timer.top === "auto"
+              ? { bottom: "19%" }
+              : {}
+          }
           disabled={!isEditMode}
         >
           <Timer onTick={handleTick} deskTimerTime={deskTimerTime} setDeskTimerTime={setDeskTimerTime} />
@@ -269,6 +302,9 @@ function Dashboard() {
         <Draggable
           initialLeft="70%"
           initialTop="80%"
+          initialLeft={widgetPositions.planner.left}
+          initialTop={widgetPositions.planner.top}
+          onDragEnd={(pos) => handleDragEnd("planner", pos)}
           className="z-[999]"
           style={{ width: "25%" }}
           disabled={!isEditMode}
@@ -285,12 +321,12 @@ function Dashboard() {
         </div>
 
         <Draggable
-          initialLeft="60%"
-          initialTop="auto"
+          initialLeft={widgetPositions.todo.left}
+          initialTop={widgetPositions.todo.top}
+          onDragEnd={(pos) => handleDragEnd("todo", pos)}
           className="z-20"
           style={{
-            bottom: "50%",
-            right: "28%",
+            ...(widgetPositions.todo.top === "auto" ? { bottom: "50%", right: "28%" } : {}),
             width: "11%",
           }}
           disabled={!isEditMode}
@@ -299,8 +335,9 @@ function Dashboard() {
         </Draggable>
 
         <Draggable
-          initialLeft="70%"
-          initialTop="50%"
+          initialLeft={widgetPositions.music.left}
+          initialTop={widgetPositions.music.top}
+          onDragEnd={(pos) => handleDragEnd("music", pos)}
           className="z-20"
           style={{ width: "26%" }}
           disabled={!isEditMode}
@@ -309,8 +346,9 @@ function Dashboard() {
         </Draggable>
 
         <Draggable
-          initialLeft="45%"
-          initialTop="68%"
+          initialLeft={widgetPositions.plant.left}
+          initialTop={widgetPositions.plant.top}
+          onDragEnd={(pos) => handleDragEnd("plant", pos)}
           className="z-30"
           disabled={!isEditMode}
         >
