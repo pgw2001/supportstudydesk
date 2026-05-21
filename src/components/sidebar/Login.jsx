@@ -27,7 +27,13 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-function Login({ user, setUser, setIsGroupOpen }) {
+function Login({ user, setUser, setIsGroupOpen,deskTimerTime }) {
+  useEffect(() => {
+  console.log(
+    "LOGIN TIMER:",
+    deskTimerTime
+  );
+  }, [deskTimerTime]);
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
 
@@ -61,6 +67,7 @@ function Login({ user, setUser, setIsGroupOpen }) {
   // 목표 시간 (분)
   const [dailyGoal, setDailyGoal] =
     useState(120);
+
 
   const [
     goalInput,
@@ -114,9 +121,8 @@ function Login({ user, setUser, setIsGroupOpen }) {
           strokeWidth={1.8}
         />
       ),
-      info: "25:13",
+       info: `${Math.floor(deskTimerTime / 60)}m`,
     },
-
     {
       name: "Todo List",
       icon: (
