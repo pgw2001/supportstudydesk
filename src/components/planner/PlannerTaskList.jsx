@@ -12,7 +12,7 @@ function PlannerTaskList({
   tasks,
   setTasks,
   toggleTask,
-  setBlocks,
+  setBlocks = () => {},
 }) {
   const [subject, setSubject] =
     useState("");
@@ -72,40 +72,45 @@ function PlannerTaskList({
       </h2>
 
       {/* 입력 */}
-      <div className="mb-5 flex gap-2">
+      <div className="mb-5 flex flex-col gap-2">
 
-        <input
-          value={subject}
-          onChange={(e) =>
-            setSubject(e.target.value)
-          }
-          placeholder="과목"
-          className="
-            w-[90px]
-            rounded-lg
-            border
-            px-2
-            py-2
-          "
-        />
+        <div className="flex items-end gap-2 min-w-0">
+          <input
+            value={subject}
+            onChange={(e) =>
+              setSubject(e.target.value)
+            }
+            placeholder="과목"
+            className="
+              flex-none
+              w-[90px]
+              rounded-lg
+              border
+              px-2
+              py-2
+            "
+          />
 
-        <input
-          value={text}
-          onChange={(e) =>
-            setText(e.target.value)
-          }
-          placeholder="할 일"
-          className="
-            flex-1
-            rounded-lg
-            border
-            px-3
-            py-2
-          "
-        />
+          <input
+            value={text}
+            onChange={(e) =>
+              setText(e.target.value)
+            }
+            placeholder="할 일"
+            className="
+              min-w-0
+              flex-1
+              rounded-lg
+              border
+              px-3
+              py-2
+            "
+          />
+        </div>
 
-        {/* 색상 선택 */}
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2 w-full">
+          {/* 색상 선택 */}
+          <div className="flex items-center gap-1">
 
           {COLORS.map((c) => (
             <button
@@ -130,18 +135,19 @@ function PlannerTaskList({
 
         </div>
 
-        <button
-          onClick={addTask}
-          className="
-            rounded-lg
-            bg-black
-            px-4
-            py-2
-            text-white
-          "
-        >
-          추가
-        </button>
+          <button
+            onClick={addTask}
+            className="
+              rounded-lg
+              bg-black
+              px-4
+              py-2
+              text-white
+            "
+          >
+            추가
+          </button>
+        </div>
 
       </div>
 

@@ -10,30 +10,30 @@ import PlannerProgress from "./PlannerProgress";
 function Planner({ onClose }) {
   const svgRef = useRef(null);
 
+  // localStorage 불러오기
   const savedData = JSON.parse(
-  localStorage.getItem("planner") || "{}"
-);
-
-const [tasks, setTasks] = useState(
-  savedData.tasks || []
-);
-
-const [comment, setComment] =
-  useState(savedData.comment || "");
-
-const [dday, setDday] = useState(
-  savedData.dday || ""
-);
-
-const [blocks, setBlocks] = useState(
-  savedData.blocks || []
-);
-
-const [timetable, setTimetable] =
-  useState(
-    savedData.timetable || {}
+    localStorage.getItem("planner") || "{}"
   );
 
+  // task
+  const [tasks, setTasks] = useState(
+    savedData.tasks || []
+  );
+
+  // comment
+  const [comment, setComment] =
+    useState(savedData.comment || "");
+
+  // dday
+  const [dday, setDday] = useState(
+    savedData.dday || ""
+  );
+
+  // timetable
+  const [timetable, setTimetable] =
+    useState(
+      savedData.timetable || {}
+    );
 
   // rough 배경
   useEffect(() => {
@@ -50,10 +50,10 @@ const [timetable, setTimetable] =
       "g"
     );
 
-    // 메인 배경
+    // 메인 종이
     group.appendChild(
-      rc.rectangle(10, 10, 980, 680, {
-        roughness: 1.5,
+      rc.rectangle(10, 10, 960, 800, {
+        roughness: 1.4,
         fill: "#fcfaf5",
         fillStyle: "solid",
         stroke: "#222",
@@ -64,8 +64,7 @@ const [timetable, setTimetable] =
     svg.appendChild(group);
   }, []);
 
-
-  // localStorage 저장
+  // 저장
   useEffect(() => {
     localStorage.setItem(
       "planner",
@@ -73,11 +72,15 @@ const [timetable, setTimetable] =
         tasks,
         comment,
         dday,
-        blocks,
         timetable,
       })
     );
-  }, [tasks, comment, dday, blocks, timetable]);
+  }, [
+    tasks,
+    comment,
+    dday,
+    timetable,
+  ]);
 
   // 체크
   const toggleTask = (id) => {
@@ -107,8 +110,8 @@ const [timetable, setTimetable] =
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40">
 
-      {/* 메인 */}
-      <div className="relative h-[700px] w-[1000px]">
+      {/* 팝업 */}
+      <div className="relative h-[820px] w-[980px] max-w-[calc(100vw-40px)]">
 
         {/* rough 배경 */}
         <svg
@@ -117,14 +120,14 @@ const [timetable, setTimetable] =
         />
 
         {/* 내용 */}
-        <div className="absolute inset-0 p-10">
+        <div className="absolute inset-0 p-8 overflow-auto">
 
           {/* 닫기 */}
           <button
             onClick={onClose}
             className="
               absolute
-              right-8
+              right-7
               top-5
               text-3xl
               font-bold
@@ -140,42 +143,57 @@ const [timetable, setTimetable] =
             setDday={setDday}
           />
 
-          {/* 메인 컨텐츠 */}
-          <div className="mt-8 flex gap-8">
+          {/* 메인 */}
+          <div className="mt-6 flex flex-col gap-5">
 
-            {/* 좌측 */}
-            <div className="w-[58%]">
+            {/* task + timetable */}
+            <div className="flex gap-5 min-w-0">
 
-              <PlannerTaskList
-                tasks={tasks}
-                setTasks={setTasks}
-                toggleTask={toggleTask}
-                setBlocks={setBlocks}
-              />
+              {/* task */}
+              <div className="w-[42%] min-w-0">
 
+                <PlannerTaskList
+                  tasks={tasks}
+                  setTasks={setTasks}
+                  toggleTask={toggleTask}
+                />
+
+              </div>
+
+              {/* timetable */}
+              <div className="flex-1 min-w-0">
+
+                <PlannerTimetable
+                  tasks={tasks}
+                  timetable={timetable}
+                  setTimetable={
+                    setTimetable
+                  }
+                />
+
+              </div>
+
+            </div>
+
+            {/* comment */}
+            <div className="min-w-0">
               <PlannerComment
                 comment={comment}
                 setComment={setComment}
               />
-
             </div>
 
-            {/* 우측 timetable */}
-            <PlannerTimetable
-              tasks={tasks}
-              timetable={timetable}
-              setTimetable={setTimetable}
+            {/* progress */}
+            <PlannerProgress
+              progress={progress}
             />
 
           </div>
 
-          {/* 진행률 */}
-          <PlannerProgress
-            progress={progress}
-          />
-
         </div>
+
       </div>
+
     </div>
   );
 }

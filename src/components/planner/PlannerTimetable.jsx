@@ -34,13 +34,9 @@ function PlannerTimetable({
     row,
     col
   ) => {
-
-    if (!selectedTask) return;
-
     const key = `${row}-${col}`;
 
     setTimetable((prev) => {
-
       // 이미 칠해져있으면 제거
       if (prev[key]) {
         const updated = { ...prev };
@@ -49,6 +45,8 @@ function PlannerTimetable({
 
         return updated;
       }
+
+      if (!selectedTask) return prev;
 
       // 새로 칠하기
       return {
@@ -166,7 +164,7 @@ function PlannerTimetable({
                     )
                   }
                   className="
-                    h-[32px]
+                    h-[22px]
                     border-b
                     border-r
                     transition

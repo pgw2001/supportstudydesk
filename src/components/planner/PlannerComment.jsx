@@ -16,8 +16,9 @@ function PlannerComment({
         }
         placeholder="오늘의 코멘트"
         className="
-          h-[130px]
+          h-[100px]
           w-full
+          max-w-full
           resize-none
           rounded-2xl
           border
