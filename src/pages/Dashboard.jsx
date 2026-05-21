@@ -324,7 +324,6 @@ function Dashboard() {
         <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
-          setIsStyleOpen={setIsStyleOpen}
           deskTimerTime={deskTimerTime}
         />
 
