@@ -34,6 +34,15 @@ function Dashboard() {
     return saved ? parseFloat(saved) : 0.5;
   });
 
+  const [deskTimerTime, setDeskTimerTime] =
+  useState(0);
+  useEffect(() => {
+  console.log(
+    "dashboard:",
+    deskTimerTime
+  );
+}, [deskTimerTime]);
+  // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
   const [plantProgress, setPlantProgress] = useState(() => {
     const savedProgress = localStorage.getItem("plantProgress");
 
@@ -254,7 +263,7 @@ function Dashboard() {
           style={{ bottom: "19%" }}
           disabled={!isEditMode}
         >
-          <Timer onTick={handleTick} />
+          <Timer onTick={handleTick} deskTimerTime={deskTimerTime} setDeskTimerTime={setDeskTimerTime} />
         </Draggable>
 
         <Draggable
@@ -315,7 +324,8 @@ function Dashboard() {
         <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
-          setIsStyleOpen={() => {}}
+          setIsStyleOpen={setIsStyleOpen}
+          deskTimerTime={deskTimerTime}
         />
 
         <Modal
