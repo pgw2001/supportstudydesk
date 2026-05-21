@@ -1,119 +1,76 @@
 import { useState, useCallback, useEffect } from "react";
+import { Check, CloudRain, ImagePlus, Layout, RotateCcw, Upload } from "lucide-react";
 import Sidebar from "../components/sidebar/Sidebar";
-import menubar from "../assets/menubar.svg";
-import { Layout, Check, ImagePlus, RotateCcw, Upload } from "lucide-react";
-
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
 import Memo from "../components/memo/Memo";
 import Quotes from "../components/quotes/Quotes";
-import deskSvg from "../assets/desk.svg";
-import windowLayerSvg from "/assets/window/window_layer.svg";
-import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg"
 import Calendar from "../components/calendar/Calendar";
 import PlannerButton from "../components/planner/PlannerButton";
-import Draggable from "../utils/Draggable";
 import MusicPlayer from "../components/musicPlayer/MusicPlayer";
 import StudyPlant from "../components/study-plant/StudyPlant";
 import Modal from "../components/common/modal";
+import Draggable from "../utils/Draggable";
 import { useWindow } from "../components/window/useWindow";
+import RainyWindowOverlay from "../components/window/RainyWindowOverlay";
+import menubar from "../assets/menubar.svg";
+import deskSvg from "../assets/desk.svg";
+import windowLayerSvg from "/assets/window/window_layer.svg";
+import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg";
 
 const DEFAULT_WINDOW_BG = "/assets/window/window_bg.png";
-const DASHBOARD_ASPECT_RATIO = 16 / 9;
-const WINDOW_LAYOUT = {
-  leftPercent: -38,
-  topPercent: -53,
-  widthPercent: 65,
-  aspectWidth: 370,
-  aspectHeight: 687,
-};
-const WINDOW_MASK_URL = 'url("/assets/window/mask.svg")';
-const WINDOW_MASK_STYLE = {
-  WebkitMaskImage: WINDOW_MASK_URL,
-  maskImage: WINDOW_MASK_URL,
-  WebkitMaskSize: "100% 100%",
-  maskSize: "100% 100%",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-  WebkitMaskPosition: "center",
-  maskPosition: "center",
-  WebkitMaskMode: "alpha",
-  maskMode: "alpha",
-};
-
-const getVisibleWindowCrop = () => {
-  const viewportWidth = 100 * DASHBOARD_ASPECT_RATIO;
-  const viewportHeight = 100;
-  const windowWidth = (WINDOW_LAYOUT.widthPercent / 100) * viewportWidth;
-  const windowHeight =
-    windowWidth * (WINDOW_LAYOUT.aspectHeight / WINDOW_LAYOUT.aspectWidth);
-  const windowLeft = (WINDOW_LAYOUT.leftPercent / 100) * viewportWidth;
-  const windowTop = (WINDOW_LAYOUT.topPercent / 100) * viewportHeight;
-  const visibleLeft = Math.max(0, windowLeft);
-  const visibleTop = Math.max(0, windowTop);
-  const visibleRight = Math.min(viewportWidth, windowLeft + windowWidth);
-  const visibleBottom = Math.min(viewportHeight, windowTop + windowHeight);
-
-  return {
-    x: (visibleLeft - windowLeft) / windowWidth,
-    y: (visibleTop - windowTop) / windowHeight,
-    width: Math.max(0, visibleRight - visibleLeft) / windowWidth,
-    height: Math.max(0, visibleBottom - visibleTop) / windowHeight,
-  };
-};
-
-const WINDOW_VISIBLE_CROP = getVisibleWindowCrop();
-const WINDOW_VISIBLE_PREVIEW_STYLE = {
-  width: `${100 / WINDOW_VISIBLE_CROP.width}%`,
-  height: `${100 / WINDOW_VISIBLE_CROP.height}%`,
-  left: `${(-WINDOW_VISIBLE_CROP.x / WINDOW_VISIBLE_CROP.width) * 100}%`,
-  top: `${(-WINDOW_VISIBLE_CROP.y / WINDOW_VISIBLE_CROP.height) * 100}%`,
-};
-const WINDOW_VISIBLE_PREVIEW_ASPECT =
-  (WINDOW_VISIBLE_CROP.width * WINDOW_LAYOUT.aspectWidth) /
-  (WINDOW_VISIBLE_CROP.height * WINDOW_LAYOUT.aspectHeight);
+const WINDOW_RAIN_STORAGE_KEY = "windowRainEnabled";
+const WINDOW_RAIN_INTENSITY_KEY = "windowRainIntensity";
 
 function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+  const [isWindowRainEnabled, setIsWindowRainEnabled] = useState(() => {
+    return localStorage.getItem(WINDOW_RAIN_STORAGE_KEY) === "true";
+  });
+  const [windowRainIntensity, setWindowRainIntensity] = useState(() => {
+    const saved = localStorage.getItem(WINDOW_RAIN_INTENSITY_KEY);
+    return saved ? parseFloat(saved) : 0.5;
+  });
 
-  // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
   const [plantProgress, setPlantProgress] = useState(() => {
     const savedProgress = localStorage.getItem("plantProgress");
-    return savedProgress ? JSON.parse(savedProgress) : {
-      rose: 0,
-      sunflower: 0,
-      hydrangea: 0,
-      lilyOfTheValley: 0,
-      hyacinth: 0
-    };
-  });
-  const [activePlantType, setActivePlantType] = useState(() => {
-    return localStorage.getItem("activePlantType") || 'rose';
+
+    return savedProgress
+      ? JSON.parse(savedProgress)
+      : {
+          rose: 0,
+          sunflower: 0,
+          hydrangea: 0,
+          lilyOfTheValley: 0,
+          hyacinth: 0,
+        };
   });
 
-  // 데이터 변경 시 로컬 스토리지에 자동 저장
+  const [activePlantType, setActivePlantType] = useState(() => {
+    return localStorage.getItem("activePlantType") || "rose";
+  });
+
   useEffect(() => {
     localStorage.setItem("plantProgress", JSON.stringify(plantProgress));
     localStorage.setItem("activePlantType", activePlantType);
   }, [plantProgress, activePlantType]);
 
-  // 배치 수정 모드 상태
-  const [isEditMode, setIsEditMode] = useState(false);
+  useEffect(() => {
+    localStorage.setItem(WINDOW_RAIN_STORAGE_KEY, String(isWindowRainEnabled));
+  }, [isWindowRainEnabled]);
 
-  // StyleBar 상태
-  const [isStyleOpen, setIsStyleOpen] = useState(false);
-  const [selectedStyle, setSelectedStyle] = useState(1);
+  useEffect(() => {
+    localStorage.setItem(WINDOW_RAIN_INTENSITY_KEY, String(windowRainIntensity));
+  }, [windowRainIntensity]);
 
-  // 타이머 틱 핸들러 (메모이제이션)
   const handleTick = useCallback(() => {
-    setPlantProgress(prev => ({
+    setPlantProgress((prev) => ({
       ...prev,
-      [activePlantType]: (prev[activePlantType] || 0) + 1
+      [activePlantType]: (prev[activePlantType] || 0) + 1,
     }));
   }, [activePlantType]);
-
-  // Calendar 확대 상태
-  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
 
   const {
     fileInputRef,
@@ -135,20 +92,23 @@ function Dashboard() {
     previewFrameRef,
     windowImageStyle,
     previewImageStyle,
+    windowMaskStyle,
+    previewContainerStyle,
+    windowButtonStyle,
+    previewAspect,
   } = useWindow(DEFAULT_WINDOW_BG);
 
   return (
     <div className="flex min-h-screen items-center justify-center overflow-visible bg-[#f4f1ec]">
       <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden bg-[#fcfbf8]">
-
-        {/* 메뉴 버튼 */}
         {!isSidebarOpen && (
           <div className="absolute top-3 right-3 z-[999] flex gap-2">
-            {/* 배치 수정 버튼 */}
             <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`flex items-center justify-center w-10 h-10 rounded-full transition shadow-sm ${
-                isEditMode ? "bg-green-500 text-white" : "bg-white/80 text-gray-700 hover:bg-white"
+              onClick={() => setIsEditMode((prev) => !prev)}
+              className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+                isEditMode
+                  ? "bg-green-500 text-white"
+                  : "bg-white/80 text-gray-700 hover:bg-white"
               }`}
               title={isEditMode ? "배치 완료" : "배치 수정"}
             >
@@ -158,37 +118,33 @@ function Dashboard() {
             {isEditMode && (
               <button
                 onClick={openWindowEditor}
-                className="flex items-center justify-center w-10 h-10 rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-white"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-white"
                 title="창 배경 수정"
               >
                 <ImagePlus size={18} />
               </button>
             )}
-            
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className=""
-            >
+
+            <button onClick={() => setIsSidebarOpen(true)}>
               <img
                 src={menubar}
                 alt="menu"
-                className="w-8 h-8 opacity-70 hover:opacity-100 transition"
+                className="h-8 w-8 opacity-70 transition hover:opacity-100"
               />
             </button>
           </div>
         )}
 
-        {/* Window */}
         <div 
-          className={`absolute left-[-38%] top-[-53%] w-[65%] aspect-[370/687] transition-all duration-300 ${isEditMode ? "z-50" : "z-10"}`}
-          style={{ pointerEvents: isEditMode ? 'auto' : 'none' }}
+          className={`group absolute left-[-38%] top-[-53%] aspect-[370/687] w-[65%] transition-all duration-300 ${isEditMode ? "z-50" : "z-[1]"}`}
+          style={{ pointerEvents: "auto" }}
         >
-          {/* 1. 사용자 배경 레이어 (가장 뒤) */}
           <div className="absolute left-[4%] top-0 h-full w-full z-0 pointer-events-none">
+            {/* 배경과 비 레이어를 하나의 마스크 컨테이너로 통합 */}
             <div
               ref={windowFrameRef}
               className="absolute inset-0 overflow-hidden"
-              style={WINDOW_MASK_STYLE}
+              style={windowMaskStyle}
             >
               <img
                 src={windowBg}
@@ -197,29 +153,70 @@ function Dashboard() {
                 style={windowImageStyle}
                 draggable={false}
               />
+              {/* 비 레이어를 배경 이미지 바로 위에 배치 */}
+              <RainyWindowOverlay 
+                enabled={isWindowRainEnabled} 
+                intensity={windowRainIntensity}
+              />
             </div>
-            {/* RoughJS 스타일의 외곽선 틀을 배경 레이어에도 추가 */}
+
             <img
               src={windowLayerSvg}
               alt="window background frame outline"
-              className="absolute inset-0 h-full w-full object-contain fill-none"
+              className="absolute inset-0 h-full w-full object-contain"
             />
           </div>
-          {/* 2. 유리 레이어 */}
+
           <img
             src={windowGlassLayerSvg}
-            alt="windowGlass"
-            className="absolute left-[7%] opacity-60 h-full w-full object-contain z-10 pointer-events-none"
+            alt="window glass"
+            className="absolute left-[7%] z-10 h-full w-full object-contain opacity-60 pointer-events-none"
           />
-          {/* 3. 창틀 레이어 (가장 앞) */}
           <img
             src={windowLayerSvg}
-            alt="window"
-            className="absolute left-[10%] h-full w-full object-contain fill-none z-20 pointer-events-none"
+            alt="window front frame"
+            className="absolute left-[10%] z-20 h-full w-full object-contain pointer-events-none"
           />
+
+          <div
+            className="absolute inset-0 z-30 pointer-events-none opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
+          >
+            <div className="absolute z-30 flex flex-col items-center gap-3" style={windowButtonStyle}>
+              <button
+                type="button"
+                onClick={() => setIsWindowRainEnabled((prev) => !prev)}
+                className={`pointer-events-auto inline-flex items-center gap-2 rounded-full border px-4 py-2 font-['Patrick_Hand'] text-sm shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-[3px] transition ${
+                  isWindowRainEnabled
+                    ? "border-black/15 bg-white/90 text-black"
+                    : "border-black/10 bg-[#f7f3eb]/88 text-black/70"
+                }`}
+                title={isWindowRainEnabled ? "비 끄기" : "비 켜기"}
+              >
+                <CloudRain size={16} />
+                <span>{isWindowRainEnabled ? "Rain On" : "Rain Off"}</span>
+              </button>
+
+              {isWindowRainEnabled && (
+                <div className="pointer-events-auto flex flex-col items-center gap-1 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur-md">
+                  <div className="flex w-full justify-between px-1 font-['Patrick_Hand'] text-[10px] text-black/50">
+                    <span>Light</span>
+                    <span>Heavy</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={windowRainIntensity}
+                    onChange={(e) => setWindowRainIntensity(parseFloat(e.target.value))}
+                    className="h-1.5 w-24 cursor-pointer appearance-none rounded-lg bg-black/10 accent-black"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Calendar */}
         <Draggable
           initialLeft="28%"
           initialTop="8%"
@@ -230,7 +227,6 @@ function Dashboard() {
           <Calendar onExpandStateChange={setIsCalendarExpanded} />
         </Draggable>
 
-        {/* Memo */}
         <Draggable
           initialLeft="61%"
           initialTop="18%"
@@ -240,13 +236,17 @@ function Dashboard() {
         >
           <Memo />
         </Draggable>
-        
-        {/* Quotes */}
-        <Draggable initialLeft="80%" initialTop="25%" className="z-10" style={{ width: '18%' }} disabled={!isEditMode}>
+
+        <Draggable
+          initialLeft="80%"
+          initialTop="25%"
+          className="z-10"
+          style={{ width: "18%" }}
+          disabled={!isEditMode}
+        >
           <Quotes />
         </Draggable>
-        
-        {/* Timer */}
+
         <Draggable
           initialLeft="34%"
           initialTop="auto"
@@ -256,9 +256,7 @@ function Dashboard() {
         >
           <Timer onTick={handleTick} />
         </Draggable>
-        
 
-        {/* Planner */}
         <Draggable
           initialLeft="70%"
           initialTop="80%"
@@ -271,18 +269,12 @@ function Dashboard() {
           </div>
         </Draggable>
 
-        {/* Desk */}
         <div className="absolute top-[82%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
 
-        <div className="absolute bottom-[0%] left-[17%] w-[100%] aspect-[2244/389] z-0">
-          <img
-            src={deskSvg}
-            alt="desk"
-            className="h-full w-full object-contain"
-          />
+        <div className="absolute bottom-[0%] left-[17%] z-0 aspect-[2244/389] w-[100%]">
+          <img src={deskSvg} alt="desk" className="h-full w-full object-contain" />
         </div>
-        
-        {/* Todo List */}
+
         <Draggable
           initialLeft="60%"
           initialTop="auto"
@@ -297,26 +289,33 @@ function Dashboard() {
           <TodoList />
         </Draggable>
 
-        {/* Music Player */}
-        <Draggable initialLeft="70%" initialTop="50%" className="z-20" style={{ width: '26%'}} disabled={!isEditMode}>
+        <Draggable
+          initialLeft="70%"
+          initialTop="50%"
+          className="z-20"
+          style={{ width: "26%" }}
+          disabled={!isEditMode}
+        >
           <MusicPlayer />
         </Draggable>
 
-        {/* Study-Plant: 다시 Draggable로 감싸고 z-index를 높여 클릭 우선순위 확보 */}
-        <Draggable initialLeft="45%" initialTop="68%" className="z-30" disabled={!isEditMode}>
-          <StudyPlant 
-            plantProgress={plantProgress} 
-            activePlantType={activePlantType} 
-            onPlantChange={setActivePlantType} 
+        <Draggable
+          initialLeft="45%"
+          initialTop="68%"
+          className="z-30"
+          disabled={!isEditMode}
+        >
+          <StudyPlant
+            plantProgress={plantProgress}
+            activePlantType={activePlantType}
+            onPlantChange={setActivePlantType}
           />
         </Draggable>
 
-
-        {/* Sidebar */}
         <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
-          setIsStyleOpen={setIsStyleOpen}
+          setIsStyleOpen={() => {}}
         />
 
         <Modal
@@ -337,7 +336,7 @@ function Dashboard() {
 
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-black/65">
-                이미지를 올린 뒤, 미리보기 안에서 드래그해서 창 안 위치를 맞춰주세요.
+                이미지를 올린 뒤 미리보기 안에서 드래그해서 위치를 맞춰주세요.
               </p>
               <button
                 type="button"
@@ -352,16 +351,13 @@ function Dashboard() {
             <div className="rounded-[28px] border border-black/10 bg-[#f8f3ea] p-5">
               <div
                 className="mx-auto relative w-full max-w-[220px] overflow-hidden rounded-[24px] border border-black/10 bg-white"
-                style={{ aspectRatio: `${WINDOW_VISIBLE_PREVIEW_ASPECT}` }}
+                style={{ aspectRatio: `${previewAspect}` }}
               >
-                <div
-                  className="absolute"
-                  style={WINDOW_VISIBLE_PREVIEW_STYLE}
-                >
+                <div className="absolute" style={previewContainerStyle}>
                   <div
                     ref={previewFrameRef}
-                    className="absolute left-[4%] top-0 h-full w-full overflow-hidden cursor-grab active:cursor-grabbing touch-none z-10"
-                    style={WINDOW_MASK_STYLE}
+                    className="absolute left-[4%] top-0 h-full w-full overflow-hidden cursor-grab touch-none active:cursor-grabbing"
+                    style={windowMaskStyle}
                     {...previewPointerHandlers}
                   >
                     <img
@@ -374,7 +370,7 @@ function Dashboard() {
                   </div>
                   <img
                     src={windowLayerSvg}
-                    alt="window preview frame back"
+                    alt="window preview back frame"
                     className="absolute left-[4%] h-full w-full object-contain pointer-events-none"
                   />
                 </div>
@@ -426,7 +422,6 @@ function Dashboard() {
             </div>
           </div>
         </Modal>
-
       </main>
     </div>
   );

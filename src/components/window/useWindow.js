@@ -11,6 +11,65 @@ const DEFAULT_SCALE = 0.4; // 1.0보다 크면 기본 상태에서 더 확대됩
 const MIN_SCALE = 0.2;
 const MAX_SCALE = 2.5;
 
+const DASHBOARD_ASPECT_RATIO = 16 / 9;
+const WINDOW_LAYOUT = {
+  leftPercent: -38,
+  topPercent: -53,
+  widthPercent: 65,
+  aspectWidth: 370,
+  aspectHeight: 687,
+};
+const WINDOW_MASK_URL = 'url("/assets/window/mask.svg")';
+export const WINDOW_MASK_STYLE = {
+  WebkitMaskImage: WINDOW_MASK_URL,
+  maskImage: WINDOW_MASK_URL,
+  WebkitMaskSize: "100% 100%",
+  maskSize: "100% 100%",
+  WebkitMaskRepeat: "no-repeat",
+  maskRepeat: "no-repeat",
+  WebkitMaskPosition: "center",
+  maskPosition: "center",
+  WebkitMaskMode: "alpha",
+  maskMode: "alpha",
+};
+
+const getVisibleWindowCrop = () => {
+  const viewportWidth = 100 * DASHBOARD_ASPECT_RATIO;
+  const viewportHeight = 100;
+  const windowWidth = (WINDOW_LAYOUT.widthPercent / 100) * viewportWidth;
+  const windowHeight =
+    windowWidth * (WINDOW_LAYOUT.aspectHeight / WINDOW_LAYOUT.aspectWidth);
+  const windowLeft = (WINDOW_LAYOUT.leftPercent / 100) * viewportWidth;
+  const windowTop = (WINDOW_LAYOUT.topPercent / 100) * viewportHeight;
+  const visibleLeft = Math.max(0, windowLeft);
+  const visibleTop = Math.max(0, windowTop);
+  const visibleRight = Math.min(viewportWidth, windowLeft + windowWidth);
+  const visibleBottom = Math.min(viewportHeight, windowTop + windowHeight);
+
+  return {
+    x: (visibleLeft - windowLeft) / windowWidth,
+    y: (visibleTop - windowTop) / windowHeight,
+    width: Math.max(0, visibleRight - visibleLeft) / windowWidth,
+    height: Math.max(0, visibleBottom - visibleTop) / windowHeight,
+  };
+};
+
+const WINDOW_VISIBLE_CROP = getVisibleWindowCrop();
+const WINDOW_VISIBLE_PREVIEW_STYLE = {
+  width: `${100 / WINDOW_VISIBLE_CROP.width}%`,
+  height: `${100 / WINDOW_VISIBLE_CROP.height}%`,
+  left: `${(-WINDOW_VISIBLE_CROP.x / WINDOW_VISIBLE_CROP.width) * 100}%`,
+  top: `${(-WINDOW_VISIBLE_CROP.y / WINDOW_VISIBLE_CROP.height) * 100}%`,
+};
+const WINDOW_DASHBOARD_BUTTON_STYLE = {
+  left: `${(WINDOW_VISIBLE_CROP.x + WINDOW_VISIBLE_CROP.width / 2) * 100}%`,
+  top: `${(WINDOW_VISIBLE_CROP.y + WINDOW_VISIBLE_CROP.height / 2) * 100}%`,
+  transform: "translate(-50%, -50%)",
+};
+const WINDOW_VISIBLE_PREVIEW_ASPECT =
+  (WINDOW_VISIBLE_CROP.width * WINDOW_LAYOUT.aspectWidth) /
+  (WINDOW_VISIBLE_CROP.height * WINDOW_LAYOUT.aspectHeight);
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const readStoredPosition = () => {
@@ -323,5 +382,9 @@ export const useWindow = (defaultBg) => {
     windowImageStyle: getImageStyle(windowFrameSize, windowImageSize, windowPosition, windowScale),
     previewImageStyle: getImageStyle(previewFrameSize, draftImageSize, draftPosition, draftScale),
     hasCustomWindowBg: windowBg !== defaultBg,
+    windowMaskStyle: WINDOW_MASK_STYLE,
+    previewContainerStyle: WINDOW_VISIBLE_PREVIEW_STYLE,
+    windowButtonStyle: WINDOW_DASHBOARD_BUTTON_STYLE,
+    previewAspect: WINDOW_VISIBLE_PREVIEW_ASPECT,
   };
 };
