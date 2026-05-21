@@ -1,25 +1,41 @@
 import { useEffect, useRef, useState } from "react";
 import rough from "roughjs";
 
+import PlannerHeader from "./PlannerHeader";
+import PlannerTaskList from "./PlannerTaskList";
+import PlannerTimetable from "./PlannerTimetable";
+import PlannerComment from "./PlannerComment";
+import PlannerProgress from "./PlannerProgress";
+
 function Planner({ onClose }) {
-  const [todos, setTodos] = useState([]);
-  const [input, setInput] = useState("");
-
   const svgRef = useRef(null);
-  const roughGroupRef = useRef(null);
 
-  // 오늘 날짜
-  const today = new Date().toLocaleDateString(
-    "ko-KR",
-    {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      weekday: "long",
-    }
+  // localStorage 불러오기
+  const savedData = JSON.parse(
+    localStorage.getItem("planner") || "{}"
   );
 
-  // rough 배경 생성
+  // task
+  const [tasks, setTasks] = useState(
+    savedData.tasks || []
+  );
+
+  // comment
+  const [comment, setComment] =
+    useState(savedData.comment || "");
+
+  // dday
+  const [dday, setDday] = useState(
+    savedData.dday || ""
+  );
+
+  // timetable
+  const [timetable, setTimetable] =
+    useState(
+      savedData.timetable || {}
+    );
+
+  // rough 배경
   useEffect(() => {
     const svg = svgRef.current;
 
@@ -35,281 +51,149 @@ function Planner({ onClose }) {
     );
 
     // 메인 종이
-    const rect = rc.rectangle(
-      8,
-      8,
-      504,
-      654,
-      {
-        roughness: 2.2,
+    group.appendChild(
+      rc.rectangle(10, 10, 960, 800, {
+        roughness: 1.4,
+        fill: "#fcfaf5",
+        fillStyle: "solid",
         stroke: "#222",
         strokeWidth: 2,
-        fill: "#f8f3e8",
-        fillStyle: "solid",
-      }
+      })
     );
-
-    // 그림자 느낌
-    const shadow = rc.rectangle(
-      16,
-      16,
-      504,
-      654,
-      {
-        roughness: 2,
-        stroke: "rgba(0,0,0,0.15)",
-        strokeWidth: 3,
-      }
-    );
-
-    group.appendChild(shadow);
-    group.appendChild(rect);
 
     svg.appendChild(group);
-
-    roughGroupRef.current = group;
   }, []);
 
-  // 저장 함수
-  const saveToLocalStorage = () => {
+  // 저장
+  useEffect(() => {
     localStorage.setItem(
       "planner",
-      JSON.stringify({todos, input})
+      JSON.stringify({
+        tasks,
+        comment,
+        dday,
+        timetable,
+      })
     );
-  };
-
-  // localStorage 불러오기
-  useEffect(() => {
-    const saved = localStorage.getItem(
-      "planner"
-    );
-
-    if (saved) {
-      const parsed = JSON.parse(saved);
-
-      setTodos(parsed.todos || []);
-      setInput(parsed.input || "");
-    }
-  }, []);
-
-  // 컴포넌트 언마운트 시 저장
-  useEffect(() => {
-    return () => {
-      saveToLocalStorage();
-    };
-  }, [todos, input]);
-
-  // 추가
-  const addTodo = () => {
-    if (!input.trim()) return;
-
-    setTodos([
-      ...todos,
-      {
-        id: Date.now(),
-        text: input,
-        done: false,
-      },
-    ]);
-
-    setInput("");
-  };
+  }, [
+    tasks,
+    comment,
+    dday,
+    timetable,
+  ]);
 
   // 체크
-  const toggleTodo = (id) => {
-    setTodos(
-      todos.map((todo) =>
-        todo.id === id
+  const toggleTask = (id) => {
+    setTasks(
+      tasks.map((task) =>
+        task.id === id
           ? {
-              ...todo,
-              done: !todo.done,
+              ...task,
+              done: !task.done,
             }
-          : todo
+          : task
       )
     );
   };
 
-  // 삭제
-  const deleteTodo = (id) => {
-    setTodos(
-      todos.filter((todo) => todo.id !== id)
-    );
-  };
-
   // 진행률
-  const completed = todos.filter(
-    (todo) => todo.done
-  ).length;
-
   const progress =
-    todos.length === 0
+    tasks.length === 0
       ? 0
       : Math.round(
-          (completed / todos.length) * 100
+          (tasks.filter((t) => t.done)
+            .length /
+            tasks.length) *
+            100
         );
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40">
 
-      {/* 컨테이너 */}
-      <div className="relative h-[670px] w-[520px]">
+      {/* 팝업 */}
+      <div className="relative h-[820px] w-[980px] max-w-[calc(100vw-40px)]">
 
-        {/* 배경 */}
+        {/* rough 배경 */}
         <svg
           ref={svgRef}
           className="absolute inset-0 h-full w-full"
         />
 
         {/* 내용 */}
-        <div className="absolute inset-0 p-10">
+        <div className="absolute inset-0 p-8 overflow-auto">
 
-        {/* 닫기 */}
-        <button
+          {/* 닫기 */}
+          <button
             onClick={onClose}
             className="
               absolute
               right-7
               top-5
-              text-2xl
+              text-3xl
               font-bold
             "
-        >   
+          >
             ✕
-        </button>
+          </button>
 
-          {/* 날짜 */}
-          <h2 className="mb-8 text-3xl font-bold text-neutral-800">
-            {today}
-          </h2>
+          {/* 헤더 */}
+          <PlannerHeader
+            totalTime="-- : --"
+            dday={dday}
+            setDday={setDday}
+          />
 
-          {/* 입력 */}
-          <div className="mb-8 flex gap-3">
-            <input
-              type="text"
-              value={input}
-              placeholder="할 일을 입력하세요"
-              onChange={(e) =>
-                setInput(e.target.value)
-              }
-              onKeyDown={(e) =>
-                e.key === "Enter" && addTodo()
-              }
-              className="
-                flex-1
-                border-b-2
-                border-neutral-700
-                bg-transparent
-                px-2
-                py-2
-                outline-none
-              "
-            />
+          {/* 메인 */}
+          <div className="mt-6 flex flex-col gap-5">
 
-            <button
-              onClick={addTodo}
-              className="
-                rounded-xl
-                border-2
-                border-neutral-800
-                bg-[#f5ecd7]
-                px-4
-                py-2
-                font-semibold
-                transition
-                hover:scale-105
-              "
-            >
-              추가
-            </button>
-          </div>
+            {/* task + timetable */}
+            <div className="flex gap-5 min-w-0">
 
-          {/* 리스트 */}
-          <div className="mb-10 max-h-[360px] space-y-4 overflow-y-auto pr-2">
+              {/* task */}
+              <div className="w-[42%] min-w-0">
 
-            {todos.length === 0 && (
-              <p className="text-neutral-400">
-                아직 작성된 할 일이 없습니다.
-              </p>
-            )}
-
-            {todos.map((todo) => (
-              <div
-                key={todo.id}
-                className="
-                  flex
-                  items-center
-                  gap-3
-                  rounded-xl
-                  border-2
-                  border-neutral-300
-                  bg-white/70
-                  px-4
-                  py-3
-                "
-              >
-
-                <input
-                  type="checkbox"
-                  checked={todo.done}
-                  onChange={() =>
-                    toggleTodo(todo.id)
-                  }
-                  className="h-4 w-4"
+                <PlannerTaskList
+                  tasks={tasks}
+                  setTasks={setTasks}
+                  toggleTask={toggleTask}
                 />
 
-                <span
-                  className={`
-                    flex-1
-                    text-lg
-                    ${
-                      todo.done
-                        ? "text-neutral-400 line-through"
-                        : ""
-                    }
-                  `}
-                >
-                  {todo.text}
-                </span>
+              </div>
 
-                <button
-                  onClick={() =>
-                    deleteTodo(todo.id)
+              {/* timetable */}
+              <div className="flex-1 min-w-0">
+
+                <PlannerTimetable
+                  tasks={tasks}
+                  timetable={timetable}
+                  setTimetable={
+                    setTimetable
                   }
-                  className="
-                    text-sm
-                    text-red-500
-                  "
-                >
-                  삭제
-                </button>
+                />
 
               </div>
-            ))}
-          </div>
 
-          {/* Progress */}
-          <div className="mb-2 flex justify-between text-sm font-semibold">
-            <span>목표 달성도</span>
-            <span>{progress}%</span>
-          </div>
+            </div>
 
-          {/* 게이지 */}
-          <div className="h-5 overflow-hidden rounded-full border-2 border-neutral-800 bg-[#ddd4bb]">
-            <div
-              className="
-                h-full
-                bg-[#f4c84c]
-                transition-all
-                duration-300
-              "
-              style={{
-                width: `${progress}%`,
-              }}
+            {/* comment */}
+            <div className="min-w-0">
+              <PlannerComment
+                comment={comment}
+                setComment={setComment}
+              />
+            </div>
+
+            {/* progress */}
+            <PlannerProgress
+              progress={progress}
             />
+
           </div>
 
         </div>
+
       </div>
+
     </div>
   );
 }
