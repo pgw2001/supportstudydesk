@@ -1,40 +1,14 @@
 import { useState } from "react";
-
 import NormalTimer from "./NormalTimer";
 import PomodoroTimer from "./PomodoroTimer";
 
-function Timer({
-  onTick,
-  deskTimerTime,
-  setDeskTimerTime,
-}) {
-  const [mode, setMode] =
-    useState("normal");
+function Timer({ onTick }) {
+  const [mode, setMode] = useState("normal");
 
   return mode === "normal" ? (
-    <NormalTimer
-      switchMode={() =>
-        setMode("pomodoro")
-      }
-
-      onTick={onTick}
-
-      deskTimerTime={
-        deskTimerTime
-      }
-
-      setDeskTimerTime={
-        setDeskTimerTime
-      }
-    />
+    <NormalTimer switchMode={() => setMode("pomodoro")} onTick={onTick} />
   ) : (
-    <PomodoroTimer
-      switchMode={() =>
-        setMode("normal")
-      }
-
-      onTick={onTick}
-    />
+    <PomodoroTimer switchMode={() => setMode("normal")} onTick={onTick} />
   );
 }
 

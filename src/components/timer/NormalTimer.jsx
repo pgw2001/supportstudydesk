@@ -1,57 +1,9 @@
 import { useEffect, useState } from "react";
 import TimerFrame from "./TimerFrame";
 
-import {
-  doc,
-  getDoc,
-  setDoc,
-} from "firebase/firestore";
-
-import {
-  auth,
-  db,
-} from "../../services/firebase";
-
-function NormalTimer({ switchMode, onTick,deskTimerTime,setDeskTimerTime }) {
-  const [time, setTime] =
-  useState(deskTimerTime || 0);
+function NormalTimer({ switchMode, onTick }) {
+  const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  useEffect(() => {
-  const loadTimer = async () => {
-    if (!auth.currentUser) return;
-
-    const docRef = doc(
-      db,
-      "users",
-      auth.currentUser.uid
-    );
-
-    const snap =
-      await getDoc(docRef);
-
-    if (snap.exists()) {
-      const data = snap.data();
-
-      if (data.deskTimerTime !== undefined) {
-      setTime(data.deskTimerTime);
-
-        if (setDeskTimerTime) {
-        setDeskTimerTime(
-        data.deskTimerTime
-        );
-        }
-    }
-
-      if (data.timerRunning) {
-        setIsRunning(
-          data.timerRunning
-        );
-      }
-    }
-  };
-
-  loadTimer();
-}, []);
 
   useEffect(() => {
     let timer;
@@ -67,33 +19,10 @@ function NormalTimer({ switchMode, onTick,deskTimerTime,setDeskTimerTime }) {
 
   // 시간이 실제로 변경될 때만 화분 성장에 반영 (Strict Mode 중복 호출 방지)
   useEffect(() => {
-  console.log("time:", time);
-
-  if (setDeskTimerTime) {
-    setDeskTimerTime(time);
-  }
-  }, [time]);
-
-  useEffect(() => {
-  const saveTimer = async () => {
-    if (!auth.currentUser) return;
-
-    await setDoc(
-      doc(
-        db,
-        "users",
-        auth.currentUser.uid
-      ),
-      {
-        deskTimerTime: time,
-        timerRunning: isRunning,
-      },
-      { merge: true }
-    );
-  };
-
-  saveTimer();
-}, [time, isRunning]);
+    if (isRunning && time > 0 && onTick) {
+      onTick();
+    }
+  }, [time, isRunning, onTick]);
 
   const formatTime = () => {
     const minutes = String(Math.floor(time / 60)).padStart(2, "0");
@@ -215,25 +144,10 @@ function NormalTimer({ switchMode, onTick,deskTimerTime,setDeskTimerTime }) {
 
       {/* RESET */}
       <g
-        onClick={async () => {
-      setIsRunning(false);
-      setTime(0);
-
-      if (auth.currentUser) {
-      await setDoc(
-      doc(
-        db,
-        "users",
-        auth.currentUser.uid
-      ),
-      {
-        deskTimerTime: 0,
-        timerRunning: false,
-      },
-      { merge: true }
-        );
-       }
-      }}
+        onClick={() => {
+          setIsRunning(false);
+          setTime(0);
+        }}
         onPointerDown={(e) => e.stopPropagation()}
         style={{ cursor: "pointer" }}
       >
