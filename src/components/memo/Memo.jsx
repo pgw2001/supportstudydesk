@@ -1,20 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import rough from "roughjs";
 
-function Memo() {
-  const [text, setText] = useState("");
-
+function Memo({ memo, onChange, onDragStart }) {
   const svgRef = useRef(null);
   const roughGroupRef = useRef(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("memo");
-    if (saved) setText(saved);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("memo", text);
-  }, [text]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -26,7 +15,6 @@ function Memo() {
 
     const rc = rough.svg(svg);
 
-    // 메모 배경
     const note = rc.rectangle(4, 4, 192, 212, {
       stroke: "#987a00",
       strokeWidth: 2,
@@ -41,17 +29,19 @@ function Memo() {
 
   return (
     <section
-      className="
-        relative
-        w-[clamp(120px,16vw,200px)]
-        aspect-[200/220]
-      "
+      className="absolute select-none"
+      style={{
+        left: memo.x,
+        top: memo.y,
+        transform: `rotate(${memo.rotation}deg)`,
+      }}
+      onMouseDown={onDragStart}
     >
       {/* SVG */}
       <svg
         ref={svgRef}
         viewBox="0 0 200 220"
-        className="absolute inset-0 h-full w-full"
+        className="h-[220px] w-[200px]"
         xmlns="http://www.w3.org/2000/svg"
       >
         <g
@@ -60,10 +50,12 @@ function Memo() {
         />
       </svg>
 
-      {/* 메모 입력 */}
+      {/* 입력 */}
       <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
+        value={memo.text}
+        onChange={(e) =>
+          onChange(memo.id, e.target.value)
+        }
         placeholder="Write memo..."
         className="
           absolute
