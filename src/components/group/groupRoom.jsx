@@ -253,6 +253,19 @@ function GroupRoom({
     user,
     username,
   ]);
+   useEffect(() => {
+  let interval;
+
+  if (isStudying) {
+    interval = setInterval(() => {
+      setSeconds((prev) => prev + 1);
+    }, 1000);
+  }
+
+  return () => {
+    clearInterval(interval);
+  };
+}, [isStudying]);
 
   useEffect(() => {
     if (!group?.id) return;
