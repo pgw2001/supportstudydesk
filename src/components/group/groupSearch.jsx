@@ -16,6 +16,7 @@ import rough from "roughjs/bundled/rough.esm";
 function GroupSearch({
   setPage,
   setIsGroupOpen,
+  setIsGroupOpen,
 }) {
   const paperSvgRef =
     useRef(null);
@@ -377,6 +378,11 @@ function GroupSearch({
                 (group) => (
                   <button
                     key={group.title}
+
+                    onClick={()=>{
+                        setSelectedGroup(group);
+                        setPage("room");
+                    }}
                     className={`
                       flex
                       items-center
