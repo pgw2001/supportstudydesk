@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import TimerFrame from "./TimerFrame";
 
-function PomodoroTimer({ switchMode }) {
+function PomodoroTimer({ switchMode, onTick, setDeskTimerDisplay }) {
   const [time, setTime] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -44,6 +44,7 @@ function PomodoroTimer({ switchMode }) {
             return 0;
           }
 
+
           return prev - 1;
         });
       }, 1000);
@@ -51,6 +52,22 @@ function PomodoroTimer({ switchMode }) {
 
     return () => clearInterval(timer);
   }, [isRunning, mode]);
+
+  useEffect(() => {
+
+  if (isRunning && onTick) {
+    onTick();
+  }
+
+  }, [time, isRunning, onTick]);
+
+  useEffect(() => {
+
+  setDeskTimerDisplay?.(
+    formatTime()
+  );
+
+  }, [time]);
 
   const adjustFocusTime = (amount) => {
     const next = Math.max(5, focusMinutes + amount);

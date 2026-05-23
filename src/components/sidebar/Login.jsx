@@ -27,7 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-function Login({ user, setUser, setIsGroupOpen }) {
+function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, }) {
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
 
@@ -114,7 +114,7 @@ function Login({ user, setUser, setIsGroupOpen }) {
           strokeWidth={1.8}
         />
       ),
-      info: "25:13",
+      info: deskTimerDisplay,
     },
 
     {

@@ -33,6 +33,7 @@ import rough from "roughjs";
 function Sidebar({
   isOpen,
   setIsOpen,
+  deskTimerDisplay,
 }) {
   const [showPassword, setShowPassword] =
     useState(false);
@@ -705,6 +706,8 @@ function Sidebar({
                 setIsGroupOpen={
                   setIsGroupOpen
                 }
+                deskTimerDisplay={
+                deskTimerDisplay}
               />
             ) : null}
           </div>
