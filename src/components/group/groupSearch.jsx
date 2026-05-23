@@ -16,7 +16,6 @@ import rough from "roughjs/bundled/rough.esm";
 function GroupSearch({
   setPage,
   setIsGroupOpen,
-  setIsGroupOpen,
 }) {
   const paperSvgRef =
     useRef(null);
