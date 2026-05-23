@@ -253,7 +253,7 @@ function GroupRoom({
     user,
     username,
   ]);
-  useEffect(() => {
+   useEffect(() => {
   let interval;
 
   if (isStudying) {
