@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useMemo } from "react";
 import rough from "roughjs";
-import { getHolidays } from "../../utils/HolidayAPI";
 import ExpandedModal from "../common/ExpandedModal";
 import ScheduleDetailsPopover from "./ScheduleDetailsPopover";
+import { useCalendar } from "./useCalendar";
 
 const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
 
@@ -619,119 +618,34 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
 }
 
 function Calendar({ onExpandStateChange }) {
-    const today = useMemo(() => new Date(), []);
-    // 현재 보고 있는 달력을 관리하는 상태 (해당 월의 1일로 설정)
-    const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-    const [showPicker, setShowPicker] = useState(false);
-    const [holidays, setHolidays] = useState([]);
-    const [showScheduleDetails, setShowScheduleDetails] = useState(null); // { date: string, pos: {x, y, w, h} }
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    // 확장 상태가 바뀔 때마다 부모(Dashboard)에게 알림
-    useEffect(() => {
-        onExpandStateChange?.(isExpanded);
-    }, [isExpanded, onExpandStateChange]);
-
-    // 일정 입력 관련 상태
-    const [scheduleInput, setScheduleInput] = useState(null); // { date: string }
-    const [tempTitle, setTempTitle] = useState("");
-    const [tempColor, setTempColor] = useState("#3b82f6");
-    
-    const [schedules, setSchedules] = useState(() => {
-        const saved = localStorage.getItem("calendar_schedules");
-        return saved ? JSON.parse(saved) : [];
-    });
-
-    const minDate = useMemo(() => new Date(today.getFullYear() - 10, today.getMonth(), 1), [today]);
-    const maxDate = useMemo(() => new Date(today.getFullYear() + 10, today.getMonth(), 1), [today]);
+    const {
+        today,
+        viewDate, setViewDate,
+        showPicker, setShowPicker,
+        holidays,
+        showScheduleDetails, setShowScheduleDetails,
+        isExpanded, setIsExpanded,
+        scheduleInput, setScheduleInput,
+        tempTitle, setTempTitle,
+        tempColor, setTempColor,
+        schedules,
+        minDate, maxDate,
+        handlePrevMonth,
+        handleNextMonth,
+        handleGoToday,
+        handleDeleteSchedule,
+        handleDateClick,
+        handleScheduleDetailsClick,
+        handleEditSchedule,
+        saveSchedule
+    } = useCalendar(onExpandStateChange);
 
     const palette = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#6366f1', '#a855f7']; // 무지개 색상 팔레트
-
-    const handlePrevMonth = () => {
-        const prev = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
-        if (prev >= minDate) {
-            setViewDate(prev);
-        }
-    };
-
-    const handleNextMonth = () => {
-        const next = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
-        if (next <= maxDate) {
-            setViewDate(next);
-        }
-    };
-
-    const handleGoToday = () => {
-        setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
-    };
-
-    const handleDeleteSchedule = useCallback((id) => {
-        setSchedules(prev => prev.filter(s => s.id !== id));
-    }, []);
-
-    const handleDateClick = (date, pos) => {
-        setScheduleInput({ date: date.toISOString().split('T')[0], pos });
-        setTempTitle("");
-        setTempColor("#3b82f6");
-    };
-
-    const handleScheduleDetailsClick = (date, pos) => {
-        setShowScheduleDetails({ date: date.toISOString().split('T')[0], pos });
-    };
-
-    const handleEditSchedule = (schedule) => {
-        setScheduleInput({ 
-            date: schedule.date, 
-            pos: showScheduleDetails.pos, 
-            id: schedule.id 
-        });
-        setTempTitle(schedule.title);
-        setTempColor(schedule.color);
-        setShowScheduleDetails(null); // 상세 창 닫기
-    };
-
-    const saveSchedule = () => {
-        if (tempTitle.trim()) {
-            if (scheduleInput.id) {
-                // 수정 모드
-                setSchedules(prev => prev.map(s => 
-                    s.id === scheduleInput.id ? { ...s, title: tempTitle, color: tempColor } : s
-                ));
-            } else {
-                // 신규 추가 모드
-                const newSchedule = {
-                    id: Date.now(),
-                    date: scheduleInput.date,
-                    title: tempTitle,
-                    color: tempColor
-                };
-                setSchedules(prev => [...prev, newSchedule]);
-            }
-        }
-        setScheduleInput(null);
-        setTempTitle("");
-    };
-
-    useEffect(() => {
-        localStorage.setItem("calendar_schedules", JSON.stringify(schedules));
-    }, [schedules]);
-
-    // 월이 변경될 때마다 공휴일 데이터를 가져옵니다.
-    useEffect(() => {
-        const fetchHolidays = async () => {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth() + 1;
-            const data = await getHolidays(year, month);
-            setHolidays(data);
-        };
-        fetchHolidays();
-    }, [viewDate]);
 
     // 일정 입력창용 RoughJS 말풍선 배경 그리기
     const inputSvgRef = useRef(null);
     useEffect(() => {
         if (scheduleInput && inputSvgRef.current) {
-            // Clear previous drawings
             inputSvgRef.current.innerHTML = "";
             const rc = rough.svg(inputSvgRef.current);
             
