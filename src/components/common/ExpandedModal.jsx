@@ -49,33 +49,34 @@ const ExpandedModal = ({
             onPointerDown={(e) => e.stopPropagation()}
         >
             <div 
-                className={`relative flex flex-col max-w-full max-h-full ${isTailwind(width) ? width : 'w-full'} ${isTailwind(height) ? height : ''}`}
+                className={`relative flex flex-col overflow-hidden max-w-full max-h-full ${isTailwind(width) ? width : 'w-full'} ${isTailwind(height) ? height : ''}`}
                 style={{
                     ...getDimensionStyle(width, 'width'),
                     ...getDimensionStyle(height, 'height'),
                 }}
             >
                 {/* RoughJS Background SVG */}
-                <svg 
-                    ref={svgRef} 
-                    className="absolute inset-0 w-full h-full -z-10 drop-shadow-2xl pointer-events-none" 
-                    viewBox="0 0 1000 562" 
-                    preserveAspectRatio="none"
-                />
+                <svg ref={svgRef} className="absolute inset-0 w-full h-full -z-10 drop-shadow-2xl pointer-events-none" viewBox="0 0 1000 562" preserveAspectRatio="none"/>
 
-                <button 
-                    onClick={onClose}
-                    className="absolute top-6 right-8 text-3xl font-bold hover:scale-110 transition-transform text-black z-[100]"
-                    style={{ fontFamily: "'Comic Sans MS', cursive" }}
-                >
-                    ✕
-                </button>
-                {title && (
-                    <span className="absolute top-6 left-10 text-gray-400 italic text-2xl" style={{ fontFamily: "'Comic Sans MS', cursive" }}>
-                        {title}
-                    </span>
-                )}
-                <div className="w-full h-full p-4 md:p-6 flex overflow-hidden">
+                {/* Header Area: 독립적인 영역을 확보하여 스크롤바 침범 방지 */}
+                <div className="w-full flex justify-between items-center px-10 pt-8 pb-2 z-[100] flex-shrink-0">
+                    <div className="flex-1">
+                        {title && (
+                            <span className="text-gray-400 italic text-2xl" style={{ fontFamily: "'Comic Sans MS', cursive" }}>
+                                {title}
+                            </span>
+                        )}
+                    </div>
+                    <button 
+                        onClick={onClose}
+                        className="text-5xl font-bold hover:scale-110 transition-transform text-black leading-none"
+                        style={{ fontFamily: "'Comic Sans MS', cursive" }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div className="w-full flex-grow p-4 md:p-6 pt-0 flex overflow-hidden">
                     {children}
                 </div>
             </div>
