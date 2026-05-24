@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Check, CloudRain, ImagePlus, Layout, RotateCcw, Upload } from "lucide-react";
 import Sidebar from "../components/sidebar/Sidebar";
 import Timer from "../components/timer/Timer";
@@ -20,8 +20,6 @@ import windowLayerSvg from "/assets/window/window_layer.svg";
 import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg";
 
 const DEFAULT_WINDOW_BG = "/assets/window/window_bg.png";
-const WINDOW_RAIN_STORAGE_KEY = "windowRainEnabled";
-const WINDOW_RAIN_INTENSITY_KEY = "windowRainIntensity";
 const WIDGET_POSITIONS_KEY = "widgetPositions";
 
 const DEFAULT_POSITIONS = {
@@ -39,13 +37,6 @@ function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
-  const [isWindowRainEnabled, setIsWindowRainEnabled] = useState(() => {
-    return localStorage.getItem(WINDOW_RAIN_STORAGE_KEY) === "true";
-  });
-  const [windowRainIntensity, setWindowRainIntensity] = useState(() => {
-    const saved = localStorage.getItem(WINDOW_RAIN_INTENSITY_KEY);
-    return saved ? parseFloat(saved) : 0.5;
-  });
 
   const [widgetPositions, setWidgetPositions] = useState(() => {
     const saved = localStorage.getItem(WIDGET_POSITIONS_KEY);
@@ -95,14 +86,6 @@ function Dashboard() {
     localStorage.setItem("dailyStudyTime", JSON.stringify(dailyStudyTime));
   }, [dailyStudyTime]);
 
-  useEffect(() => {
-    localStorage.setItem(WINDOW_RAIN_STORAGE_KEY, String(isWindowRainEnabled));
-  }, [isWindowRainEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem(WINDOW_RAIN_INTENSITY_KEY, String(windowRainIntensity));
-  }, [windowRainIntensity]);
-
   const handleTick = useCallback(() => {
     const todayStr = getLocalDateString(new Date());
     setDailyStudyTime(prev => ({
@@ -148,11 +131,30 @@ function Dashboard() {
     previewContainerStyle,
     windowButtonStyle,
     previewAspect,
+    isWindowRainEnabled,
+    setIsWindowRainEnabled,
+    windowRainIntensity,
+    setWindowRainIntensity,
   } = useWindow(DEFAULT_WINDOW_BG);
 
   return (
     <div className="flex min-h-screen items-center justify-center overflow-visible bg-[#f4f1ec]">
       <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden bg-[#fcfbf8]">
+        {/* 비 효과 활성 시 화면 전체를 우중충하고 흐리게 만드는 분위기 레이어 */}
+        <div 
+          className="absolute inset-0 pointer-events-none transition-all duration-1000 z-[1000]"
+          style={{
+            backgroundColor: isWindowRainEnabled 
+              ? `rgba(35, 45, 65, ${0.05 + windowRainIntensity * 0.12})` 
+              : "transparent",
+            backdropFilter: isWindowRainEnabled 
+              ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
+              : "none",
+            WebkitBackdropFilter: isWindowRainEnabled 
+              ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
+              : "none",
+          }}
+        />
         {!isSidebarOpen && (
           <div className="absolute top-3 right-3 z-[999] flex gap-2">
             <button
@@ -245,7 +247,7 @@ function Dashboard() {
                 title={isWindowRainEnabled ? "비 끄기" : "비 켜기"}
               >
                 <CloudRain size={16} />
-                <span>{isWindowRainEnabled ? "Rain On" : "Rain Off"}</span>
+                <span>{isWindowRainEnabled ? "Rain Off" : "Rain On"}</span>
               </button>
 
               {isWindowRainEnabled && (

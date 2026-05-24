@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import rainSound from "../../assets/rain.mp3";
 
 const WINDOW_BG_STORAGE_KEY = "windowBg";
 const WINDOW_BG_POSITION_STORAGE_KEY = "windowBgPosition";
 const WINDOW_BG_SCALE_STORAGE_KEY = "windowBgScale";
+const WINDOW_RAIN_STORAGE_KEY = "windowRainEnabled";
+const WINDOW_RAIN_INTENSITY_KEY = "windowRainIntensity";
 
 // x, y는 0.0(왼쪽/위)에서 1.0(오른쪽/아래) 사이의 값입니다.
 const DEFAULT_POSITION = { x: 0, y: 0.4676540687776643 }; // 예: y를 0.4로 하면 이미지가 약간 위로 올라감
@@ -213,6 +216,13 @@ export const useWindow = (defaultBg) => {
   const [draftScale, setDraftScale] = useState(windowScale);
   const [windowImageSize, setWindowImageSize] = useState(null);
   const [draftImageSize, setDraftImageSize] = useState(null);
+  const [isWindowRainEnabled, setIsWindowRainEnabled] = useState(() => {
+    return localStorage.getItem(WINDOW_RAIN_STORAGE_KEY) === "true";
+  });
+  const [windowRainIntensity, setWindowRainIntensity] = useState(() => {
+    const saved = localStorage.getItem(WINDOW_RAIN_INTENSITY_KEY);
+    return saved ? parseFloat(saved) : 0.5;
+  });
 
   const [windowFrameRef, windowFrameSize] = useElementSize();
   const [previewFrameRef, previewFrameSize] = useElementSize();
@@ -221,6 +231,41 @@ export const useWindow = (defaultBg) => {
 
   useEffect(() => loadImageSize(windowBg, setWindowImageSize), [windowBg]);
   useEffect(() => loadImageSize(draftBg, setDraftImageSize), [draftBg]);
+
+  // 비 소리 효과 관리
+  const rainAudioRef = useRef(null);
+
+  useEffect(() => {
+    const audio = new Audio(rainSound);
+    audio.loop = true;
+    rainAudioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      rainAudioRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(WINDOW_RAIN_STORAGE_KEY, String(isWindowRainEnabled));
+    if (!rainAudioRef.current) return;
+
+    if (isWindowRainEnabled) {
+      rainAudioRef.current.volume = windowRainIntensity;
+      rainAudioRef.current.play().catch((error) => {
+        console.warn("Audio play blocked or failed:", error);
+      });
+    } else {
+      rainAudioRef.current.pause();
+    }
+  }, [isWindowRainEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem(WINDOW_RAIN_INTENSITY_KEY, String(windowRainIntensity));
+    if (rainAudioRef.current) {
+      rainAudioRef.current.volume = windowRainIntensity;
+    }
+  }, [windowRainIntensity]);
 
   useEffect(() => {
     localStorage.setItem(WINDOW_BG_STORAGE_KEY, windowBg);
@@ -386,5 +431,9 @@ export const useWindow = (defaultBg) => {
     previewContainerStyle: WINDOW_VISIBLE_PREVIEW_STYLE,
     windowButtonStyle: WINDOW_DASHBOARD_BUTTON_STYLE,
     previewAspect: WINDOW_VISIBLE_PREVIEW_ASPECT,
+    isWindowRainEnabled,
+    setIsWindowRainEnabled,
+    windowRainIntensity,
+    setWindowRainIntensity,
   };
 };
