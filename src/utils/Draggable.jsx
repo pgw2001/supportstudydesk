@@ -1,7 +1,15 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function Draggable({ children, initialLeft = "0%", initialTop = "0%", className = "", style = {}, disabled = false, onDragEnd }) {
   const [position, setPosition] = useState({ left: initialLeft, top: initialTop });
+
+  useEffect(() => {
+  setPosition({
+    left: initialLeft,
+    top: initialTop,
+  });
+  }, [initialLeft, initialTop]);
+
   const [isDragging, setIsDragging] = useState(false);
   const dragging = useRef(false);
   const origin = useRef({ x: 0, y: 0, left: 0, top: 0 });

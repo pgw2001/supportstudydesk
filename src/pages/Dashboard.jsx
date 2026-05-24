@@ -1,3 +1,7 @@
+import {
+  saveUserData,
+  loadUserData,
+} from "../services/userData";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Check, CloudRain, ImagePlus, Layout, RotateCcw, Upload } from "lucide-react";
 import Sidebar from "../components/sidebar/Sidebar";
@@ -33,49 +37,177 @@ const DEFAULT_POSITIONS = {
   plant: { left: "45%", top: "68%" },
 };
 
+const DEFAULT_PLANT_PROGRESS = {
+  rose: 0,
+  sunflower: 0,
+  hydrangea: 0,
+  lilyOfTheValley: 0,
+  hyacinth: 0,
+};
+
 function Dashboard({ user, setUser }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
 
-  const [widgetPositions, setWidgetPositions] = useState(() => {
-    const saved = localStorage.getItem(WIDGET_POSITIONS_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_POSITIONS;
-  });
+  const [widgetPositions, setWidgetPositions] =
+  useState(DEFAULT_POSITIONS);
 
-  const handleDragEnd = (id, pos) => {
-    setWidgetPositions(prev => {
-      const next = { ...prev, [id]: pos };
-      localStorage.setItem(WIDGET_POSITIONS_KEY, JSON.stringify(next));
-      return next;
-    });
+  const [isWidgetLoaded, setIsWidgetLoaded] =
+  useState(false);
+
+  const handleDragEnd = (
+  id,
+  pos
+  ) => {
+
+  setWidgetPositions(
+    prev => ({
+      ...prev,
+      [id]: pos,
+    })
+  );
   };
+  useEffect(() => {
+
+  setIsWidgetLoaded(false);  
+
+  const loadWidgetPositions =
+    async () => {
+
+      if (user === null) {
+
+        setWidgetPositions(
+          DEFAULT_POSITIONS
+        );
+
+        setIsWidgetLoaded(true);
+
+        return;
+      }
+
+      const data =
+        await loadUserData(
+          user.uid
+        );
+
+      setWidgetPositions(
+        data?.widgetPositions ||
+        DEFAULT_POSITIONS
+      );
+
+      setIsWidgetLoaded(true);
+    };
+
+  loadWidgetPositions();
+
+  }, [user]);
+
+  useEffect(() => {
+
+  if (
+    !isWidgetLoaded ||
+    !user?.uid ||
+    user?.isGuest
+  ) {
+    return;
+  }
+
+  saveUserData(
+    user.uid,
+    {
+      widgetPositions,
+    }
+  );
+
+}, [
+  widgetPositions,
+  user,
+  isWidgetLoaded,
+  ]);
 
 
   // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
-  const [plantProgress, setPlantProgress] = useState(() => {
-    const savedProgress = localStorage.getItem("plantProgress");
+  const [plantProgress, setPlantProgress] =
+  useState(DEFAULT_PLANT_PROGRESS);
 
-    return savedProgress
-      ? JSON.parse(savedProgress)
-      : {
-          rose: 0,
-          sunflower: 0,
-          hydrangea: 0,
-          lilyOfTheValley: 0,
-          hyacinth: 0,
-        };
-  });
+  const [activePlantType, setActivePlantType] =
+  useState("rose");
 
-  const [activePlantType, setActivePlantType] = useState(() => {
-    return localStorage.getItem("activePlantType") || "rose";
-  });
+
+  const [isPlantLoaded, setIsPlantLoaded] =
+useState(false);
+
+useEffect(() => {
+  setIsPlantLoaded(false);
+
+  const loadPlantData =
+    async () => {
+
+      // 로그아웃 상태
+      if (user === null) {
+
+        setPlantProgress(
+          DEFAULT_PLANT_PROGRESS
+        );
+
+        setActivePlantType(
+          "rose"
+        );
+
+        setIsPlantLoaded(true);
+
+        return;
+      }
+
+
+
+      const data =
+        await loadUserData(
+          user.uid
+        );
+
+      setPlantProgress(
+        data?.plantProgress ||
+        DEFAULT_PLANT_PROGRESS
+      );
+
+      setActivePlantType(
+        data?.activePlantType ||
+        "rose"
+      );
+
+      setIsPlantLoaded(true);
+    };
+
+  loadPlantData();
+
+  }, [user]);
 
   useEffect(() => {
-    localStorage.setItem("plantProgress", JSON.stringify(plantProgress));
-    localStorage.setItem("activePlantType", activePlantType);
-  }, [plantProgress, activePlantType]);
 
+  if (
+    !isPlantLoaded ||
+    !user?.uid ||
+    user?.isGuest
+  ) {
+    return;
+  }
+
+  saveUserData(
+    user.uid,
+    {
+      plantProgress,
+      activePlantType,
+    }
+  );
+
+  }, [
+  plantProgress,
+  activePlantType,
+  user,
+  isPlantLoaded,
+  ]);
   // 일간 공부 시간 데이터 관리 (성장 화분 방식과 동일)
   const [dailyStudyTime, setDailyStudyTime] = useState(() => {
     const saved = localStorage.getItem("dailyStudyTime");
@@ -272,6 +404,7 @@ function Dashboard({ user, setUser }) {
         </div>
 
         <Draggable
+          key={`${user?.uid || "logout"}-calendar`}
           initialLeft={widgetPositions.calendar.left}
           initialTop={widgetPositions.calendar.top}
           onDragEnd={(pos) => handleDragEnd("calendar", pos)}
@@ -287,7 +420,8 @@ function Dashboard({ user, setUser }) {
           />
         </Draggable>
 
-        <Draggable
+        <Draggable      
+          key={`${user?.uid || "logout"}-memo`}    
           initialLeft={widgetPositions.memo.left}
           initialTop={widgetPositions.memo.top}
           onDragEnd={(pos) => handleDragEnd("memo", pos)}
@@ -299,6 +433,7 @@ function Dashboard({ user, setUser }) {
         </Draggable>
 
         <Draggable
+          key={`${user?.uid || "logout"}-quotes`}
           initialLeft={widgetPositions.quotes.left}
           initialTop={widgetPositions.quotes.top}
           onDragEnd={(pos) => handleDragEnd("quotes", pos)}
@@ -310,6 +445,7 @@ function Dashboard({ user, setUser }) {
         </Draggable>
 
         <Draggable
+          key={`${user?.uid || "logout"}-timer`}
           initialLeft={widgetPositions.timer.left}
           initialTop={widgetPositions.timer.top}
           onDragEnd={(pos) => handleDragEnd("timer", pos)}
@@ -334,6 +470,7 @@ function Dashboard({ user, setUser }) {
         </Draggable>
 
         <Draggable
+          key={`${user?.uid || "logout"}-planner`}
           initialLeft={widgetPositions.planner.left}
           initialTop={widgetPositions.planner.top}
           onDragEnd={(pos) => handleDragEnd("planner", pos)}
@@ -353,6 +490,7 @@ function Dashboard({ user, setUser }) {
         </div>
 
         <Draggable
+          key={`${user?.uid || "logout"}-todo`}
           initialLeft={widgetPositions.todo.left}
           initialTop={widgetPositions.todo.top}
           onDragEnd={(pos) => handleDragEnd("todo", pos)}
@@ -367,6 +505,7 @@ function Dashboard({ user, setUser }) {
         </Draggable>
 
         <Draggable
+          key={`${user?.uid || "logout"}-music`}
           initialLeft={widgetPositions.music.left}
           initialTop={widgetPositions.music.top}
           onDragEnd={(pos) => handleDragEnd("music", pos)}
@@ -378,6 +517,7 @@ function Dashboard({ user, setUser }) {
         </Draggable>
 
         <Draggable
+          key={`${user?.uid || "logout"}-plant`}
           initialLeft={widgetPositions.plant.left}
           initialTop={widgetPositions.plant.top}
           onDragEnd={(pos) => handleDragEnd("plant", pos)}
@@ -385,6 +525,7 @@ function Dashboard({ user, setUser }) {
           disabled={!isEditMode}
         >
           <StudyPlant
+             key={user?.uid || "logout"}
             plantProgress={plantProgress}
             activePlantType={activePlantType}
             onPlantChange={setActivePlantType}
