@@ -34,15 +34,15 @@ function Sidebar({
   isOpen,
   setIsOpen,
   deskTimerDisplay,
-  taskCount,}) {
+  taskCount,
+  user,
+  setUser,
+  }) {
   const [showPassword, setShowPassword] =
     useState(false);
 
   const [mode, setMode] =
     useState("login");
-
-  const [user, setUser] =
-    useState(null);
 
   const [loginValue, setLoginValue] =
     useState("");
@@ -256,7 +256,7 @@ function Sidebar({
       {/* Sidebar */}
       <div
         className={`
-          fixed top-0 right-0 z-[999]
+          fixed top-0 right-0 z-[9999]
 
           h-screen
           w-[320px]
@@ -277,11 +277,12 @@ function Sidebar({
 
             flex
             h-full
+
             w-[290px]
 
             flex-col
 
-            overflow-visible
+            overflow-hidden
 
             px-4 py-4
 
@@ -307,6 +308,7 @@ function Sidebar({
           <div
             className="
               flex-1
+              min-h-0
 
               overflow-y-auto
               overflow-x-visible

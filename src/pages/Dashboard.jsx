@@ -33,7 +33,7 @@ const DEFAULT_POSITIONS = {
   plant: { left: "45%", top: "68%" },
 };
 
-function Dashboard() {
+function Dashboard({ user, setUser }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
@@ -359,7 +359,7 @@ function Dashboard() {
           }}
           disabled={!isEditMode}
         >
-          <TodoList setTaskCount={setTaskCount} />
+          <TodoList setTaskCount={setTaskCount} user={user} />
         </Draggable>
 
         <Draggable
@@ -391,6 +391,8 @@ function Dashboard() {
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
           deskTimerDisplay={deskTimerDisplay}
+          user={user}
+          setUser={setUser}
           taskCount={taskCount}
           deskTimerTime={dailyStudyTime[getLocalDateString(new Date())] || 0}
         />

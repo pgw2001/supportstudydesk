@@ -4,7 +4,8 @@ import TestBench from "./pages/TestBench";
 
 function App() {
   const [viewMode, setViewMode] = useState("dashboard"); // 'dashboard' or 'test'
-
+  const [user, setUser] = useState(null);
+  
   return (
     <div className="relative">
       {/* 화면 전환 스위치 (개발용) */}
@@ -17,7 +18,7 @@ function App() {
         </button>
       </div>
 
-      {viewMode === "dashboard" ? <Dashboard /> : <TestBench />}
+      {viewMode === "dashboard" ? <Dashboard user={user} setUser={setUser} /> : <TestBench />}
     </div>
   );
 }

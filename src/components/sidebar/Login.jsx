@@ -1423,8 +1423,8 @@ if (taskSvgRef.current) {
     "support-study-desk:todo-lists"
   );
 }
-
-  setUser(null);
+setTasks([]);
+setUser(null);
 }}
 
     onMouseEnter={() =>

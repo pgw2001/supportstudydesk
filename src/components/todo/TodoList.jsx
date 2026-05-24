@@ -1,4 +1,9 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import {
+  saveUserData,
+  loadUserData,
+} from "../../services/userData";
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import rough from "roughjs";
 import { TODO_SEED, getLineCount } from "./TodoUtils";
 import TodoItem from "./TodoItem";
@@ -16,11 +21,75 @@ const createTodoList = (number = 1) => ({
   todos: createEmptyTodos(),
 });
 
-function TodoList({ className,setTaskCount, }) {
+function TodoList({ className,setTaskCount,user }) {
   const svgRef = useRef(null);
   const listSvgRef = useRef(null);
 
+  const isResettingRef =
+  useRef(false);
+
   const [todoLists, setTodoLists] = useState(() => [createTodoList()]);
+  const [isLoaded, setIsLoaded] =
+  useState(false);
+  useEffect(() => {
+
+  const fetchTodoLists =
+  async () => {
+
+    if (!user) {
+
+      isResettingRef.current =
+        true;
+
+      setIsLoaded(false);
+
+      setTodoLists([
+        createTodoList(),
+      ]);
+
+      setCurrentListIndex(0);
+
+
+      return;
+    }
+
+    const data =
+      await loadUserData(
+        user.uid
+      );
+
+if (data?.todoLists) {
+
+  setTodoLists(
+    data.todoLists
+  );
+
+} else {
+
+  setTodoLists([
+    createTodoList(),
+  ]);
+}
+
+if (
+  typeof data?.currentListIndex
+  === "number"
+) {
+
+  setCurrentListIndex(
+    data.currentListIndex
+  );
+
+} else {
+
+  setCurrentListIndex(0);
+}
+setIsLoaded(true);
+    };
+
+  fetchTodoLists();
+
+}, [user]);
   const [currentListIndex, setCurrentListIndex] = useState(0);
   const [editingIndex, setEditingIndex] = useState(-1);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
@@ -274,6 +343,35 @@ function TodoList({ className,setTaskCount, }) {
       svgRef.current.appendChild(nextTriangle);
     }
   }, [addTodo, completedCount, currentListIndex, isEditingTitle, setTitle, title, totalCount, isWidgetHovered, todoLists.length]);
+
+  useEffect(() => {
+
+  if (
+    !isLoaded ||
+    !user ||
+    !user?.uid ||
+    user?.isGuest
+  ) {
+
+    isResettingRef.current =
+    false;
+
+    return;
+  }
+
+  saveUserData(
+    user.uid,
+    {
+      todoLists,
+      currentListIndex,
+    }
+  );
+
+  }, [
+  todoLists,
+  currentListIndex,
+  user,
+  ]);
 
   const totalLines = todos.reduce((acc, todo) => acc + getLineCount(todo.text), 0);
   const listHeight = Math.max(260, totalLines * 45.5 + 60);
