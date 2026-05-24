@@ -98,11 +98,14 @@ function Dashboard() {
       [activePlantType]: (prev[activePlantType] || 0) + 1,
     }));
   }, [activePlantType]);
-
+  
   const [
   deskTimerDisplay,
   setDeskTimerDisplay,
   ] = useState("00:00");
+
+  const [taskCount, setTaskCount] =
+  useState(0);
 
   const {
     fileInputRef,
@@ -334,7 +337,7 @@ function Dashboard() {
           }}
           disabled={!isEditMode}
         >
-          <TodoList />
+          <TodoList setTaskCount={setTaskCount} />
         </Draggable>
 
         <Draggable
@@ -366,6 +369,7 @@ function Dashboard() {
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
           deskTimerDisplay={deskTimerDisplay}
+          taskCount={taskCount}
         />
 
         <Modal

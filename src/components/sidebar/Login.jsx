@@ -27,7 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, }) {
+function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
 
@@ -125,7 +125,7 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, }) {
           strokeWidth={1.8}
         />
       ),
-      info: "3 tasks",
+      info: `${taskCount} tasks`,
     },
 
     {
