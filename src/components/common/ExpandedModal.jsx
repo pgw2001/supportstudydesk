@@ -62,9 +62,9 @@ const ExpandedModal = ({
                 <div className="w-full flex justify-between items-center px-10 pt-8 pb-2 z-[100] flex-shrink-0">
                     <div className="flex-1">
                         {title && (
-                            <span className="text-gray-400 italic text-2xl" style={{ fontFamily: "'Comic Sans MS', cursive" }}>
+                            <div style={{ fontFamily: "'Comic Sans MS', cursive" }}>
                                 {title}
-                            </span>
+                            </div>
                         )}
                     </div>
                     <button 

@@ -11,6 +11,15 @@ import EditIcon from "../../assets/icons/edit";
 
 const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
 
+// 시간 포맷팅 헬퍼 (seconds -> HH:mm:ss)
+const formatStudyTime = (seconds) => {
+    if (!seconds || seconds <= 0) return "";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
 function CalendarPin({className}) {
     const svgRef = useRef(null);
 
@@ -641,8 +650,9 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
     );
 }
 
-function Calendar({ onExpandStateChange }) {
+function Calendar({ onExpandStateChange, dailyStudyTime = {} }) {
     const sectionRef = useRef(null);
+    const [isStudyTimeMode, setIsStudyTimeMode] = useState(false);
 
     const {
         today,
@@ -824,8 +834,44 @@ function Calendar({ onExpandStateChange }) {
             <ExpandedModal 
                 isOpen={isExpanded} 
                 onClose={handleClose} 
-                title="Expanded Calendar View"
-                title=""
+                title={
+                    <div className="relative inline-block">
+                        <span 
+                            className="text-3xl font-bold cursor-pointer hover:opacity-70 transition-opacity text-black"
+                            onClick={() => setShowPicker(!showPicker)}
+                        >
+                            {viewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
+                        </span>
+                        {showPicker && (
+                            <div className="absolute top-full left-0 mt-2 z-[101] bg-white border-2 border-black p-2 rounded shadow-lg flex gap-2 items-center min-w-max text-base font-sans not-italic">
+                                <select 
+                                    className="p-1 border border-gray-300 rounded text-black"
+                                    value={viewDate.getMonth()} 
+                                    onChange={(e) => {
+                                        setViewDate(new Date(viewDate.getFullYear(), parseInt(e.target.value), 1));
+                                    }}
+                                >
+                                    {Array.from({ length: 12 }).map((_, i) => (
+                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('en-US', { month: 'long' })}</option>
+                                    ))}
+                                </select>
+                                <select 
+                                    className="p-1 border border-gray-300 rounded text-black"
+                                    value={viewDate.getFullYear()} 
+                                    onChange={(e) => {
+                                        setViewDate(new Date(parseInt(e.target.value), viewDate.getMonth(), 1));
+                                    }}
+                                >
+                                    {Array.from({ length: 21 }).map((_, i) => {
+                                        const year = today.getFullYear() - 10 + i;
+                                        return <option key={year} value={year}>{year}</option>;
+                                    })}
+                                </select>
+                                <button onClick={() => setShowPicker(false)} className="px-2 text-gray-500 hover:text-black font-bold">✕</button>
+                            </div>
+                        )}
+                    </div>
+                }
             >
                 <div className="flex h-full w-full bg-white rounded-b-xl overflow-hidden font-['Comic_Sans_MS',_cursive]">
                     {/* Sidebar: 1/4 */}
@@ -926,45 +972,18 @@ function Calendar({ onExpandStateChange }) {
                     </aside>
 
                     {/* Calendar Grid: 3/4 -> 72% */}
-                    <main className="w-[72%] p-6 flex flex-col overflow-y-auto">
-                        <div className="flex justify-between items-center mb-6">
-                            <div className="relative">
-                                <h2 
-                                    className="text-3xl font-bold cursor-pointer hover:opacity-70 transition-opacity"
-                                    onClick={() => setShowPicker(!showPicker)}
+                    <main 
+                        className="w-[72%] p-6 flex flex-col overflow-y-auto"
+                        style={{ containerType: 'inline-size' }}
+                    >
+                        <div className="flex justify-end items-center mb-6">
+                            <div className="flex gap-2 items-center">
+                                <button 
+                                    onClick={() => setIsStudyTimeMode(!isStudyTimeMode)} 
+                                    className={`px-3 py-2 border border-black rounded-lg transition-colors text-[13px] font-bold ${isStudyTimeMode ? 'bg-red-500 text-white' : 'hover:bg-gray-100'}`}
                                 >
-                                    {viewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
-                                </h2>
-                                {showPicker && (
-                                    <div className="absolute top-full left-0 mt-2 z-[100] bg-white border-2 border-black p-2 rounded shadow-lg flex gap-2 items-center min-w-max">
-                                        <select 
-                                            className="p-1 border border-gray-300 rounded font-sans text-sm text-black"
-                                            value={viewDate.getMonth()} 
-                                            onChange={(e) => {
-                                                setViewDate(new Date(viewDate.getFullYear(), parseInt(e.target.value), 1));
-                                            }}
-                                        >
-                                            {Array.from({ length: 12 }).map((_, i) => (
-                                                <option key={i} value={i}>{new Date(0, i).toLocaleString('en-US', { month: 'long' })}</option>
-                                            ))}
-                                        </select>
-                                        <select 
-                                            className="p-1 border border-gray-300 rounded font-sans text-sm text-black"
-                                            value={viewDate.getFullYear()} 
-                                            onChange={(e) => {
-                                                setViewDate(new Date(parseInt(e.target.value), viewDate.getMonth(), 1));
-                                            }}
-                                        >
-                                            {Array.from({ length: 21 }).map((_, i) => {
-                                                const year = today.getFullYear() - 10 + i;
-                                                return <option key={year} value={year}>{year}</option>;
-                                            })}
-                                        </select>
-                                        <button onClick={() => setShowPicker(false)} className="px-2 text-gray-500 hover:text-black font-sans font-bold text-lg">✕</button>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex gap-2">
+                                    Study Time
+                                </button>
                                 <button onClick={handlePrevMonth} className="px-4 py-2 border border-black rounded-lg hover:bg-gray-100 transition-colors">Prev</button>
                                 <button onClick={handleGoToday} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">Today</button>
                                 <button onClick={handleNextMonth} className="px-4 py-2 border border-black rounded-lg hover:bg-gray-100 transition-colors">Next</button>
@@ -1008,19 +1027,30 @@ function Calendar({ onExpandStateChange }) {
                                     </span>
                                     
                                     {/* Holiday/Schedules Preview */}
-                                    <div className="flex flex-col gap-0.5 overflow-hidden">
-                                        {dayInfo.holiday && (
-                                            <div className="text-[10px] bg-green-100 text-green-700 px-1 rounded truncate" title={dayInfo.holiday.dateName}>
-                                                {dayInfo.holiday.dateName}
+                                    <div className="flex flex-col gap-0.5 overflow-hidden flex-grow">
+                                        {isStudyTimeMode ? (
+                                            <div 
+                                                className="text-center font-bold mt-auto mb-auto whitespace-nowrap overflow-hidden"
+                                                style={{ fontSize: 'clamp(5px, 1.6cqw, 15px)' }}
+                                            >
+                                                {formatStudyTime(dailyStudyTime[dayInfo.dateString] || 0)}
                                             </div>
-                                        )}
-                                        {dayInfo.daySchedules.slice(0, 2).map(s => (
-                                            <div key={s.id} className="text-[10px] px-1 rounded truncate text-white" style={{ backgroundColor: s.color }}>
-                                                {s.title}
-                                            </div>
-                                        ))}
-                                        {dayInfo.daySchedules.length > 2 && (
-                                            <div className="text-[9px] text-gray-400 pl-1 font-bold">+{dayInfo.daySchedules.length - 2} more</div>
+                                        ) : (
+                                            <>
+                                                {dayInfo.holiday && (
+                                                    <div className="text-[10px] bg-green-100 text-green-700 px-1 rounded truncate" title={dayInfo.holiday.dateName}>
+                                                        {dayInfo.holiday.dateName}
+                                                    </div>
+                                                )}
+                                                {dayInfo.daySchedules.slice(0, 2).map(s => (
+                                                    <div key={s.id} className="text-[10px] px-1 rounded truncate text-white" style={{ backgroundColor: s.color }}>
+                                                        {s.title}
+                                                    </div>
+                                                ))}
+                                                {dayInfo.daySchedules.length > 2 && (
+                                                    <div className="text-[9px] text-gray-400 pl-1 font-bold">+{dayInfo.daySchedules.length - 2} more</div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -1076,6 +1106,12 @@ function Calendar({ onExpandStateChange }) {
                                 <p className="text-center py-6 text-gray-400 italic">No plans scheduled.</p>
                             )}
                         </div>
+                        {dailyStudyTime[selectedDate.dateString] > 0 && (
+                            <div className="mt-1 pt-2 border-t border-black/10 flex justify-between items-center italic text-gray-500">
+                                <span>Study Time</span>
+                                <span>{formatStudyTime(dailyStudyTime[selectedDate.dateString])}</span>
+                            </div>
+                        )}
                     </div>
                 </Modal>
             )}
@@ -1310,6 +1346,7 @@ function Calendar({ onExpandStateChange }) {
                     })}
                     pos={showScheduleDetails.pos}
                     widgetRect={sectionRef.current?.getBoundingClientRect()}
+                    dailyStudyTime={dailyStudyTime}
                     onDeleteSchedule={handleDeleteSchedule}
                     onEditSchedule={handleEditSchedule}
                 />

@@ -6,7 +6,16 @@ import Modal from '../common/modal';
 
 const SEED = 3333; // Calendar.jsx와 동일한 시드 사용
 
-const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holidayForDate, pos, onDeleteSchedule, onEditSchedule, widgetRect }) => {
+// 시간 포맷팅 헬퍼
+const formatStudyTime = (seconds) => {
+    if (!seconds || seconds <= 0) return "";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holidayForDate, pos, onDeleteSchedule, onEditSchedule, widgetRect, dailyStudyTime }) => {
     const svgRef = useRef(null);
     const [infoSchedule, setInfoSchedule] = useState(null);
 
@@ -40,6 +49,8 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holid
     const top = widgetRect.top + ((pos.y + 15) * scale);
     const width = 350 * scale;
     const height = 240 * scale;
+
+    const studyTimeStr = formatStudyTime(dailyStudyTime?.[date] || 0);
 
     return createPortal(
         <div
@@ -114,6 +125,13 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holid
                     ))
                 ) : (
                     <span className="text-gray-500 italic">No plans for this day.</span>
+                )}
+
+                {studyTimeStr && (
+                    <div className="mt-1 pt-1 border-t border-black/10 flex justify-between items-center italic text-gray-500">
+                        <span>Study Time</span>
+                        <span>{studyTimeStr}</span>
+                    </div>
                 )}
             </div>
 

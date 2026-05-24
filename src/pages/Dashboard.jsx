@@ -13,6 +13,7 @@ import Modal from "../components/common/modal";
 import Draggable from "../utils/Draggable";
 import { useWindow } from "../components/window/useWindow";
 import RainyWindowOverlay from "../components/window/RainyWindowOverlay";
+import { getLocalDateString } from "../utils/dateUtils";
 import menubar from "../assets/menubar.svg";
 import deskSvg from "../assets/desk.svg";
 import windowLayerSvg from "/assets/window/window_layer.svg";
@@ -83,6 +84,16 @@ function Dashboard() {
     localStorage.setItem("activePlantType", activePlantType);
   }, [plantProgress, activePlantType]);
 
+  // 일간 공부 시간 데이터 관리 (성장 화분 방식과 동일)
+  const [dailyStudyTime, setDailyStudyTime] = useState(() => {
+    const saved = localStorage.getItem("dailyStudyTime");
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dailyStudyTime", JSON.stringify(dailyStudyTime));
+  }, [dailyStudyTime]);
+
   useEffect(() => {
     localStorage.setItem(WINDOW_RAIN_STORAGE_KEY, String(isWindowRainEnabled));
   }, [isWindowRainEnabled]);
@@ -92,6 +103,12 @@ function Dashboard() {
   }, [windowRainIntensity]);
 
   const handleTick = useCallback(() => {
+    const todayStr = getLocalDateString(new Date());
+    setDailyStudyTime(prev => ({
+      ...prev,
+      [todayStr]: (prev[todayStr] || 0) + 1
+    }));
+
     setPlantProgress((prev) => ({
       ...prev,
       [activePlantType]: (prev[activePlantType] || 0) + 1,
@@ -251,7 +268,10 @@ function Dashboard() {
           style={{ width: "28%" }}
           disabled={!isEditMode}
         >
-          <Calendar onExpandStateChange={setIsCalendarExpanded} />
+          <Calendar 
+            onExpandStateChange={setIsCalendarExpanded} 
+            dailyStudyTime={dailyStudyTime}
+          />
         </Draggable>
 
         <Draggable
@@ -288,12 +308,14 @@ function Dashboard() {
           }
           disabled={!isEditMode}
         >
-          <Timer onTick={handleTick}/>
+          <Timer 
+            onTick={handleTick} 
+            onPomoTick={handleTick} 
+            onPomodoroTick={handleTick} 
+          />
         </Draggable>
 
         <Draggable
-          initialLeft="70%"
-          initialTop="80%"
           initialLeft={widgetPositions.planner.left}
           initialTop={widgetPositions.planner.top}
           onDragEnd={(pos) => handleDragEnd("planner", pos)}
@@ -354,7 +376,7 @@ function Dashboard() {
         <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
-       
+          deskTimerTime={dailyStudyTime[getLocalDateString(new Date())] || 0}
         />
 
         <Modal

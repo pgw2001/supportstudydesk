@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import TimerFrame from "./TimerFrame";
 
-function PomodoroTimer({ switchMode }) {
+function PomodoroTimer({ switchMode, onTick }) {
   const [time, setTime] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -50,7 +50,14 @@ function PomodoroTimer({ switchMode }) {
     }
 
     return () => clearInterval(timer);
-  }, [isRunning, mode]);
+  }, [isRunning, mode, focusMinutes]);
+
+  // 시간이 변경될 때마다 onTick 호출 (포커스 모드일 때만)
+  useEffect(() => {
+    if (isRunning && mode === "focus" && time > 0 && onTick) {
+      onTick();
+    }
+  }, [time, isRunning, mode, onTick]);
 
   const adjustFocusTime = (amount) => {
     const next = Math.max(5, focusMinutes + amount);
