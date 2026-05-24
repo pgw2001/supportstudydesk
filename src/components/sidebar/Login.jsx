@@ -23,7 +23,6 @@ import {
   CheckSquare,
   StickyNote,
   Users,
-  Settings,
   ChevronRight,
 } from "lucide-react";
 
@@ -150,16 +149,7 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
       info: "",
     },
 
-    {
-      name: "Settings",
-      icon: (
-        <Settings
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-      info: "",
-    },
+    
   ];
 
   // 랜덤 응원 문구
@@ -254,6 +244,9 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
         const isHovered =
           hoveredMenu ===
           menuList[i].name;
+        
+        const isGroup =
+          menuList[i].name === "Group";  
 
         const rect = rc.rectangle(
           3,
@@ -272,8 +265,10 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
             bowing: 1,
 
             fill: isHovered
-              ? "rgb(165, 255, 113)"
-              : "rgba(255,255,255,0.98)",
+            ? isGroup
+            ? "rgb(107, 233, 250)"
+            : "rgb(165, 255, 113)"
+            : "rgba(255,255,255,0.98)",
 
             fillStyle:
               isHovered

@@ -13,7 +13,7 @@ import {
   Clock3,
   CheckSquare,
   StickyNote,
-  Settings,
+  Users,
   ChevronRight,
   Palette,
 } from "lucide-react";
@@ -106,7 +106,7 @@ function Guest({ user, setUser }) {
           strokeWidth={1.8}
         />
       ),
-      info: "25:13",
+      info: "locked",
     },
 
     {
@@ -117,7 +117,7 @@ function Guest({ user, setUser }) {
           strokeWidth={1.8}
         />
       ),
-      info: "3 tasks",
+      info: "locked",
     },
 
     {
@@ -128,19 +128,20 @@ function Guest({ user, setUser }) {
           strokeWidth={1.8}
         />
       ),
-      info: "12 notes",
+      info: "locked",
     },
 
     {
-      name: "Settings",
-      icon: (
-        <Settings
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-      info: "",
-    },
+  name: "Group",
+  icon: (
+    <Users
+      size={18}
+      strokeWidth={1.8}
+    />
+  ),
+  info: "locked",
+  },
+
   ];
 
   // 랜덤 응원 문구
@@ -1172,6 +1173,13 @@ if (taskSvgRef.current) {
     (item, index) => (
       <button
         key={item.name}
+
+        onClick={() => {
+          if (item.name === "Group") {
+            alert("Login required");
+          }
+        }}
+
         onMouseEnter={() =>
           setHoveredMenu(
             item.name
