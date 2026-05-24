@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import TimerFrame from "./TimerFrame";
 
-function NormalTimer({ switchMode, onTick }) {
+function NormalTimer({ switchMode, onTick,setDeskTimerDisplay }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -23,6 +23,14 @@ function NormalTimer({ switchMode, onTick }) {
       onTick();
     }
   }, [time, isRunning, onTick]);
+
+  useEffect(() => {
+
+  setDeskTimerDisplay?.(
+    formatTime()
+  );
+
+  }, [time]);
 
   const formatTime = () => {
     const minutes = String(Math.floor(time / 60)).padStart(2, "0");

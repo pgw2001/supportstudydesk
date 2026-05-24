@@ -51,6 +51,7 @@ function Dashboard() {
     });
   };
 
+
   // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
   const [plantProgress, setPlantProgress] = useState(() => {
     const savedProgress = localStorage.getItem("plantProgress");
@@ -97,6 +98,14 @@ function Dashboard() {
       [activePlantType]: (prev[activePlantType] || 0) + 1,
     }));
   }, [activePlantType]);
+  
+  const [
+  deskTimerDisplay,
+  setDeskTimerDisplay,
+  ] = useState("00:00");
+
+  const [taskCount, setTaskCount] =
+  useState(0);
 
   const {
     fileInputRef,
@@ -310,10 +319,13 @@ function Dashboard() {
           }
           disabled={!isEditMode}
         >
-          <Timer 
-            onTick={handleTick} 
-            onPomoTick={handleTick} 
-            onPomodoroTick={handleTick} 
+          <Timer
+          onTick={handleTick}
+          onPomoTick={handleTick} 
+          onPomodoroTick={handleTick}
+          setDeskTimerDisplay={
+          setDeskTimerDisplay
+          }
           />
         </Draggable>
 
@@ -347,7 +359,7 @@ function Dashboard() {
           }}
           disabled={!isEditMode}
         >
-          <TodoList />
+          <TodoList setTaskCount={setTaskCount} />
         </Draggable>
 
         <Draggable
@@ -378,6 +390,8 @@ function Dashboard() {
         <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
+          deskTimerDisplay={deskTimerDisplay}
+          taskCount={taskCount}
           deskTimerTime={dailyStudyTime[getLocalDateString(new Date())] || 0}
         />
 

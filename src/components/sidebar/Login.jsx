@@ -23,17 +23,11 @@ import {
   CheckSquare,
   StickyNote,
   Users,
-  Settings,
   ChevronRight,
 } from "lucide-react";
 
-function Login({ user, setUser, setIsGroupOpen,deskTimerTime }) {
-  useEffect(() => {
-  console.log(
-    "LOGIN TIMER:",
-    deskTimerTime
-  );
-  }, [deskTimerTime]);
+function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
+
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
 
@@ -121,7 +115,7 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerTime }) {
           strokeWidth={1.8}
         />
       ),
-       info: `${Math.floor(deskTimerTime / 60)}m`,
+      info: deskTimerDisplay,
     },
     {
       name: "Todo List",
@@ -131,7 +125,7 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerTime }) {
           strokeWidth={1.8}
         />
       ),
-      info: "3 tasks",
+      info: `${taskCount} tasks`,
     },
 
     {
@@ -156,16 +150,7 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerTime }) {
       info: "",
     },
 
-    {
-      name: "Settings",
-      icon: (
-        <Settings
-          size={18}
-          strokeWidth={1.8}
-        />
-      ),
-      info: "",
-    },
+    
   ];
 
   // 랜덤 응원 문구
@@ -260,6 +245,9 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerTime }) {
         const isHovered =
           hoveredMenu ===
           menuList[i].name;
+        
+        const isGroup =
+          menuList[i].name === "Group";  
 
         const rect = rc.rectangle(
           3,
@@ -278,8 +266,10 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerTime }) {
             bowing: 1,
 
             fill: isHovered
-              ? "rgb(165, 255, 113)"
-              : "rgba(255,255,255,0.98)",
+            ? isGroup
+            ? "rgb(107, 233, 250)"
+            : "rgb(165, 255, 113)"
+            : "rgba(255,255,255,0.98)",
 
             fillStyle:
               isHovered

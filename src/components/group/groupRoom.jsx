@@ -685,104 +685,141 @@ function GroupRoom({
             </div>
 
             <div className="flex min-h-0 flex-col gap-4">
-              <div className="rounded-[28px] border-[2px] border-black bg-[#fde68a] p-5 text-center">
-                <div className="font-['Patrick_Hand'] text-[28px]">
-                  My Study Time
-                </div>
 
-                <div className="mt-3 font-['Patrick_Hand'] text-[44px]">
-                  {formatTime(
-                    seconds
-                  )}
-                </div>
+  {/* My Study Time */}
+  <div className="rounded-[26px] border-[2px] border-black bg-[#fde68a] px-5 py-4">
+    <div className="flex items-center justify-between gap-4">
 
-                <button
-                  onClick={
-                    handleToggleStudy
-                  }
-                  className={`mt-5 w-full rounded-full border-[2px] border-black px-5 py-3 font-bold ${
-                    isStudying
-                      ? "bg-[#fecaca]"
-                      : "bg-[#bbf7d0]"
-                  }`}
-                >
-                  {isStudying
-                    ? "⏹ STOP STUDY"
-                    : "▶ START STUDY"}
-                </button>
-              </div>
+      <div>
+        <div className="font-['Patrick_Hand'] text-[22px]">
+          My Study Time
+        </div>
 
-              <div className="flex min-h-0 flex-1 flex-col rounded-[28px] border-[2px] border-black bg-white p-4">
-                <div className="mb-3 font-['Patrick_Hand'] text-[28px]">
-                  Group Chat 💬
-                </div>
+        <div className="mt-1 font-['Patrick_Hand'] text-[32px] leading-none">
+          {formatTime(seconds)}
+        </div>
+      </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto rounded-[18px] bg-[#f8f6ef] p-3">
-                  {messages.map(
-                    (
-                      msg
-                    ) => (
-                      <div
-                        key={
-                          msg.id
-                        }
-                        className="mb-3 rounded-[16px] border border-black/10 bg-white px-3 py-2"
-                      >
-                        <div className="text-[11px] font-bold text-[#db2777]">
-                          {
-                            msg.username
-                          }
-                        </div>
+      <button
+        onClick={handleToggleStudy}
+        className={`rounded-full border-[2px] border-black px-5 py-3 text-[14px] font-bold whitespace-nowrap ${
+          isStudying
+            ? "bg-[#fecaca]"
+            : "bg-[#bbf7d0]"
+        }`}
+      >
+        {isStudying
+          ? "⏹ STOP"
+          : "▶ START"}
+      </button>
 
-                        <div className="mt-1 break-words text-[13px]">
-                          {
-                            msg.text
-                          }
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
+    </div>
+  </div>
 
-                <div className="mt-3 flex gap-2">
-                  <input
-  value={message}
-  onChange={(e) =>
-    setMessage(
-      e.target.value
-    )
-  }
-  onKeyDown={(e) => {
-    if (
-      e.key === "Enter"
-    ) {
-      sendMessage();
-    }
-  }}
-  placeholder="메시지 입력..."
-  className="h-[42px] min-w-0 flex-1 rounded-full border-[2px] border-black px-4 text-[13px] outline-none"
-/>
+  {/* Chat */}
+  <div className="flex min-h-0 flex-1 flex-col rounded-[28px] border-[2px] border-black bg-white p-4">
 
-                  <button
-                    onClick={
-                      sendMessage
-                    }
-                    className="h-[42px] rounded-full border-[2px] border-black bg-[#fbcfe8] px-4 text-[13px] font-bold"
-                  >
-                    전송
-                  </button>
-                </div>
-              </div>
+    <div className="mb-3 flex items-center gap-2">
+      <div className="font-['Patrick_Hand'] text-[30px]">
+        Group Chat
+      </div>
 
-              <button
-                onClick={
-                  handleLeaveGroup
-                }
-                className="rounded-[22px] border-[2px] border-black bg-[#fecaca] px-5 py-4 text-[15px] font-bold"
-              >
-                그룹 탈퇴
-              </button>
-            </div>
+      <div className="text-[26px]">
+        💬
+      </div>
+    </div>
+
+    <div
+      className="
+        min-h-0
+        flex-1
+        overflow-y-auto
+        rounded-[20px]
+        bg-[#f8f6ef]
+        p-4
+      "
+    >
+      {messages.map((msg) => (
+        <div
+          key={msg.id}
+          className="
+            mb-3
+            rounded-[18px]
+            bg-white
+            px-4
+            py-3
+          "
+        >
+          <div className="text-[12px] font-bold text-[#db2777]">
+            {msg.username}
+          </div>
+
+          <div className="mt-1 text-[14px] break-words">
+            {msg.text}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div className="mt-3 flex gap-2">
+      <input
+        value={message}
+        onChange={(e) =>
+          setMessage(e.target.value)
+        }
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            sendMessage();
+          }
+        }}
+        placeholder="메시지 입력..."
+        className="
+          h-[46px]
+          min-w-0
+          flex-1
+          rounded-full
+          border-[2px]
+          border-black
+          px-4
+          outline-none
+        "
+      />
+
+      <button
+        onClick={sendMessage}
+        className="
+          h-[46px]
+          rounded-full
+          border-[2px]
+          border-black
+          bg-[#fbcfe8]
+          px-5
+          font-bold
+        "
+      >
+        전송
+      </button>
+    </div>
+  </div>
+
+  {/* Leave */}
+  <button
+    onClick={handleLeaveGroup}
+    className="
+      rounded-[22px]
+      border-[2px]
+      border-black
+      bg-[#fecaca]
+      px-5
+      py-4
+      text-[15px]
+      font-bold
+    "
+  >
+    그룹 탈퇴
+  </button>
+
+</div>
           </div>
         </div>
       </div>

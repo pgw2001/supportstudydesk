@@ -16,7 +16,7 @@ const createTodoList = (number = 1) => ({
   todos: createEmptyTodos(),
 });
 
-function TodoList({ className }) {
+function TodoList({ className,setTaskCount, }) {
   const svgRef = useRef(null);
   const listSvgRef = useRef(null);
 
@@ -131,6 +131,23 @@ function TodoList({ className }) {
 
   const completedCount = todos.filter((todo) => todo.completed).length;
   const totalCount = todos.length;
+  //Todo갯수 세기(재현)
+  useEffect(() => {
+  const count =
+    todoLists.reduce(
+      (total, list) =>
+        total +
+        list.todos.filter(
+          (todo) =>
+            todo.text.trim() !== "" &&
+            !todo.completed
+        ).length,
+      0
+    );
+
+  setTaskCount?.(count);
+
+  }, [todoLists, setTaskCount]);
 
   useEffect(() => {
     if (!svgRef.current) return;
