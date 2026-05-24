@@ -1,15 +1,23 @@
 import holderSvg from "../../assets/memoholder.svg";
 
-function MemoHolder({ onCreate }) {
+function MemoHolder({ onStart }) {
+  const handleClick = (e) => {
+    e.preventDefault?.();
+    onStart?.(e);
+  };
+
   return (
     <div
-      onMouseDown={onCreate}
-      //className="border-4 border-red-500"
+      onClick={handleClick}
+      data-no-drag="true"
+      style={{ touchAction: "none", cursor: "pointer", zIndex: 10002, position: "relative" }}
+      className="w-[150px] h-[150px]"
     >
       <img
         src={holderSvg}
         alt="holder"
-        className="w-[200px] h-[200px]"
+        className="w-full h-full"
+        draggable={false}
       />
     </div>
   );
