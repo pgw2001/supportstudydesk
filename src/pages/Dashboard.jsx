@@ -315,11 +315,10 @@ function Dashboard() {
           initialTop={widgetPositions.timer.top}
           onDragEnd={(pos) => handleDragEnd("timer", pos)}
           className="z-20"
-          style={
-            widgetPositions.timer.top === "auto"
-              ? { bottom: "19%" }
-              : {}
-          }
+          style={{
+            width: "12%",
+            ...(widgetPositions.timer.top === "auto" ? { bottom: "19%" } : {}),
+          }}
           disabled={!isEditMode}
         >
           <Timer

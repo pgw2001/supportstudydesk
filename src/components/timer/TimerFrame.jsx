@@ -50,7 +50,7 @@ function TimerFrame({ children }) {
   }, []);
 
   return (
-    <section className="w-[clamp(150px,22vw,320px)]">
+    <section className="w-full">
       <svg
         ref={svgRef}
         viewBox="0 0 340 240"
