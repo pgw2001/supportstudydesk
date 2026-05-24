@@ -190,7 +190,7 @@ function Dashboard() {
         )}
 
         <div 
-          className={`group absolute left-[-38%] top-[-53%] aspect-[370/687] w-[65%] transition-all duration-300 ${isEditMode ? "z-50" : "z-[1]"}`}
+          className="group absolute left-[-38%] top-[-53%] aspect-[370/687] w-[65%] transition-all duration-300 z-[1]"
           style={{ pointerEvents: "auto" }}
         >
           <div className="absolute left-[4%] top-0 h-full w-full z-0 pointer-events-none">
