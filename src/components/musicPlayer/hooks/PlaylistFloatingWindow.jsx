@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
+import Modal from '../../common/modal';
 
 const PlaylistFloatingWindow = ({
   isOpen,
@@ -15,11 +16,6 @@ const PlaylistFloatingWindow = ({
   const [isAdding, setIsAdding] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isSongAddMode, setIsSongAddMode] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-
-  if (!isOpen) return null;
 
   const activePlaylist = userPlaylists.find(p => p.id === activePlaylistId);
 
@@ -31,56 +27,15 @@ const PlaylistFloatingWindow = ({
     }
   };
 
-  const handlePointerDown = (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up to parent elements
-
-    // 버튼이나 입력창을 클릭한 경우 드래그 로직을 건너뜁니다.
-    if (e.target.closest('button') || e.target.closest('input')) return;
-
-    const handle = e.target.closest('.drag-handle');
-    if (handle) {
-      isDragging.current = true;
-      dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-      e.currentTarget.setPointerCapture(e.pointerId);
-    }
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDragging.current) return;
-    setPosition({
-      x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y,
-    });
-  };
-
-  const handlePointerUp = () => {
-    isDragging.current = false;
-  };
-
   return (
-    <div 
-      className="absolute top-1/2 left-1/2 w-[300px] h-[400px] bg-white border-2 border-black rounded-lg shadow-lg z-50 p-4 flex flex-col font-mono select-none"
-      style={{
-        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-        touchAction: 'none'
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Music Playlists"
+      width="320px"
+      height="450px"
+      className="font-mono select-none"
     >
-      <div className="flex justify-between items-center mb-4 drag-handle cursor-move">
-        <h3 className="text-lg font-bold pointer-events-none">Playlists</h3>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }} 
-          className="text-xl font-bold hover:text-red-500 p-1"
-        >
-          ✕
-        </button>
-      </div>
-
       {/* Playlist Management */}
       <div className="mb-4">
         <h4 className="font-semibold mb-2 flex justify-between items-center">
@@ -203,7 +158,7 @@ const PlaylistFloatingWindow = ({
           </ul>
         )}
       </div>
-    </div>
+    </Modal>
   );
 };
 

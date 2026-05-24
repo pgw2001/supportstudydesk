@@ -321,7 +321,7 @@ function Dashboard() {
           initialLeft={widgetPositions.planner.left}
           initialTop={widgetPositions.planner.top}
           onDragEnd={(pos) => handleDragEnd("planner", pos)}
-          className="z-[999]"
+          className="z-[30]"
           style={{ width: "25%" }}
           disabled={!isEditMode}
         >
