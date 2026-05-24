@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Check, CloudRain, ImagePlus, Layout, RotateCcw, Upload } from "lucide-react";
+import { Check, CloudRain, ImagePlus, Layout, Moon, RotateCcw, Sun, Upload } from "lucide-react";
 import Sidebar from "../components/sidebar/Sidebar";
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
@@ -39,6 +39,14 @@ function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+  
+  // 다크모드 상태 관리
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("isDarkMode") === "true";
+  });
+  useEffect(() => {
+    localStorage.setItem("isDarkMode", isDarkMode);
+  }, [isDarkMode]);
 
   const [widgetPositions, setWidgetPositions] = useState(() => {
     const saved = localStorage.getItem(WIDGET_POSITIONS_KEY);
@@ -141,25 +149,59 @@ function Dashboard() {
   } = useWindow(DEFAULT_WINDOW_BG);
 
   return (
-    <div className="flex min-h-screen items-center justify-center overflow-visible bg-[#f4f1ec]">
-      <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden bg-[#fcfbf8]">
+    <div className={`flex min-h-screen items-center justify-center overflow-visible transition-colors duration-700 ${isDarkMode ? "bg-[#111]" : "bg-[#f4f1ec]"}`}>
+      <main className={`relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden transition-colors duration-700 ${isDarkMode ? "bg-[#161616]" : "bg-[#fcfbf8]"}`}>
         {/* 비 효과 활성 시 화면 전체를 우중충하고 흐리게 만드는 분위기 레이어 */}
         <div 
           className="absolute inset-0 pointer-events-none transition-all duration-1000 z-[1000]"
           style={{
-            backgroundColor: isWindowRainEnabled 
-              ? `rgba(35, 45, 65, ${0.05 + windowRainIntensity * 0.12})` 
-              : "transparent",
-            backdropFilter: isWindowRainEnabled 
-              ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
-              : "none",
-            WebkitBackdropFilter: isWindowRainEnabled 
-              ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
-              : "none",
+            backgroundColor: isDarkMode 
+              ? (isWindowRainEnabled 
+                  ? `rgba(15, 20, 40, ${0.35 + windowRainIntensity * 0.2})` 
+                  : "rgba(15, 20, 40, 0.25)")
+              : (isWindowRainEnabled 
+                  ? `rgba(35, 45, 65, ${0.05 + windowRainIntensity * 0.12})` 
+                  : "transparent"),
+            backdropFilter: isDarkMode 
+              ? `brightness(0.9) saturate(0.85)` 
+              : isWindowRainEnabled 
+                ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
+                : "none",
+            WebkitBackdropFilter: isDarkMode 
+              ? `brightness(0.9) saturate(0.85)` 
+              : isWindowRainEnabled 
+                ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
+                : "none",
           }}
         />
+
+        {/* 미세한 노이즈 텍스처 (다크모드 전용) */}
+        {isDarkMode && (
+          <div 
+            className="absolute inset-0 pointer-events-none z-[1001] opacity-[0.03]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'repeat',
+              mixBlendMode: 'overlay',
+            }}
+          />
+        )}
+
         {!isSidebarOpen && (
           <div className="absolute top-3 right-3 z-[999] flex gap-2">
+            {/* 다크모드 토글 버튼 */}
+            <button
+              onClick={() => setIsDarkMode((prev) => !prev)}
+              className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+                isDarkMode
+                  ? "bg-indigo-900/80 text-yellow-200 hover:bg-indigo-800"
+                  : "bg-white/80 text-gray-700 hover:bg-white"
+              }`}
+              title={isDarkMode ? "라이트 모드" : "다크 모드"}
+            >
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
             <button
               onClick={() => setIsEditMode((prev) => !prev)}
               className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
@@ -196,6 +238,27 @@ function Dashboard() {
           className="group absolute left-[-38%] top-[-53%] aspect-[370/687] w-[65%] transition-all duration-300 z-[1]"
           style={{ pointerEvents: "auto" }}
         >
+          {/* 창문에서 책상으로 흘러나오는 광원 효과 (다크모드) */}
+          {isDarkMode && (
+            <>
+              {/* 창문 틀 근처의 핵심 푸른 광원 */}
+              <div 
+                className="absolute left-[5%] top-[10%] w-[90%] h-[80%] blur-[100px] rounded-full mix-blend-screen pointer-events-none transition-opacity duration-1000"
+                style={{
+                  background: 'radial-gradient(circle, rgba(60, 100, 255, 0.15) 0%, rgba(140, 80, 255, 0.05) 70%)'
+                }}
+              />
+              {/* 책상 쪽으로 길게 흘러나오는 빛줄기 (Spill Light) */}
+              <div 
+                className="absolute left-[20%] top-[30%] w-[180%] h-[150%] blur-[150px] rounded-[100%] mix-blend-soft-light pointer-events-none transition-opacity duration-1000"
+                style={{
+                  background: 'radial-gradient(ellipse at center, rgba(70, 130, 255, 0.1) 0%, transparent 60%)',
+                  transform: 'rotate(-25deg)',
+                }}
+              />
+            </>
+          )}
+
           <div className="absolute left-[4%] top-0 h-full w-full z-0 pointer-events-none">
             {/* 배경과 비 레이어를 하나의 마스크 컨테이너로 통합 */}
             <div
@@ -278,8 +341,11 @@ function Dashboard() {
           initialLeft={widgetPositions.calendar.left}
           initialTop={widgetPositions.calendar.top}
           onDragEnd={(pos) => handleDragEnd("calendar", pos)}
-          className={isCalendarExpanded ? "z-[9999]" : "z-20"}
-          style={{ width: "28%" }}
+          className={`${isCalendarExpanded ? "z-[9999]" : "z-20"} transition-shadow duration-300`}
+          style={{ 
+            width: "28%",
+            filter: isDarkMode ? "drop-shadow(0 15px 30px rgba(0,0,0,0.4))" : "none"
+          }}
           disabled={!isEditMode}
         >
           <Calendar 
@@ -292,8 +358,11 @@ function Dashboard() {
           initialLeft={widgetPositions.memo.left}
           initialTop={widgetPositions.memo.top}
           onDragEnd={(pos) => handleDragEnd("memo", pos)}
-          className="z-10"
-          style={{ width: "16%" }}
+          className="z-10 transition-shadow duration-300"
+          style={{ 
+            width: "16%",
+            filter: isDarkMode ? "drop-shadow(0 12px 24px rgba(0,0,0,0.4))" : "none"
+          }}
           disabled={!isEditMode}
         >
           <Memo />
@@ -303,8 +372,11 @@ function Dashboard() {
           initialLeft={widgetPositions.quotes.left}
           initialTop={widgetPositions.quotes.top}
           onDragEnd={(pos) => handleDragEnd("quotes", pos)}
-          className="z-10"
-          style={{ width: "18%" }}
+          className="z-10 transition-shadow duration-300"
+          style={{ 
+            width: "18%",
+            filter: isDarkMode ? "drop-shadow(0 8px 20px rgba(0,0,0,0.4))" : "none"
+          }}
           disabled={!isEditMode}
         >
           <Quotes />
@@ -318,6 +390,7 @@ function Dashboard() {
           style={{
             width: "12%",
             ...(widgetPositions.timer.top === "auto" ? { bottom: "19%" } : {}),
+            filter: isDarkMode ? "drop-shadow(0 10px 25px rgba(0,0,0,0.4))" : "none"
           }}
           disabled={!isEditMode}
         >
@@ -358,6 +431,7 @@ function Dashboard() {
           style={{
             ...(widgetPositions.todo.top === "auto" ? { bottom: "50%", right: "28%" } : {}),
             width: "11%",
+            filter: isDarkMode ? "drop-shadow(0 10px 20px rgba(0,0,0,0.4))" : "none"
           }}
           disabled={!isEditMode}
         >
@@ -369,7 +443,10 @@ function Dashboard() {
           initialTop={widgetPositions.music.top}
           onDragEnd={(pos) => handleDragEnd("music", pos)}
           className="z-20"
-          style={{ width: "26%" }}
+          style={{ 
+            width: "26%",
+            filter: isDarkMode ? "drop-shadow(0 15px 35px rgba(0,0,0,0.4))" : "none"
+          }}
           disabled={!isEditMode}
         >
           <MusicPlayer />
@@ -394,7 +471,10 @@ function Dashboard() {
           initialTop={widgetPositions.tablet.top}
           onDragEnd={(pos) => handleDragEnd("tablet", pos)}
           className="z-20"
-          style={{ width: "20%" }}
+          style={{ 
+            width: "20%",
+            filter: isDarkMode ? "drop-shadow(0 15px 30px rgba(0,0,0,0.4))" : "none"
+          }}
           disabled={!isEditMode}
         >
           <Tablet />
