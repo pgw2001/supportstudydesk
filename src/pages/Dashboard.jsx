@@ -110,13 +110,8 @@ function Dashboard() {
     }));
   }, [activePlantType]);
   
-  const [
-  deskTimerDisplay,
-  setDeskTimerDisplay,
-  ] = useState("00:00");
-
-  const [taskCount, setTaskCount] =
-  useState(0);
+  const [deskTimerDisplay, setDeskTimerDisplay] = useState("00:00");
+  const [taskCount, setTaskCount] = useState(0);
 
   const {
     fileInputRef,
@@ -395,12 +390,10 @@ function Dashboard() {
           disabled={!isEditMode}
         >
           <Timer
-          onTick={handleTick}
-          onPomoTick={handleTick} 
-          onPomodoroTick={handleTick}
-          setDeskTimerDisplay={
-          setDeskTimerDisplay
-          }
+            onTick={handleTick}
+            onPomoTick={handleTick}
+            onPomodoroTick={handleTick}
+            setDeskTimerDisplay={setDeskTimerDisplay}
           />
         </Draggable>
 
