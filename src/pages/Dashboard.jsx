@@ -8,6 +8,7 @@ import Quotes from "../components/quotes/Quotes";
 import Calendar from "../components/calendar/Calendar";
 import PlannerButton from "../components/planner/PlannerButton";
 import MusicPlayer from "../components/musicPlayer/MusicPlayer";
+import Tablet from "../components/tablet/Tablet";
 import StudyPlant from "../components/study-plant/StudyPlant";
 import Modal from "../components/common/modal";
 import Draggable from "../utils/Draggable";
@@ -31,6 +32,7 @@ const DEFAULT_POSITIONS = {
   todo: { left: "60%", top: "auto" }, // style에서 bottom, right 사용 중
   music: { left: "70%", top: "50%" },
   plant: { left: "45%", top: "68%" },
+  tablet: { left: "15%", top: "55%" },
 };
 
 function Dashboard() {
@@ -40,7 +42,8 @@ function Dashboard() {
 
   const [widgetPositions, setWidgetPositions] = useState(() => {
     const saved = localStorage.getItem(WIDGET_POSITIONS_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_POSITIONS;
+    if (!saved) return DEFAULT_POSITIONS;
+    return { ...DEFAULT_POSITIONS, ...JSON.parse(saved) };
   });
 
   const handleDragEnd = (id, pos) => {
@@ -385,6 +388,17 @@ function Dashboard() {
             activePlantType={activePlantType}
             onPlantChange={setActivePlantType}
           />
+        </Draggable>
+
+        <Draggable
+          initialLeft={widgetPositions.tablet.left}
+          initialTop={widgetPositions.tablet.top}
+          onDragEnd={(pos) => handleDragEnd("tablet", pos)}
+          className="z-20"
+          style={{ width: "20%" }}
+          disabled={!isEditMode}
+        >
+          <Tablet />
         </Draggable>
 
         <Sidebar
