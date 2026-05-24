@@ -107,9 +107,6 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
       {memos.map((memo) => (
         <div
           key={memo.id}
-          // ⭐ [핵심 추가]: 메모 엘리먼트 자체를 감싸는 div를 만들고, 
-          // 여기서 발생하는 모든 마우스/포인터 클릭 이벤트가 부모인 Dashboard의 
-          // 큰 <Draggable> 위젯으로 전파(버블링)되는 것을 완벽하게 막아줍니다.
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           style={{ display: "contents" }} // 기존 layout 스타일에 영향을 주지 않도록 설정
