@@ -1,31 +1,8 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { DEFAULT_VOLUME, VIEWBOX } from "../constants";
- 
-export const SONG_PLAYLIST = [
-  {
-    id: 1,
-    title: "A Boy Who Only Dreams",
-    artist: "Eddie Lee",
-    src: "https://firebasestorage.googleapis.com/v0/b/supportstudydesk-6506b.firebasestorage.app/o/music%2Feddie_lee_kr-a-boy-who-only-dreams-291359.mp3?alt=media&token=0e71195d-99cc-4a41-bc61-a19272917b93",
-    duration: 0,
-  },
+import { SONG_PLAYLIST } from "./songs";
+export { SONG_PLAYLIST };
 
-  {
-    id: 2,
-    title: "Search One's Memory",
-    artist: "Eddie Lee",
-    src: "https://firebasestorage.googleapis.com/v0/b/supportstudydesk-6506b.firebasestorage.app/o/music%2Feddie_lee_kr-search-onex27s-memory-291354.mp3?alt=media&token=85277fe9-3712-4d52-b619-e183838bf193",
-    duration: 0,
-  },
-
-  {
-    id: 3,
-    title: "To My Precious Person",
-    artist: "Eddie Lee",
-    src: "https://firebasestorage.googleapis.com/v0/b/supportstudydesk-6506b.firebasestorage.app/o/music%2Feddie_lee_kr-to-my-precious-person-291357.mp3?alt=media&token=a12a68ea-4353-4156-867d-e3e4b4901165",
-    duration: 0,
-  },
-];
 export const useMusicPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
