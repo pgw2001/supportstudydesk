@@ -4,6 +4,7 @@ import Sidebar from "../components/sidebar/Sidebar";
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
 import MemoBoard from "../components/memo/MemoBoard";
+import MemoHolder from "../components/memo/MemoHolder";
 import Quotes from "../components/quotes/Quotes";
 import Calendar from "../components/calendar/Calendar";
 import PlannerButton from "../components/planner/PlannerButton";
@@ -25,6 +26,7 @@ const WIDGET_POSITIONS_KEY = "widgetPositions";
 const DEFAULT_POSITIONS = {
   calendar: { left: "28%", top: "8%" },
   memo: { left: "61%", top: "18%" },
+  memoHolder: { left: "80%", top: "25%" },
   quotes: { left: "80%", top: "25%" },
   timer: { left: "34%", top: "auto" }, // style에서 bottom 사용 중
   planner: { left: "70%", top: "80%" },
@@ -50,6 +52,8 @@ function Dashboard() {
       return next;
     });
   };
+
+  const memoBoardRef = useRef(null);
 
 
   // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
@@ -293,7 +297,18 @@ function Dashboard() {
           style={{ width: "16%", height: "100%",}}
           disabled={!isEditMode}
         >
-          <MemoBoard isEditMode={isEditMode} />
+          <MemoBoard ref={memoBoardRef} isEditMode={isEditMode} />
+        </Draggable>
+
+        <Draggable
+          initialLeft={widgetPositions.memoHolder?.left || DEFAULT_POSITIONS.memoHolder.left}
+          initialTop={widgetPositions.memoHolder?.top || DEFAULT_POSITIONS.memoHolder.top}
+          onDragEnd={(pos) => handleDragEnd("memoHolder", pos)}
+          className="z-30"
+          disabled={!isEditMode}
+        >
+          {/* 클릭 시 ref를 통해 MemoBoard 안의 startCreate 실행 */}
+          <MemoHolder onStart={() => memoBoardRef.current?.startCreate()} />
         </Draggable>
 
         <Draggable

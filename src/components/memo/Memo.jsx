@@ -51,7 +51,6 @@ function Memo({
         max-w-[220px]
         max-h-[242px]
       "
-      data-no-drag="true"
       style={{
         left: `${memo.xPercent * 100}%`,
         top: `${memo.yPercent * 100}%`,
@@ -60,26 +59,26 @@ function Memo({
           rotate(${memo.rotation}deg)
         `,
         touchAction: "none",
+        userSelect: "none",
         cursor: isEditMode
           ? "grab"
           : "default",
-        pointerEvents: "auto",
+        zIndex: memo.id,
       }}
-      onPointerDownCapture={(e) => {
+
+      // 부모 Draggable 이벤트 차단
+      onMouseDownCapture={(e) => {
         if (!isEditMode) return;
 
-        // 부모 Draggable로 이벤트 전달 완전 차단
         e.stopPropagation();
       }}
 
-      onPointerDown={(e) => {
+      // 메모 드래그 시작
+      onMouseDown={(e) => {
         if (!isEditMode) return;
 
         e.preventDefault();
-
-        e.currentTarget.setPointerCapture?.(
-          e.pointerId
-        );
+        e.stopPropagation();
 
         onDragStart?.(
           e.clientX,
@@ -102,12 +101,12 @@ function Memo({
         />
       </svg>
 
-      {/* 삭제 */}
+      {/* 삭제 버튼 */}
       <button
         type="button"
-        onPointerDown={(e) =>
-          e.stopPropagation()
-        }
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
         onClick={(e) => {
           e.stopPropagation();
           onDelete?.();
@@ -140,9 +139,10 @@ function Memo({
         }
         placeholder="Write memo..."
         readOnly={isEditMode}
-        onPointerDown={(e) => {
+        onMouseDown={(e) => {
           if (isEditMode) {
             e.preventDefault();
+            e.stopPropagation();
           }
         }}
         className="
@@ -155,7 +155,6 @@ function Memo({
           bg-transparent
           p-[8%]
           text-[0.75vw]
-          min-text-[11px]
           leading-[1.3]
           text-neutral-900
           outline-none
