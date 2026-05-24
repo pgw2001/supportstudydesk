@@ -125,7 +125,12 @@ export const useCalendar = () => {
         setScheduleInput(null);
         setTempTitle("");
         setTempDescription("");
-    }, [tempTitle, scheduleInput, tempColor]);
+        setTempStartDate("");
+        setTempEndDate("");
+        setTempStartTime("09:00");
+        setTempEndTime("10:00");
+        setTempColor("#3b82f6");
+    }, [tempTitle, tempDescription, tempColor, tempStartDate, tempEndDate, tempStartTime, tempEndTime, scheduleInput]);
 
     return {
         today,

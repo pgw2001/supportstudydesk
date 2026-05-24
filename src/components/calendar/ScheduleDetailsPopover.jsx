@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import rough from 'roughjs';
 import EditIcon from '../../assets/icons/edit';
 
 const SEED = 3333; // Calendar.jsx와 동일한 시드 사용
 
-const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, onDeleteSchedule, onEditSchedule }) => {
+const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, onDeleteSchedule, onEditSchedule, widgetRect }) => {
     const svgRef = useRef(null);
 
     useEffect(() => {
@@ -12,8 +13,11 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
             svgRef.current.innerHTML = "";
             const rc = rough.svg(svgRef.current);
             
+            const width = 320;
+            const height = 220;
+
             // 말풍선 본체 (사각형)
-            const rect = rc.rectangle(5, 5, 270, 190, {
+            const rect = rc.rectangle(5, 5, width - 10, height - 10, {
                 fill: '#fff',
                 fillStyle: 'solid',
                 stroke: '#000',
@@ -37,23 +41,26 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
         }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !widgetRect) return null;
 
-    // 캘린더 위젯의 뷰박스 크기 (522x506)를 기준으로 백분율 위치 계산
-    const popoverLeft = ((pos.x + pos.w) / 522) * 100;
-    const popoverTop = ((pos.y + 15) / 506) * 100; // 15px는 날짜 숫자 아래 여백
+    // 위젯의 현재 크기와 위치를 기반으로 픽셀 좌표 계산
+    const scale = widgetRect.width / 522;
+    const left = widgetRect.left + ((pos.x + pos.w) * scale);
+    const top = widgetRect.top + ((pos.y + 15) * scale);
+    const width = 320 * scale;
+    const height = 220 * scale;
 
-    return (
+    return createPortal(
         <div
-            className="absolute z-[100] flex flex-col"
+            className="fixed z-[999999] flex flex-col"
             style={{ 
                 fontFamily: "'Comic Sans MS', cursive",
                 containerType: 'both',
-                left: `${popoverLeft}%`,
-                top: `${popoverTop}%`,
-                width: '53.6%', // 280px / 522px
-                height: '39.5%', // 200px / 506px
-                padding: '4% 5%',
+                left: `${left}px`,
+                top: `${top}px`,
+                width: `${width}px`,
+                height: `${height}px`,
+                padding: `${height * 0.1}px ${width * 0.1}px`,
                 gap: '3%',
                 transform: 'translate(5%, -50%)', // X축으로 살짝 띄우고 Y축 중앙 정렬
                 filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
@@ -64,7 +71,7 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
             <svg 
                 ref={svgRef}
                 className="absolute inset-0 w-full h-full -z-10 overflow-visible"
-                viewBox="0 0 280 200"
+                viewBox="0 0 320 220"
                 preserveAspectRatio="none"
             />
 
@@ -106,7 +113,8 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
                     <span className="text-gray-500 italic">No plans for this day.</span>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

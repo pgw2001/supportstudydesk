@@ -627,6 +627,8 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
 }
 
 function Calendar({ onExpandStateChange }) {
+    const sectionRef = useRef(null);
+
     const {
         today,
         viewDate, setViewDate,
@@ -654,9 +656,9 @@ function Calendar({ onExpandStateChange }) {
         saveSchedule
     } = useCalendar();
 
-    const { 
-        isExpanded, 
-        handleExpand, 
+    const {
+        isExpanded,
+        handleExpand,
         handleClose,
         expandedCalendarDays,
         selectedDate,
@@ -687,9 +689,13 @@ function Calendar({ onExpandStateChange }) {
     useEffect(() => {
         if (scheduleInput && popoverContentRef.current) {
             const measure = () => {
-                // 요소들이 차지하는 높이 + 상하 패딩 여유분
+                // 요소들이 차지하는 실제 높이 측정
                 const contentH = popoverContentRef.current.offsetHeight;
-                setPopoverHeight(contentH + (isExpanded ? 50 : 40));
+                const rect = sectionRef.current?.getBoundingClientRect();
+                const scale = rect ? rect.width / 522 : 1;
+                // 상하 패딩(40px)과 RoughJS 테두리 여유분(20px)을 스케일에 맞춰 계산
+                const verticalMargin = isExpanded ? 80 : (60 * scale);
+                setPopoverHeight(contentH + verticalMargin);
             };
             measure();
             const observer = new ResizeObserver(measure);
@@ -705,7 +711,7 @@ function Calendar({ onExpandStateChange }) {
             inputSvgRef.current.innerHTML = "";
             const rc = rough.svg(inputSvgRef.current);
 
-            const width = isExpanded ? 450 : 280; // 40% 너비에 맞춰 280으로 조정
+            const width = isExpanded ? 550 : 480; 
             const height = popoverHeight; 
 
             // 말풍선 본체 (사각형)
@@ -736,7 +742,15 @@ function Calendar({ onExpandStateChange }) {
     }, [scheduleInput, isExpanded, popoverHeight]);
 
     return (
-        <section className="relative w-full aspect-[522/506]" style={{ containerType: 'inline-size' }}>
+        <section 
+            ref={sectionRef} 
+            className={`relative w-full aspect-[522/506] ${
+                (scheduleInput || showScheduleDetails || showPicker) 
+                ? 'z-[1000]' 
+                : 'z-0'
+            }`} 
+            style={{ containerType: 'inline-size' }}
+        >
             <CalendarPin className="absolute w-[15%] aspect-[77/71] left-1/2 -translate-x-1/2 z-0"/>
             
             {/* Month/Year Picker Dropdown */}
@@ -907,172 +921,178 @@ function Calendar({ onExpandStateChange }) {
             )}
 
             {/* Schedule Input Popover */}
-            {scheduleInput && createPortal(
+            {scheduleInput && sectionRef.current && createPortal(
                 <div
-                    className={`${isExpanded ? 'fixed' : 'absolute'} z-[10000] flex flex-col`}
-                    style={isExpanded ? {
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: '450px',
-                        height: `${popoverHeight}px`,
-                        containerType: 'both',
-                        fontFamily: "'Comic Sans MS', cursive",
-                        padding: '20px 30px',
-                        gap: '8px',
-                        filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.2))'
-                    } : {
-                        fontFamily: "'Comic Sans MS', cursive",
-                        containerType: 'both', // 내부 요소들이 컨테이너 크기에 반응하도록 설정
-                        // 모달 너비: 40% (약 210px)
-                        // 버튼 위치 기준으로 우측 배치, 화면 밖 시 좌측 배치
-                        left: (() => {
-                            const btnX = (scheduleInput.pos.x + scheduleInput.pos.w) / 522;
-                            const modalWidth = 0.40; // 40%
-                            // 우측 배치 시 화면 넘는지 확인 (버튼 우측 + 모달 너비 > 100%)
-                            if (btnX + modalWidth > 1) {
-                                // 좌측 배치: 버튼 좌측 - 모달 너비 - 여백(2%)
-                                return `${Math.max(0, scheduleInput.pos.x / 522 * 100 - 42)}%`;
-                            } else {
-                                // 우측 배치: 버튼 우측 + 여백(2%)
-                                return `${btnX * 100 + 2}%`;
-                            }
-                        })(),
-                        top: `${(scheduleInput.pos.y + 15) / 506 * 100}%`,
-                        width: '40%',  // 약 210px
-                        height: `${popoverHeight}px`,
-                        padding: '3% 5%',
-                        gap: '2%',
-                        transform: 'translate(0, -50%)',
-                        filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
-                    }}
+                    className="fixed z-[10000] flex flex-col"
+                    style={(() => {
+                        if (isExpanded) {
+                            return {
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                    width: '550px',
+                                height: `${popoverHeight}px`,
+                                containerType: 'both',
+                                fontFamily: "'Comic Sans MS', cursive",
+                                padding: '20px 30px',
+                                gap: '8px',
+                                filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.2))'
+                            };
+                        }
+                        
+                        const rect = sectionRef.current.getBoundingClientRect();
+                        const scale = rect.width / 522;
+                        const buttonRightPx = (scheduleInput.pos.x + scheduleInput.pos.w + 5) * scale;
+                        const cellCenterYPx = (scheduleInput.pos.y + scheduleInput.pos.h / 2) * scale;
+                        const modalWidth = 480 * scale;
+
+                        let left = rect.left + buttonRightPx;
+                        // 화면 우측을 벗어날 경우 왼쪽으로 배치
+                        if (left + modalWidth > window.innerWidth) {
+                            left = rect.left + (scheduleInput.pos.x * scale) - modalWidth;
+                        }
+
+                        return {
+                            left: `${left}px`,
+                            top: `${rect.top + cellCenterYPx}px`,
+                            width: `${modalWidth}px`,
+                            height: `${popoverHeight}px`,
+                            fontFamily: "'Comic Sans MS', cursive",
+                            padding: `${20 * scale}px ${30 * scale}px`,
+                            gap: `${12 * scale}px`,
+                            transform: 'translate(0, -50%)',
+                            filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
+                        };
+                    })()}
                     onPointerDown={(e) => e.stopPropagation()} // 팝업 내 클릭 시 드래그 방지
                 >
                     {/* RoughJS 말풍선 SVG 배경 */}
                     <svg
                         ref={inputSvgRef}
                         className="absolute inset-0 w-full h-full -z-10 overflow-visible"
-                        viewBox={isExpanded ? "0 0 400 500" : "0 0 280 380"}
+                        viewBox={`0 0 ${isExpanded ? 550 : 480} ${popoverHeight}`}
                         preserveAspectRatio="none"
                     />
 
-                    <div className="flex justify-end items-start -mb-2">
-                        <button 
-                            onClick={() => { setScheduleInput(null); setTempTitle(""); }} 
-                            className="font-bold hover:scale-110 leading-none"
-                            style={{ fontSize: 'clamp(12px, 7cqw, 20px)' }}
-                        >✕</button>
-                    </div>
-
-                    <input 
-                        autoFocus
-                        className="border-black outline-none bg-transparent font-bold"
-                        style={{ 
-                            fontSize: 'clamp(11px, 5.5cqw, 18px)', 
-                            borderWidth: '0 0 clamp(2px, 0.5cqw, 3px) 0',
-                            paddingBottom: '2%'
-                        }}
-                        placeholder="Schedule Title"
-                        value={tempTitle}
-                        onChange={e => setTempTitle(e.target.value)}
-                    />
-
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase">Date Range</span>
-                        <div className="flex items-center gap-2">
-                            <button 
-                                onClick={() => setMiniPickerMode('start')}
-                                className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'start' ? 'bg-yellow-200' : 'bg-white'}`}
-                            >{tempStartDate}</button>
-                            <span className="font-bold text-xs">~</span>
-                            <button 
-                                onClick={() => setMiniPickerMode('end')}
-                                className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'end' ? 'bg-yellow-200' : 'bg-white'}`}
-                            >{tempEndDate}</button>
+                    <div ref={popoverContentRef} className="flex flex-col w-full">
+                        <div className="flex justify-end items-start -mb-2 w-full">
+                            <button
+                                onClick={() => { setScheduleInput(null); setTempTitle(""); }}
+                                className="font-bold hover:scale-110 leading-none"
+                                style={{ fontSize: '16px' }}
+                            >✕</button>
                         </div>
-                    </div>
 
-                    {/* Custom Mini Date Picker */}
-                    {miniPickerMode && (
-                        <div 
-                            ref={miniPickerRef}
-                            className="absolute top-16 left-8 z-[10001] bg-white border-[3px] border-black p-3 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-sm animate-in fade-in slide-in-from-top-2 duration-200"
-                        >
-                            <p className="text-[10px] font-bold mb-2 underline decoration-2">SELECT {miniPickerMode.toUpperCase()} DATE</p>
-                            <input 
-                                type="date" 
-                                value={miniPickerMode === 'start' ? tempStartDate : tempEndDate}
-                                onChange={(e) => {
-                                    if (miniPickerMode === 'start') setTempStartDate(e.target.value);
-                                    else setTempEndDate(e.target.value);
-                                    setMiniPickerMode(null);
-                                }}
-                                className="font-sans text-xs outline-none p-1 border-2 border-black"
-                            />
-                        </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2" style={{ fontSize: 'clamp(8px, 4cqw, 12px)' }}>
-                        <div className="flex flex-col flex-1">
-                            <label className="font-bold text-gray-500 ml-1">START</label>
-                            <input 
-                                type="time" 
-                                value={tempStartTime} 
-                                onChange={e => setTempStartTime(e.target.value)}
-                                className="border border-black rounded p-1 bg-transparent outline-none"
-                            />
-                        </div>
-                        <span className="mt-4 font-bold">~</span>
-                        <div className="flex flex-col flex-1">
-                            <label className="font-bold text-gray-500 ml-1">END</label>
-                            <input 
-                                type="time" 
-                                value={tempEndTime} 
-                                onChange={e => setTempEndTime(e.target.value)}
-                                className="border border-black rounded p-1 bg-transparent outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                        <label className="text-[9px] font-bold text-gray-400 uppercase ml-1">Description</label>
-                        <textarea 
-                            className="border-2 border-black rounded p-2 bg-transparent outline-none resize-none h-16"
-                            style={{ fontSize: 'clamp(9px, 4cqw, 13px)' }}
-                            placeholder="Add more details..."
-                            value={tempDescription}
-                            onChange={e => setTempDescription(e.target.value)}
+                        <input
+                            autoFocus
+                            className="border-black outline-none bg-transparent font-bold w-full text-center"
+                            style={{
+                                fontSize: '16px',
+                                borderWidth: '0 0 2px 0',
+                                paddingBottom: '8px'
+                            }}
+                            placeholder="Schedule Title"
+                            value={tempTitle}
+                            onChange={e => setTempTitle(e.target.value)}
                         />
-                    </div>
 
-                    <div className="flex justify-center" style={{ gap: '2.5%', padding: '2% 0' }}>
+                        <div className="flex flex-col gap-1 w-full items-center mt-2">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">Date Range</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setMiniPickerMode('start')}
+                                    className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'start' ? 'bg-yellow-200' : 'bg-white'}`}
+                                >{tempStartDate}</button>
+                                <span className="font-bold text-xs">~</span>
+                                <button 
+                                    onClick={() => setMiniPickerMode('end')}
+                                    className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'end' ? 'bg-yellow-200' : 'bg-white'}`}
+                                >{tempEndDate}</button>
+                            </div>
+                        </div>
+
+                        {/* Custom Mini Date Picker */}
+                        {miniPickerMode && (
+                            <div 
+                                ref={miniPickerRef}
+                                className="absolute top-16 left-8 z-[10001] bg-white border-[3px] border-black p-3 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-sm animate-in fade-in slide-in-from-top-2 duration-200"
+                            >
+                                <p className="text-[10px] font-bold mb-2 underline decoration-2">SELECT {miniPickerMode.toUpperCase()} DATE</p>
+                                <input 
+                                    type="date" 
+                                    value={miniPickerMode === 'start' ? tempStartDate : tempEndDate}
+                                    onChange={(e) => {
+                                        if (miniPickerMode === 'start') setTempStartDate(e.target.value);
+                                        else setTempEndDate(e.target.value);
+                                        setMiniPickerMode(null);
+                                    }}
+                                    className="font-sans text-xs outline-none p-1 border-2 border-black"
+                                />
+                            </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 w-full justify-center mt-2" style={{ fontSize: '11px' }}>
+                            <div className="flex flex-col flex-1">
+                                <label className="font-bold text-gray-500 ml-1">START</label>
+                                <input
+                                    type="time"
+                                    value={tempStartTime}
+                                    onChange={e => setTempStartTime(e.target.value)}
+                                    className="border border-black rounded p-1 bg-transparent outline-none"
+                                />
+                            </div>
+                            <span className="mt-4 font-bold">~</span>
+                            <div className="flex flex-col flex-1">
+                                <label className="font-bold text-gray-500 ml-1">END</label>
+                                <input
+                                    type="time"
+                                    value={tempEndTime}
+                                    onChange={e => setTempEndTime(e.target.value)}
+                                    className="border border-black rounded p-1 bg-transparent outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1 w-full items-center mt-2">
+                            <label className="text-[9px] font-bold text-gray-400 uppercase">Description</label>
+                            <textarea
+                                    className="border-2 border-black rounded p-2 bg-transparent outline-none resize-none h-16 w-full"
+                                style={{ fontSize: '12px' }}
+                                placeholder="Add more details..."
+                                value={tempDescription}
+                                onChange={e => setTempDescription(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="flex justify-center w-full" style={{ gap: '12px', padding: '8px 0' }}>
                         {palette.map(color => (
-                            <button 
+                            <button
                                 key={color}
                                 onClick={() => setTempColor(color)}
                                 className={`rounded-full border-black transition-transform ${tempColor === color ? 'scale-125' : 'hover:scale-110'}`}
-                                style={{ 
-                                    backgroundColor: color, 
-                                    width: '10%', 
-                                    aspectRatio: '1/1',
-                                    borderWidth: 'min(1.5px, 0.5cqw)',
-                                    boxShadow: tempColor === color ? '0 0 0 min(1.5px, 0.5cqw) #9ca3af' : 'none'
+                                style={{
+                                    backgroundColor: color,
+                                    width: '40px',
+                                    height: '40px',
+                                    borderWidth: '2px',
+                                    boxShadow: tempColor === color ? '0 0 0 2px #9ca3af' : 'none'
                                 }}
                             />
                         ))}
                     </div>
 
-                    <button 
-                        onClick={saveSchedule}
-                        className="bg-black text-white font-bold hover:bg-gray-800 transition-colors mt-auto"
-                        style={{ 
-                            fontSize: 'clamp(10px, 5.5cqw, 16px)', 
-                            padding: '3% 0',
-                            borderRadius: 'clamp(2px, 1.5cqw, 5px)'
-                        }}
-                    >
-                        {scheduleInput.id ? 'UPDATE!' : 'SAVE IT!'}
-                    </button>
+                        <button
+                            onClick={saveSchedule}
+                            className="bg-black text-white font-bold hover:bg-gray-800 transition-colors mt-auto w-full"
+                            style={{
+                                fontSize: '14px',
+                                padding: '12px 0',
+                                borderRadius: '4px'
+                            }}
+                        >
+                            {scheduleInput.id ? 'UPDATE!' : 'SAVE IT!'}
+                        </button>
+                    </div>
                 </div>,
                 document.body
             )}
@@ -1106,6 +1126,7 @@ function Calendar({ onExpandStateChange }) {
                         return showScheduleDetails.date >= start && showScheduleDetails.date <= end;
                     })}
                     pos={showScheduleDetails.pos}
+                    widgetRect={sectionRef.current?.getBoundingClientRect()}
                     onDeleteSchedule={handleDeleteSchedule}
                     onEditSchedule={handleEditSchedule}
                 />
