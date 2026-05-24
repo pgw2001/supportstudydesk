@@ -10,14 +10,13 @@ const createRandom = (seed) => {
   };
 };
 
-const createDrops = ({ count, intensity, seed = 17 }) => {
+const createDrops = (count, seed = 17) => {
   const random = createRandom(seed);
-  const speedFactor = 0.5 + intensity; // 높을수록 빠름
 
   return Array.from({ length: count }, (_, index) => {
     const thickness = 0.5 + random() * 1.5; // 0.5px ~ 2px 사이의 랜덤 굵기
-    const length = 15 + random() * 25;    // 15px ~ 40px 사이의 랜덤 길이
-    const duration = (0.6 + random() * 0.4) / speedFactor; // 강도에 따른 속도 변화
+    const length = 15 + random() * 25;
+    const duration = 0.6 + random() * 0.4; // 고정된 랜덤 속도
 
     return {
       id: `rain-streak-${index}`,
@@ -42,7 +41,8 @@ const createSplashes = (count, seed = 42) => {
   }));
 };
 
-function RainDrop({ drop }) {
+function RainDrop({ drop, intensity }) {
+  const speedFactor = 0.5 + intensity;
   return (
     <div
       className="absolute bg-black will-change-transform"
@@ -52,7 +52,7 @@ function RainDrop({ drop }) {
         width: `${drop.thickness}px`,
         height: `${drop.length}px`,
         opacity: drop.opacity,
-        animation: `rainyWindowFall ${drop.duration}s steps(12) infinite`,
+        animation: `rainyWindowFall ${drop.duration / speedFactor}s steps(12) infinite`,
         animationDelay: `${drop.delay}s`,
         transform: 'translateY(-100%)',
       }}
@@ -83,18 +83,23 @@ export default function RainyWindowOverlay({
   className = "",
   seed = 17,
 }) {
-  const dropCount = Math.floor(20 + intensity * 180); // 강도에 따라 20개 ~ 200개
-  const splashCount = Math.floor(10 + intensity * 40);
-
-  const drops = useMemo(
-    () => createDrops({ count: dropCount, intensity, seed }),
-    [dropCount, intensity, seed]
+  // 최대 개수의 빗줄기를 미리 생성 (한 번만 실행됨)
+  const allDrops = useMemo(
+    () => createDrops(200, seed),
+    [seed]
   );
 
-  const splashes = useMemo(
-    () => createSplashes(splashCount, seed + 1),
-    [splashCount, seed]
+  const allSplashes = useMemo(
+    () => createSplashes(50, seed + 1),
+    [seed]
   );
+
+  // intensity를 0.05 단위로 양자화하여 렉 완화 (미세한 변화 무시)
+  const quantizedIntensity = Math.round(intensity * 20) / 20;
+
+  // 현재 강도에 따라 보여줄 개수 결정
+  const visibleDropCount = Math.floor(20 + quantizedIntensity * 180);
+  const visibleSplashCount = Math.floor(10 + quantizedIntensity * 40);
 
   if (!enabled) {
     return null;
@@ -128,12 +133,12 @@ export default function RainyWindowOverlay({
 
       <div className="absolute inset-0 bg-black/5 backdrop-blur-[0.5px]" />
 
-      {drops.map((drop) => (
-        <RainDrop key={drop.id} drop={drop} />
+      {allDrops.slice(0, visibleDropCount).map((drop) => (
+        <RainDrop key={drop.id} drop={drop} intensity={quantizedIntensity} />
       ))}
 
-      {splashes.map((splash) => (
-        <RainSplash key={splash.id} splash={splash} intensity={intensity} />
+      {allSplashes.slice(0, visibleSplashCount).map((splash) => (
+        <RainSplash key={splash.id} splash={splash} intensity={quantizedIntensity} />
       ))}
     </div>
   );
