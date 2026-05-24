@@ -129,7 +129,7 @@ function PlannerTimetable({
 
         {/* 시간표 */}
         {hours.map((hour, row) => (
-          <>
+           <div key={hour} className="contents">
             {/* 시간 */}
             <div
               key={hour}
@@ -181,7 +181,7 @@ function PlannerTimetable({
                 />
               );
             })}
-          </>
+          </div>
         ))}
 
       </div>
