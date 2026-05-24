@@ -1138,7 +1138,8 @@ function Calendar({ onExpandStateChange, dailyStudyTime = {} }) {
                             };
                     } else {
                         const buttonRightPx = (scheduleInput.pos.x + scheduleInput.pos.w + 5) * scale;
-                        const cellCenterYPx = (scheduleInput.pos.y + scheduleInput.pos.h / 2) * scale;
+                        // +버튼의 상단 y좌표에 맞춤 (+버튼은 cellY + 15에 위치)
+                        const buttonTopYPx = (scheduleInput.pos.y + 15) * scale;
                         const modalWidth = 480 * scale;
 
                         let left = rect.left + buttonRightPx;
@@ -1148,13 +1149,13 @@ function Calendar({ onExpandStateChange, dailyStudyTime = {} }) {
                         }
                         containerStyle = {
                             left: `${left}px`,
-                            top: `${rect.top + cellCenterYPx}px`,
+                            top: `${rect.top + buttonTopYPx}px`,
                             width: `${modalWidth}px`,
                             height: `${popoverHeight}px`,
                             fontFamily: "'Comic Sans MS', cursive",
                             padding: `${20 * scale}px ${30 * scale}px`,
                             gap: `${12 * scale}px`,
-                            transform: 'translate(0, -50%)',
+                            transform: 'translate(0, 0)',
                             filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
                         };
                     }
