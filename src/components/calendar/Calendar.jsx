@@ -1,8 +1,13 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import rough from "roughjs";
 import ExpandedModal from "../common/ExpandedModal";
 import ScheduleDetailsPopover from "./ScheduleDetailsPopover";
+import { getLocalDateString } from "../../utils/dateUtils";
 import { useCalendar } from "./useCalendar";
+import { useExpandedCalendar } from "./useExpandedCalendar";
+import Modal from "../common/modal";
+import EditIcon from "../../assets/icons/edit";
 
 const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
 
@@ -71,7 +76,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             const currentMonth = viewDate.getMonth(); // 0-11
             const monthName = viewDate.toLocaleString("en-US", { month: "long" });
             const displayTitle = `${monthName} ${currentYear}`;
-            const today = now.getDate();
+            const todayDateString = getLocalDateString(now);
             
             // Dimensions of the main calendar body rectangle
             const mainRectX = 5;
@@ -303,17 +308,21 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 tempDate.setDate(startDate.getDate() + i);
                 
                 const holidayDateString = `${tempDate.getFullYear()}${String(tempDate.getMonth() + 1).padStart(2, '0')}${String(tempDate.getDate()).padStart(2, '0')}`;
-                const scheduleDateString = tempDate.toISOString().split('T')[0];
+                const scheduleDateString = getLocalDateString(tempDate);
                 
                 const holiday = (holidays || []).find(h => String(h.locdate) === holidayDateString);
-                const daySchedules = (schedules || []).filter(s => s.date === scheduleDateString);
+                const daySchedules = (schedules || []).filter(s => {
+                    const targetDate = s.startDate || s.date;
+                    return scheduleDateString >= targetDate && scheduleDateString <= (s.endDate || s.startDate || s.date);
+                });
 
                 calendarDays.push({
                     date: new Date(tempDate),
                     isCurrentMonth: tempDate.getMonth() === currentMonth,
-                    isToday: tempDate.toDateString() === now.toDateString(),
+                    isToday: scheduleDateString === todayDateString,
                     isHoliday: !!holiday,
-                    holidayName: holiday ? holiday.dateName : ""
+                    holidayName: holiday ? holiday.dateName : "",
+                    daySchedules // 필터링된 일정을 객체에 포함
                 });
             }
 
@@ -481,7 +490,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                     };
 
                     // 사용자 일정 표시
-                    const daySchedules = schedules.filter(s => s.date === dateInfo.date.toISOString().split('T')[0]);
+                    const daySchedules = dateInfo.daySchedules || [];
 
                     if (daySchedules.length >= 3) {
                         // 3개 이상의 일정이 있을 경우: 첫 번째는 바 형태, 나머지는 점 형태로 표시
@@ -624,10 +633,15 @@ function Calendar({ onExpandStateChange }) {
         showPicker, setShowPicker,
         holidays,
         showScheduleDetails, setShowScheduleDetails,
-        isExpanded, setIsExpanded,
         scheduleInput, setScheduleInput,
         tempTitle, setTempTitle,
+        tempDescription, setTempDescription,
         tempColor, setTempColor,
+        tempStartTime, setTempStartTime,
+        tempEndTime, setTempEndTime,
+        tempStartDate, setTempStartDate,
+        tempEndDate, setTempEndDate,
+        miniPickerMode, setMiniPickerMode,
         schedules,
         minDate, maxDate,
         handlePrevMonth,
@@ -638,9 +652,51 @@ function Calendar({ onExpandStateChange }) {
         handleScheduleDetailsClick,
         handleEditSchedule,
         saveSchedule
-    } = useCalendar(onExpandStateChange);
+    } = useCalendar();
+
+    const { 
+        isExpanded, 
+        handleExpand, 
+        handleClose,
+        expandedCalendarDays,
+        selectedDate,
+        setSelectedDate
+    } = useExpandedCalendar(onExpandStateChange, { viewDate, holidays, schedules, today });
+
+    // 날짜 설정 미니 모달(피커) 외부 클릭 시 닫기 로직
+    const miniPickerRef = useRef(null);
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (miniPickerRef.current && !miniPickerRef.current.contains(event.target)) {
+                setMiniPickerMode(null);
+            }
+        };
+        if (miniPickerMode) {
+            // 다른 요소의 stopPropagation 영향을 받지 않도록 capture: true 사용
+            document.addEventListener("mousedown", handleClickOutside, true);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside, true);
+    }, [miniPickerMode, setMiniPickerMode]);
 
     const palette = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#6366f1', '#a855f7']; // 무지개 색상 팔레트
+
+    // 일정 입력창 동적 높이 계산을 위한 상태와 Ref
+    const [popoverHeight, setPopoverHeight] = useState(isExpanded ? 500 : 380);
+    const popoverContentRef = useRef(null);
+
+    useEffect(() => {
+        if (scheduleInput && popoverContentRef.current) {
+            const measure = () => {
+                // 요소들이 차지하는 높이 + 상하 패딩 여유분
+                const contentH = popoverContentRef.current.offsetHeight;
+                setPopoverHeight(contentH + (isExpanded ? 50 : 40));
+            };
+            measure();
+            const observer = new ResizeObserver(measure);
+            observer.observe(popoverContentRef.current);
+            return () => observer.disconnect();
+        }
+    }, [scheduleInput, isExpanded]);
 
     // 일정 입력창용 RoughJS 말풍선 배경 그리기
     const inputSvgRef = useRef(null);
@@ -648,9 +704,12 @@ function Calendar({ onExpandStateChange }) {
         if (scheduleInput && inputSvgRef.current) {
             inputSvgRef.current.innerHTML = "";
             const rc = rough.svg(inputSvgRef.current);
-            
+
+            const width = isExpanded ? 450 : 280; // 40% 너비에 맞춰 280으로 조정
+            const height = popoverHeight; 
+
             // 말풍선 본체 (사각형)
-            const rect = rc.rectangle(5, 5, 270, 190, {
+            const rect = rc.rectangle(5, 5, width - 10, height - 10, {
                 fill: '#fff',
                 fillStyle: 'solid',
                 stroke: '#000',
@@ -659,20 +718,22 @@ function Calendar({ onExpandStateChange }) {
                 seed: SEED + 999
             });
             
-            // 말풍선 꼬리: 왼쪽 중앙에서 왼쪽 밖을 가리키도록 설정 (+버튼 조준)
-            const tail = rc.polygon([[5, 90], [5, 110], [-15, 100]], {
-                fill: '#fff',
-                fillStyle: 'solid',
-                stroke: '#000',
-                strokeWidth: 3,
-                roughness: 1.5,
-                seed: SEED + 1000
-            });
-
             inputSvgRef.current.appendChild(rect);
-            inputSvgRef.current.appendChild(tail);
+
+            // 위젯 모드(확장 안됨)일 때만 말풍선 꼬리 그리기
+            if (!isExpanded) {
+                const tail = rc.polygon([[5, 90], [5, 110], [-15, 100]], {
+                    fill: '#fff',
+                    fillStyle: 'solid',
+                    stroke: '#000',
+                    strokeWidth: 3,
+                    roughness: 1.5,
+                    seed: SEED + 1000
+                });
+                inputSvgRef.current.appendChild(tail);
+            }
         }
-    }, [scheduleInput]);
+    }, [scheduleInput, isExpanded, popoverHeight]);
 
     return (
         <section className="relative w-full aspect-[522/506]" style={{ containerType: 'inline-size' }}>
@@ -711,62 +772,278 @@ function Calendar({ onExpandStateChange }) {
             {/* Expanded Modal UI (16:9 Floating Window) */}
             <ExpandedModal 
                 isOpen={isExpanded} 
-                onClose={() => setIsExpanded(false)} 
+                onClose={handleClose} 
                 title="Expanded Calendar View"
             >
-                {/* 여기에 확장되었을 때 보여줄 내용을 넣습니다. 필요하다면 더 큰 CalendarBody를 넣을 수 있습니다. */}
-                <span className="text-gray-400 italic text-2xl" style={{ fontFamily: "'Comic Sans MS', cursive" }}>Calendar Content Here</span>
+                <div className="flex h-full w-full bg-white rounded-b-xl overflow-hidden font-['Comic_Sans_MS',_cursive]">
+                    {/* Sidebar: 1/4 */}
+                    <aside className="w-1/4 border-r border-gray-200 bg-gray-50/50 p-6 flex flex-col gap-4">
+                        <h2 className="text-2xl font-bold text-gray-800">Calendar Sidebar</h2>
+                        <div className="flex-grow border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 italic p-4 text-center">
+                            Sidebar content (Stats, Filters, etc.)
+                        </div>
+                    </aside>
+
+                    {/* Calendar Grid: 3/4 */}
+                    <main className="w-3/4 p-6 flex flex-col overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-3xl font-bold">
+                                {viewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
+                            </h2>
+                            <div className="flex gap-2">
+                                <button onClick={handlePrevMonth} className="px-4 py-2 border border-black rounded-lg hover:bg-gray-100 transition-colors">Prev</button>
+                                <button onClick={handleGoToday} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">Today</button>
+                                <button onClick={handleNextMonth} className="px-4 py-2 border border-black rounded-lg hover:bg-gray-100 transition-colors">Next</button>
+                            </div>
+                        </div>
+
+                        {/* 7x6 Grid Layout */}
+                        <div className="grid grid-cols-7 grid-rows-[auto_repeat(6,minmax(100px,1fr))] gap-2 flex-grow min-h-0">
+                            {['SUN', 'MON', 'TUE', 'WED', 'THR', 'FRI', 'SAT'].map((day, idx) => (
+                                <div key={day} className={`text-center font-bold pb-2 text-sm ${idx === 0 ? 'text-red-500' : 'text-gray-600'}`}>
+                                    {day}
+                                </div>
+                            ))}
+                            {expandedCalendarDays.map((dayInfo, idx) => (
+                                <div 
+                                    key={idx}
+                                    onClick={(e) => {
+                                        // 클릭 시 상세 모달 열기
+                                        setSelectedDate(dayInfo);
+                                    }}
+                                    className={`group relative p-2 border rounded-lg transition-all cursor-pointer hover:shadow-md hover:border-black flex flex-col gap-1
+                                        ${dayInfo.isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-300'}
+                                        ${dayInfo.isToday ? 'border-2 border-black ring-2 ring-black/5' : 'border-gray-200'}
+                                    `}
+                                >
+                                    {/* 일정 추가 버튼 (+): 호버 시에만 노출 */}
+                                    <button
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // 확장 모달에서는 고정된 위치(중앙)에 뜨도록 더미 좌표 전달
+                                            handleDateClick(dayInfo.date, { x: 0, y: 0, w: 0, h: 0 });
+                                        }}
+                                        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-white border border-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black hover:text-white text-xs font-bold shadow-sm"
+                                    >
+                                        +
+                                    </button>
+
+                                    <span className={`text-sm font-bold ${dayInfo.isCurrentMonth && (idx % 7 === 0 || dayInfo.holiday) ? 'text-red-500' : ''}`}>
+                                        {dayInfo.date.getDate()}
+                                    </span>
+                                    
+                                    {/* Holiday/Schedules Preview */}
+                                    <div className="flex flex-col gap-0.5 overflow-hidden">
+                                        {dayInfo.holiday && (
+                                            <div className="text-[10px] bg-green-100 text-green-700 px-1 rounded truncate" title={dayInfo.holiday.dateName}>
+                                                {dayInfo.holiday.dateName}
+                                            </div>
+                                        )}
+                                        {dayInfo.daySchedules.slice(0, 2).map(s => (
+                                            <div key={s.id} className="text-[10px] px-1 rounded truncate text-white" style={{ backgroundColor: s.color }}>
+                                                {s.title}
+                                            </div>
+                                        ))}
+                                        {dayInfo.daySchedules.length > 2 && (
+                                            <div className="text-[9px] text-gray-400 pl-1 font-bold">+{dayInfo.daySchedules.length - 2} more</div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+                </div>
             </ExpandedModal>
 
+            {/* Expanded Day Details Modal (Rectangular) */}
+            {selectedDate && (
+                <Modal
+                    isOpen={!!selectedDate}
+                    onClose={() => setSelectedDate(null)}
+                    title={`Schedule Info`}
+                    width="400px"
+                >
+                    <div className="flex flex-col gap-3 font-['Comic_Sans_MS',_cursive] p-2">
+                        <p className="text-center font-bold text-gray-400 mb-2">{selectedDate.dateString}</p>
+                        {selectedDate.holiday && (
+                            <div className="p-3 bg-red-50 border-l-4 border-red-500 rounded text-red-700">
+                                <p className="text-xs font-bold uppercase">Holiday</p>
+                                <p className="text-lg font-bold">{selectedDate.holiday.dateName}</p>
+                            </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                            <p className="text-sm font-bold text-gray-500">Schedules</p>
+                            {selectedDate.daySchedules.length > 0 ? (
+                                selectedDate.daySchedules.map(s => (
+                                    <div key={s.id} className="flex justify-between items-center p-3 border rounded-lg shadow-sm" style={{ borderLeftColor: s.color, borderLeftWidth: '6px' }}>
+                                        <div className="flex flex-col flex-1 overflow-hidden">
+                                            <span className="font-bold">{s.title}</span>
+                                            <span className="text-[10px] text-gray-400">{(s.startDate || s.date)} ~ {(s.endDate || s.date)} | {s.startTime} - {s.endTime}</span>
+                                            {s.description && (
+                                                <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded border border-dashed border-gray-200 italic whitespace-pre-wrap">{s.description}</p>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-2 ml-2 flex-shrink-0">
+                                            <button 
+                                                onClick={() => {
+                                                    handleEditSchedule(s);
+                                                    setSelectedDate(null); // 수정창을 명확히 보여주기 위해 상세 모달 닫기
+                                                }} 
+                                                className="text-gray-400 hover:text-blue-500 transition-colors"
+                                            >
+                                                <EditIcon width="16" height="16" />
+                                            </button>
+                                            <button onClick={() => handleDeleteSchedule(s.id)} className="text-gray-400 hover:text-red-500 transition-colors">✕</button>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center py-6 text-gray-400 italic">No plans scheduled.</p>
+                            )}
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {/* Schedule Input Popover */}
-            {scheduleInput && (
+            {scheduleInput && createPortal(
                 <div
-                    className="absolute z-[100] flex flex-col"
-                    style={{ 
+                    className={`${isExpanded ? 'fixed' : 'absolute'} z-[10000] flex flex-col`}
+                    style={isExpanded ? {
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        width: '450px',
+                        height: `${popoverHeight}px`,
+                        containerType: 'both',
+                        fontFamily: "'Comic Sans MS', cursive",
+                        padding: '20px 30px',
+                        gap: '8px',
+                        filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.2))'
+                    } : {
                         fontFamily: "'Comic Sans MS', cursive",
                         containerType: 'both', // 내부 요소들이 컨테이너 크기에 반응하도록 설정
-                        // + 버튼(x + w - 15)의 바로 오른쪽으로 배치 (약 2% 정도 여백)
-                        left: `${(scheduleInput.pos.x + scheduleInput.pos.w) / 522 * 100}%`,
+                        // 모달 너비: 40% (약 210px)
+                        // 버튼 위치 기준으로 우측 배치, 화면 밖 시 좌측 배치
+                        left: (() => {
+                            const btnX = (scheduleInput.pos.x + scheduleInput.pos.w) / 522;
+                            const modalWidth = 0.40; // 40%
+                            // 우측 배치 시 화면 넘는지 확인 (버튼 우측 + 모달 너비 > 100%)
+                            if (btnX + modalWidth > 1) {
+                                // 좌측 배치: 버튼 좌측 - 모달 너비 - 여백(2%)
+                                return `${Math.max(0, scheduleInput.pos.x / 522 * 100 - 42)}%`;
+                            } else {
+                                // 우측 배치: 버튼 우측 + 여백(2%)
+                                return `${btnX * 100 + 2}%`;
+                            }
+                        })(),
                         top: `${(scheduleInput.pos.y + 15) / 506 * 100}%`,
-                        width: '53.6%',  // 280px / 522px (기존 크기 비율 유지)
-                        height: '39.5%', // 200px / 506px
-                        padding: '4% 5%',
-                        gap: '3%',
-                        transform: 'translate(5%, -50%)', // 버튼 우측 여백도 비율로 조정
+                        width: '40%',  // 약 210px
+                        height: `${popoverHeight}px`,
+                        padding: '3% 5%',
+                        gap: '2%',
+                        transform: 'translate(0, -50%)',
                         filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
                     }}
                     onPointerDown={(e) => e.stopPropagation()} // 팝업 내 클릭 시 드래그 방지
                 >
                     {/* RoughJS 말풍선 SVG 배경 */}
-                    <svg 
+                    <svg
                         ref={inputSvgRef}
                         className="absolute inset-0 w-full h-full -z-10 overflow-visible"
-                        viewBox="0 0 280 200"
+                        viewBox={isExpanded ? "0 0 400 500" : "0 0 280 380"}
                         preserveAspectRatio="none"
                     />
 
-                    <div className="flex justify-between items-center">
-                        <span className="font-bold italic" style={{ fontSize: 'clamp(10px, 5.5cqw, 16px)' }}>{scheduleInput.id ? 'Edit Plan:' : 'Plan:'} {scheduleInput.date}</span>
+                    <div className="flex justify-end items-start -mb-2">
                         <button 
                             onClick={() => { setScheduleInput(null); setTempTitle(""); }} 
                             className="font-bold hover:scale-110 leading-none"
                             style={{ fontSize: 'clamp(12px, 7cqw, 20px)' }}
                         >✕</button>
                     </div>
-                    
+
                     <input 
                         autoFocus
-                        className="border-black outline-none bg-transparent"
+                        className="border-black outline-none bg-transparent font-bold"
                         style={{ 
-                            fontSize: 'clamp(9px, 4.8cqw, 14px)', 
-                            borderWidth: 'clamp(1px, 0.8cqw, 2.5px)',
-                            padding: '2% 3%'
+                            fontSize: 'clamp(11px, 5.5cqw, 18px)', 
+                            borderWidth: '0 0 clamp(2px, 0.5cqw, 3px) 0',
+                            paddingBottom: '2%'
                         }}
-                        placeholder="What's the plan?"
+                        placeholder="Schedule Title"
                         value={tempTitle}
                         onChange={e => setTempTitle(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && saveSchedule()}
                     />
+
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[9px] font-bold text-gray-400 uppercase">Date Range</span>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => setMiniPickerMode('start')}
+                                className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'start' ? 'bg-yellow-200' : 'bg-white'}`}
+                            >{tempStartDate}</button>
+                            <span className="font-bold text-xs">~</span>
+                            <button 
+                                onClick={() => setMiniPickerMode('end')}
+                                className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'end' ? 'bg-yellow-200' : 'bg-white'}`}
+                            >{tempEndDate}</button>
+                        </div>
+                    </div>
+
+                    {/* Custom Mini Date Picker */}
+                    {miniPickerMode && (
+                        <div 
+                            ref={miniPickerRef}
+                            className="absolute top-16 left-8 z-[10001] bg-white border-[3px] border-black p-3 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-sm animate-in fade-in slide-in-from-top-2 duration-200"
+                        >
+                            <p className="text-[10px] font-bold mb-2 underline decoration-2">SELECT {miniPickerMode.toUpperCase()} DATE</p>
+                            <input 
+                                type="date" 
+                                value={miniPickerMode === 'start' ? tempStartDate : tempEndDate}
+                                onChange={(e) => {
+                                    if (miniPickerMode === 'start') setTempStartDate(e.target.value);
+                                    else setTempEndDate(e.target.value);
+                                    setMiniPickerMode(null);
+                                }}
+                                className="font-sans text-xs outline-none p-1 border-2 border-black"
+                            />
+                        </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2" style={{ fontSize: 'clamp(8px, 4cqw, 12px)' }}>
+                        <div className="flex flex-col flex-1">
+                            <label className="font-bold text-gray-500 ml-1">START</label>
+                            <input 
+                                type="time" 
+                                value={tempStartTime} 
+                                onChange={e => setTempStartTime(e.target.value)}
+                                className="border border-black rounded p-1 bg-transparent outline-none"
+                            />
+                        </div>
+                        <span className="mt-4 font-bold">~</span>
+                        <div className="flex flex-col flex-1">
+                            <label className="font-bold text-gray-500 ml-1">END</label>
+                            <input 
+                                type="time" 
+                                value={tempEndTime} 
+                                onChange={e => setTempEndTime(e.target.value)}
+                                className="border border-black rounded p-1 bg-transparent outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-bold text-gray-400 uppercase ml-1">Description</label>
+                        <textarea 
+                            className="border-2 border-black rounded p-2 bg-transparent outline-none resize-none h-16"
+                            style={{ fontSize: 'clamp(9px, 4cqw, 13px)' }}
+                            placeholder="Add more details..."
+                            value={tempDescription}
+                            onChange={e => setTempDescription(e.target.value)}
+                        />
+                    </div>
 
                     <div className="flex justify-center" style={{ gap: '2.5%', padding: '2% 0' }}>
                         {palette.map(color => (
@@ -796,7 +1073,8 @@ function Calendar({ onExpandStateChange }) {
                     >
                         {scheduleInput.id ? 'UPDATE!' : 'SAVE IT!'}
                     </button>
-                </div>
+                </div>,
+                document.body
             )}
 
             <CalendarBody 
@@ -808,7 +1086,7 @@ function Calendar({ onExpandStateChange }) {
                 canNext={viewDate < maxDate}
                 onTitleClick={() => setShowPicker(!showPicker)}
                 onGoToday={handleGoToday}
-                onExpand={() => setIsExpanded(true)}
+                onExpand={handleExpand}
                 holidays={holidays}
                 schedules={schedules}
                 onDateClick={handleDateClick}
@@ -822,7 +1100,11 @@ function Calendar({ onExpandStateChange }) {
                     isOpen={!!showScheduleDetails}
                     onClose={() => setShowScheduleDetails(null)}
                     date={showScheduleDetails.date}
-                    schedulesForDate={schedules.filter(s => s.date === showScheduleDetails.date)}
+                    schedulesForDate={schedules.filter(s => {
+                        const start = s.startDate || s.date;
+                        const end = s.endDate || start;
+                        return showScheduleDetails.date >= start && showScheduleDetails.date <= end;
+                    })}
                     pos={showScheduleDetails.pos}
                     onDeleteSchedule={handleDeleteSchedule}
                     onEditSchedule={handleEditSchedule}

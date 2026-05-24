@@ -35,25 +35,30 @@ const ExpandedModal = ({
 
     if (!isOpen) return null;
 
-    // Tailwind 클래스인지 일반 CSS 값인지 판별하는 간단한 유틸리티
-    const isTailwind = (val) => typeof val === 'string' && (val.includes('-') || val.startsWith('aspect-'));
+    // 유틸리티: 숫자인 경우 px를 붙이고, Tailwind 클래스인지 판단하여 스타일 객체 반환
+    const isTailwind = (val) => typeof val === 'string' && (val.includes('-') || val.startsWith('aspect-') || val.includes('['));
+    
+    const getDimensionStyle = (val, type) => {
+        if (!val || isTailwind(val)) return {};
+        return { [type]: typeof val === 'number' ? `${val}px` : val };
+    };
 
     return createPortal(
         <div 
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-10"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 md:p-10"
             onPointerDown={(e) => e.stopPropagation()}
         >
             <div 
-                className={`relative flex flex-col items-center justify-center w-full ${isTailwind(width) ? width : ''} ${isTailwind(height) ? height : ''}`}
+                className={`relative flex flex-col items-center justify-center max-w-full max-h-full ${isTailwind(width) ? width : 'w-full'} ${isTailwind(height) ? height : ''}`}
                 style={{
-                    width: !isTailwind(width) ? width : undefined,
-                    height: !isTailwind(height) ? height : undefined
+                    ...getDimensionStyle(width, 'width'),
+                    ...getDimensionStyle(height, 'height'),
                 }}
             >
                 {/* RoughJS Background SVG */}
                 <svg 
                     ref={svgRef} 
-                    className="absolute inset-0 w-full h-full -z-10 drop-shadow-2xl" 
+                    className="absolute inset-0 w-full h-full -z-10 drop-shadow-2xl pointer-events-none" 
                     viewBox="0 0 1000 562" 
                     preserveAspectRatio="none"
                 />
@@ -70,7 +75,7 @@ const ExpandedModal = ({
                         {title}
                     </span>
                 )}
-                <div className="w-full h-full p-12 flex items-center justify-center overflow-auto">
+                <div className="w-full h-full p-6 md:p-12 flex items-center justify-center overflow-hidden">
                     {children}
                 </div>
             </div>
