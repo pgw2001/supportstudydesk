@@ -241,13 +241,8 @@ useEffect(() => {
     }));
   }, [activePlantType]);
   
-  const [
-  deskTimerDisplay,
-  setDeskTimerDisplay,
-  ] = useState("00:00");
-
-  const [taskCount, setTaskCount] =
-  useState(0);
+  const [deskTimerDisplay, setDeskTimerDisplay] = useState("00:00");
+  const [taskCount, setTaskCount] = useState(0);
 
   const {
     fileInputRef,
