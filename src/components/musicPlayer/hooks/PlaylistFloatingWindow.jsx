@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import Modal from '../../common/modal';
 
 const PlaylistFloatingWindow = ({
   isOpen,
@@ -11,15 +12,15 @@ const PlaylistFloatingWindow = ({
   toggleSongInPlaylist,
   allSongs, // The full list of all available songs
   currentTrack, // To highlight the currently playing song
+  uploadLocalSong, // Local MP3 upload handler
+  totalStorageSize, // Total size of user-uploaded files in bytes
+  deleteUserSong, // Function to permanently delete a song
+  playTrack, // Function to play a specific track
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [isSongAddMode, setIsSongAddMode] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-
-  if (!isOpen) return null;
+  const fileInputRef = useRef(null);
 
   const activePlaylist = userPlaylists.find(p => p.id === activePlaylistId);
 
@@ -31,67 +32,50 @@ const PlaylistFloatingWindow = ({
     }
   };
 
-  const handlePointerDown = (e) => {
-    e.stopPropagation(); // Prevent event from bubbling up to parent elements
-
-    // 버튼이나 입력창을 클릭한 경우 드래그 로직을 건너뜁니다.
-    if (e.target.closest('button') || e.target.closest('input')) return;
-
-    const handle = e.target.closest('.drag-handle');
-    if (handle) {
-      isDragging.current = true;
-      dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-      e.currentTarget.setPointerCapture(e.pointerId);
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('audio/')) {
+      await uploadLocalSong(file);
+      e.target.value = null; // Reset input
     }
   };
 
-  const handlePointerMove = (e) => {
-    if (!isDragging.current) return;
-    setPosition({
-      x: e.clientX - dragStart.current.x,
-      y: e.clientY - dragStart.current.y,
-    });
-  };
-
-  const handlePointerUp = () => {
-    isDragging.current = false;
-  };
-
   return (
-    <div 
-      className="absolute top-1/2 left-1/2 w-[300px] h-[400px] bg-white border-2 border-black rounded-lg shadow-lg z-50 p-4 flex flex-col font-mono select-none"
-      style={{
-        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-        touchAction: 'none'
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Music Playlists"
+      width="320px"
+      height="450px"
+      className="font-mono select-none"
     >
-      <div className="flex justify-between items-center mb-4 drag-handle cursor-move">
-        <h3 className="text-lg font-bold pointer-events-none">Playlists</h3>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }} 
-          className="text-xl font-bold hover:text-red-500 p-1"
-        >
-          ✕
-        </button>
-      </div>
-
       {/* Playlist Management */}
       <div className="mb-4">
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden" 
+          accept="audio/mpeg,audio/wav,audio/mp3"
+          onChange={handleFileChange}
+        />
         <h4 className="font-semibold mb-2 flex justify-between items-center">
           Your Playlists
-          <button 
-            onClick={() => setIsAdding(!isAdding)}
-            className="text-xl leading-none bg-gray-100 hover:bg-gray-200 w-6 h-6 rounded flex items-center justify-center transition-all active:scale-95"
-            title="Toggle Add Playlist"
-          >
-            {isAdding ? '−' : '+'}
-          </button>
+          <div className="flex gap-1">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="text-xs px-2 py-1 bg-green-50 text-green-600 border border-green-200 rounded hover:bg-green-100 transition-all flex items-center gap-1"
+              title="Import MP3"
+            >
+              <span className="text-sm">♫</span> Import
+            </button>
+            <button 
+              onClick={() => setIsAdding(!isAdding)}
+              className="text-xl leading-none bg-gray-100 hover:bg-gray-200 w-6 h-6 rounded flex items-center justify-center transition-all active:scale-95 border border-gray-300"
+              title="New Playlist"
+            >
+              {isAdding ? '−' : '+'}
+            </button>
+          </div>
         </h4>
         <div className="flex flex-wrap gap-2 mb-2">
           {userPlaylists.map(playlist => (
@@ -181,18 +165,38 @@ const PlaylistFloatingWindow = ({
             ) : (
               // 일반 모드: 현재 플레이리스트에 포함된 곡만 표시
               <>
-                {(activePlaylist.isSystem ? allSongs : allSongs.filter(song => activePlaylist.songIds.includes(song.id))).map(song => (
-                  <li key={song.id} className={`flex items-center justify-between py-1 px-2 text-sm ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}>
-                    <span className="truncate">{song.title} - {song.artist}</span>
-                    {!activePlaylist.isSystem && (
-                      <button
-                        onClick={() => toggleSongInPlaylist(activePlaylist.id, song.id)}
-                        className="ml-2 px-2 py-0.5 rounded text-xs bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex-shrink-0"
-                        title="Remove from playlist"
-                      >
-                        ✕
-                      </button>
-                    )}
+                {(activePlaylist.isSystem ? allSongs : allSongs.filter(song => activePlaylist.songIds.includes(song.id))).map((song, index) => (
+                  <li 
+                    key={song.id} 
+                    onClick={() => playTrack(index)}
+                    className={`flex items-center justify-between py-1 px-2 text-sm cursor-pointer hover:bg-black/5 transition-colors ${currentTrack && currentTrack.id === song.id ? 'bg-yellow-100 font-bold' : ''}`}
+                  >
+                    <span className="truncate flex-grow">{song.title} - {song.artist}</span>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {/* 라이브러리에서 영구 삭제 (가져온 곡만 가능) */}
+                      {typeof song.id === 'string' && song.id.startsWith('local_') && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm("이 곡을 라이브러리에서 완전히 삭제할까요?")) {
+                              deleteUserSong(song.id);
+                            }
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete from Library"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                      {!activePlaylist.isSystem && (
+                        <button
+                          onClick={() => toggleSongInPlaylist(activePlaylist.id, song.id)}
+                          className="ml-1 px-2 py-0.5 rounded text-xs bg-red-50 text-red-500 hover:bg-red-100 transition-colors flex-shrink-0"
+                          title="Remove from playlist"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </li>
                 ))}
                 {!activePlaylist.isSystem && activePlaylist.songIds.length === 0 && (
@@ -203,7 +207,11 @@ const PlaylistFloatingWindow = ({
           </ul>
         )}
       </div>
-    </div>
+
+      <p className="text-[10px] text-gray-400 mt-2 text-center italic shrink-0">
+        Import 된 곡은 브라우저에 저장됩니다. ({ (totalStorageSize / (1024 * 1024)).toFixed(1) }MB / 100MB)
+      </p>
+    </Modal>
   );
 };
 
