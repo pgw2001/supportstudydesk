@@ -20,6 +20,16 @@ export const useCalendar = () => {
     const [tempEndTime, setTempEndTime] = useState("10:00");
     const [tempStartDate, setTempStartDate] = useState("");
     const [tempEndDate, setTempEndDate] = useState("");
+    
+    // 내 캘린더(카테고리) 관련 상태
+    const [categories] = useState([
+        { id: 'personal', name: 'Personal', color: '#3b82f6' },
+        { id: 'work', name: 'Work', color: '#f97316' },
+        { id: 'tasks', name: 'Tasks', color: '#22c55e' }
+    ]);
+    const [visibleCategoryIds, setVisibleCategoryIds] = useState(['personal', 'work', 'tasks', 'holidays']);
+    const [tempCategoryId, setTempCategoryId] = useState('personal');
+
     const [miniPickerMode, setMiniPickerMode] = useState(null); // 'start' | 'end' | null
     
     const [schedules, setSchedules] = useState(() => {
@@ -97,6 +107,7 @@ export const useCalendar = () => {
         setTempEndTime(schedule.endTime || "10:00");
         setTempStartDate(schedule.startDate || schedule.date);
         setTempEndDate(schedule.endDate || schedule.date);
+        setTempCategoryId(schedule.categoryId || 'personal');
         setShowScheduleDetails(null); // 상세 창 닫기
     }, [showScheduleDetails]);
 
@@ -121,7 +132,7 @@ export const useCalendar = () => {
             if (scheduleInput.id) {
                 // 수정 모드
                 setSchedules(prev => prev.map(s => 
-                    s.id === scheduleInput.id ? { ...s, title: tempTitle, description: tempDescription, color: tempColor, startDate: finalStartDate, endDate: finalEndDate, startTime: finalStartTime, endTime: finalEndTime } : s
+                    s.id === scheduleInput.id ? { ...s, title: tempTitle, description: tempDescription, color: tempColor, startDate: finalStartDate, endDate: finalEndDate, startTime: finalStartTime, endTime: finalEndTime, categoryId: tempCategoryId } : s
                 ));
             } else {
                 // 신규 추가 모드
@@ -133,7 +144,8 @@ export const useCalendar = () => {
                     startTime: finalStartTime,
                     endTime: finalEndTime,
                     title: tempTitle,
-                    color: tempColor
+                    color: tempColor,
+                    categoryId: tempCategoryId
                 };
                 setSchedules(prev => [...prev, newSchedule]);
             }
@@ -146,7 +158,19 @@ export const useCalendar = () => {
         setTempStartTime("09:00");
         setTempEndTime("10:00");
         setTempColor("#3b82f6");
-    }, [tempTitle, tempDescription, tempColor, tempStartDate, tempEndDate, tempStartTime, tempEndTime, scheduleInput]);
+        setTempCategoryId("personal");
+    }, [tempTitle, tempDescription, tempColor, tempStartDate, tempEndDate, tempStartTime, tempEndTime, tempCategoryId, scheduleInput]);
+
+    const toggleCategory = useCallback((id) => {
+        setVisibleCategoryIds(prev => 
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    }, []);
+
+    // 필터링된 일정 목록
+    const filteredSchedules = useMemo(() => {
+        return schedules.filter(s => visibleCategoryIds.includes(s.categoryId || 'personal'));
+    }, [schedules, visibleCategoryIds]);
 
     return {
         today,
@@ -162,6 +186,11 @@ export const useCalendar = () => {
         tempEndTime, setTempEndTime,
         tempStartDate, setTempStartDate,
         tempEndDate, setTempEndDate,
+        categories, 
+        visibleCategoryIds, setVisibleCategoryIds,
+        tempCategoryId, setTempCategoryId,
+        toggleCategory,
+        filteredSchedules,
         miniPickerMode, setMiniPickerMode,
         schedules,
         minDate, maxDate,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import rough from "roughjs";
 import ExpandedModal from "../common/ExpandedModal";
@@ -658,6 +658,11 @@ function Calendar({ onExpandStateChange }) {
         tempEndTime, setTempEndTime,
         tempStartDate, setTempStartDate,
         tempEndDate, setTempEndDate,
+        categories,
+        visibleCategoryIds,
+        tempCategoryId, setTempCategoryId,
+        toggleCategory,
+        filteredSchedules,
         miniPickerMode, setMiniPickerMode,
         schedules,
         minDate, maxDate,
@@ -671,6 +676,28 @@ function Calendar({ onExpandStateChange }) {
         saveSchedule
     } = useCalendar();
 
+    // 사이드바 미니 캘린더를 위한 별도 보기 날짜 상태
+    const [miniViewDate, setMiniViewDate] = useState(new Date(viewDate.getFullYear(), viewDate.getMonth(), 1));
+
+    // 미니 캘린더 7x6 그리드 날짜 계산
+    const miniDays = useMemo(() => {
+        const days = [];
+        const start = new Date(miniViewDate.getFullYear(), miniViewDate.getMonth(), 1);
+        start.setDate(1 - start.getDay());
+        for (let i = 0; i < 42; i++) {
+            days.push(new Date(start));
+            start.setDate(start.getDate() + 1);
+        }
+        return days;
+    }, [miniViewDate]);
+
+    const expanded = useExpandedCalendar(onExpandStateChange, { 
+        viewDate, 
+        holidays: visibleCategoryIds.includes('holidays') ? holidays : [], 
+        schedules: filteredSchedules,
+        today 
+    });
+
     const {
         isExpanded,
         handleExpand,
@@ -678,10 +705,10 @@ function Calendar({ onExpandStateChange }) {
         expandedCalendarDays,
         selectedDate,
         setSelectedDate
-    } = useExpandedCalendar(onExpandStateChange, { viewDate, holidays, schedules, today });
+    } = expanded;
 
     // 확장 모달에서 선택된 날짜의 최신 일정을 실시간으로 반영하기 위해 schedules 상태를 직접 필터링합니다.
-    const currentModalSchedules = selectedDate ? schedules.filter(s => {
+    const currentModalSchedules = selectedDate ? filteredSchedules.filter(s => {
         const start = s.startDate || s.date;
         const end = s.endDate || start;
         return selectedDate.dateString >= start && selectedDate.dateString <= end;
@@ -798,22 +825,145 @@ function Calendar({ onExpandStateChange }) {
                 isOpen={isExpanded} 
                 onClose={handleClose} 
                 title="Expanded Calendar View"
+                title=""
             >
                 <div className="flex h-full w-full bg-white rounded-b-xl overflow-hidden font-['Comic_Sans_MS',_cursive]">
                     {/* Sidebar: 1/4 */}
-                    <aside className="w-1/4 border-r border-gray-200 bg-gray-50/50 p-6 flex flex-col gap-4">
-                        <h2 className="text-2xl font-bold text-gray-800">Calendar Sidebar</h2>
-                        <div className="flex-grow border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 italic p-4 text-center">
-                            Sidebar content (Stats, Filters, etc.)
+                    <aside className="w-[28%] flex-shrink-0 border-r border-gray-200 bg-gray-50/50 py-6 px-4 flex flex-col gap-4 overflow-y-auto h-full">
+                        <button 
+                            onClick={() => handleDateClick(today, { x: 0, y: 0, w: 0, h: 0 })}
+                            className="w-full py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all flex-shrink-0 flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-95"
+                        >
+                            <span className="text-xl">+</span>
+                            <span>일정</span>
+                        </button>
+
+                        {/* Mini Calendar Area */}
+                        <div className="w-full select-none flex-shrink-0">
+                            <div className="flex justify-between items-center mb-1 px-1">
+                                <span className="text-sm font-bold text-gray-700">
+                                    {miniViewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
+                                </span>
+                                <div className="flex gap-1">
+                                    <button 
+                                        onClick={() => setMiniViewDate(new Date(miniViewDate.getFullYear(), miniViewDate.getMonth() - 1, 1))}
+                                        className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-md transition-colors text-xs font-bold"
+                                    >
+                                        &lt;
+                                    </button>
+                                    <button 
+                                        onClick={() => setMiniViewDate(new Date(miniViewDate.getFullYear(), miniViewDate.getMonth() + 1, 1))}
+                                        className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-md transition-colors text-xs font-bold"
+                                    >
+                                        &gt;
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-7 gap-y-1">
+                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                                    <div key={i} className={`text-center text-[10px] font-bold pb-1 ${i === 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                                        {day}
+                                    </div>
+                                ))}
+                                {miniDays.map((date, i) => {
+                                    const isCurrentMonth = date.getMonth() === miniViewDate.getMonth();
+                                    const isToday = date.toDateString() === today.toDateString();
+                                    return (
+                                        <div 
+                                            key={i}
+                                            onClick={() => {
+                                                const newDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                                                setViewDate(newDate);
+                                                setMiniViewDate(newDate);
+                                            }}
+                                            className={`
+                                                text-center text-[11px] py-1.5 cursor-pointer rounded-lg transition-all
+                                                ${isCurrentMonth ? 'text-gray-800' : 'text-gray-300'}
+                                                ${isToday ? 'bg-black text-white font-bold' : 'hover:bg-gray-200'}
+                                            `}
+                                        >
+                                            {date.getDate()}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* My Calendars Filter Section */}
+                        <div className="w-full mt-2 border-t pt-4">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">My Calendars</h3>
+                            <div className="flex flex-col gap-2">
+                                {categories.map(cat => (
+                                    <label key={cat.id} className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors group w-full">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={visibleCategoryIds.includes(cat.id)}
+                                            onChange={() => toggleCategory(cat.id)}
+                                            className="w-4 h-4 rounded cursor-pointer flex-shrink-0"
+                                            style={{ accentColor: cat.color }}
+                                        />
+                                        <span className={`text-sm font-medium ${visibleCategoryIds.includes(cat.id) ? 'text-gray-800' : 'text-gray-400'}`}>
+                                            {cat.name}
+                                        </span>
+                                        <div className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                                    </label>
+                                ))}
+                                {/* Holiday Toggle */}
+                                <label className="flex items-center gap-3 px-2 py-1 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors mt-1">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={visibleCategoryIds.includes('holidays')}
+                                        onChange={() => toggleCategory('holidays')}
+                                            className="w-4 h-4 rounded cursor-pointer accent-red-500 flex-shrink-0"
+                                    />
+                                    <span className={`text-sm font-medium ${visibleCategoryIds.includes('holidays') ? 'text-gray-800' : 'text-gray-400'}`}>
+                                        Holidays
+                                    </span>
+                                    <div className="ml-auto w-2 h-2 rounded-full bg-red-500"></div>
+                                </label>
+                            </div>
                         </div>
                     </aside>
 
-                    {/* Calendar Grid: 3/4 */}
-                    <main className="w-3/4 p-6 flex flex-col overflow-y-auto">
+                    {/* Calendar Grid: 3/4 -> 72% */}
+                    <main className="w-[72%] p-6 flex flex-col overflow-y-auto">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-3xl font-bold">
-                                {viewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
-                            </h2>
+                            <div className="relative">
+                                <h2 
+                                    className="text-3xl font-bold cursor-pointer hover:opacity-70 transition-opacity"
+                                    onClick={() => setShowPicker(!showPicker)}
+                                >
+                                    {viewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
+                                </h2>
+                                {showPicker && (
+                                    <div className="absolute top-full left-0 mt-2 z-[100] bg-white border-2 border-black p-2 rounded shadow-lg flex gap-2 items-center min-w-max">
+                                        <select 
+                                            className="p-1 border border-gray-300 rounded font-sans text-sm text-black"
+                                            value={viewDate.getMonth()} 
+                                            onChange={(e) => {
+                                                setViewDate(new Date(viewDate.getFullYear(), parseInt(e.target.value), 1));
+                                            }}
+                                        >
+                                            {Array.from({ length: 12 }).map((_, i) => (
+                                                <option key={i} value={i}>{new Date(0, i).toLocaleString('en-US', { month: 'long' })}</option>
+                                            ))}
+                                        </select>
+                                        <select 
+                                            className="p-1 border border-gray-300 rounded font-sans text-sm text-black"
+                                            value={viewDate.getFullYear()} 
+                                            onChange={(e) => {
+                                                setViewDate(new Date(parseInt(e.target.value), viewDate.getMonth(), 1));
+                                            }}
+                                        >
+                                            {Array.from({ length: 21 }).map((_, i) => {
+                                                const year = today.getFullYear() - 10 + i;
+                                                return <option key={year} value={year}>{year}</option>;
+                                            })}
+                                        </select>
+                                        <button onClick={() => setShowPicker(false)} className="px-2 text-gray-500 hover:text-black font-sans font-bold text-lg">✕</button>
+                                    </div>
+                                )}
+                            </div>
                             <div className="flex gap-2">
                                 <button onClick={handlePrevMonth} className="px-4 py-2 border border-black rounded-lg hover:bg-gray-100 transition-colors">Prev</button>
                                 <button onClick={handleGoToday} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">Today</button>
@@ -848,7 +998,7 @@ function Calendar({ onExpandStateChange }) {
                                             // 확장 모달에서는 고정된 위치(중앙)에 뜨도록 더미 좌표 전달
                                             handleDateClick(dayInfo.date, { x: 0, y: 0, w: 0, h: 0 });
                                         }}
-                                        className="absolute top-1 right-1 w-8 h-8 flex items-center justify-center bg-white border border-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black hover:text-white text-sm font-bold shadow-sm"
+                                        className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-white border border-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black hover:text-white text-xs font-bold shadow-sm"
                                     >
                                         +
                                     </button>
@@ -1009,6 +1159,23 @@ function Calendar({ onExpandStateChange }) {
                             onChange={e => setTempTitle(e.target.value)}
                         />
 
+                        <div className="flex flex-col gap-1 w-full items-center mt-3">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">Calendar</span>
+                            <div className="flex gap-2">
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => {
+                                            setTempCategoryId(cat.id);
+                                            setTempColor(cat.color);
+                                        }}
+                                        className={`px-3 py-1 rounded-full text-[10px] font-bold border-2 transition-all ${tempCategoryId === cat.id ? 'text-white' : 'bg-white'}`}
+                                        style={{ borderColor: cat.color, backgroundColor: tempCategoryId === cat.id ? cat.color : 'white', color: tempCategoryId === cat.id ? 'white' : cat.color }}
+                                    >{cat.name}</button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="flex flex-col gap-1 w-full items-center mt-2">
                             <span className="text-[9px] font-bold text-gray-400 uppercase">Date Range</span>
                             <div className="flex items-center gap-2">
@@ -1122,8 +1289,8 @@ function Calendar({ onExpandStateChange }) {
                 onTitleClick={() => setShowPicker(!showPicker)}
                 onGoToday={handleGoToday}
                 onExpand={handleExpand}
-                holidays={holidays}
-                schedules={schedules}
+                holidays={visibleCategoryIds.includes('holidays') ? holidays : []}
+                schedules={filteredSchedules}
                 onDateClick={handleDateClick}
                 onScheduleDetailsClick={handleScheduleDetailsClick}
                 onDeleteSchedule={handleDeleteSchedule}
@@ -1136,7 +1303,7 @@ function Calendar({ onExpandStateChange }) {
                     onClose={() => setShowScheduleDetails(null)}
                     date={showScheduleDetails.date}
                     holidayForDate={holidays.find(h => String(h.locdate) === showScheduleDetails.date.replace(/-/g, ''))}
-                    schedulesForDate={schedules.filter(s => {
+                    schedulesForDate={filteredSchedules.filter(s => {
                         const start = s.startDate || s.date;
                         const end = s.endDate || start;
                         return showScheduleDetails.date >= start && showScheduleDetails.date <= end;

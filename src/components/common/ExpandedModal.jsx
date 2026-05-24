@@ -9,7 +9,7 @@ const ExpandedModal = ({
     onClose, 
     title, 
     children, 
-    width = "max-w-6xl", // 기본 너비 (Tailwind 클래스나 CSS 값 모두 가능)
+    width = "w-full max-w-6xl", // w-full을 추가하여 너비 고정
     height = "aspect-video" // 기본 높이
 }) => {
     const svgRef = useRef(null);
@@ -49,7 +49,7 @@ const ExpandedModal = ({
             onPointerDown={(e) => e.stopPropagation()}
         >
             <div 
-                className={`relative flex flex-col items-center justify-center max-w-full max-h-full ${isTailwind(width) ? width : 'w-full'} ${isTailwind(height) ? height : ''}`}
+                className={`relative flex flex-col max-w-full max-h-full ${isTailwind(width) ? width : 'w-full'} ${isTailwind(height) ? height : ''}`}
                 style={{
                     ...getDimensionStyle(width, 'width'),
                     ...getDimensionStyle(height, 'height'),
@@ -75,7 +75,7 @@ const ExpandedModal = ({
                         {title}
                     </span>
                 )}
-                <div className="w-full h-full p-6 md:p-12 flex items-center justify-center overflow-hidden">
+                <div className="w-full h-full p-4 md:p-6 flex overflow-hidden">
                     {children}
                 </div>
             </div>
