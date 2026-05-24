@@ -19,6 +19,8 @@ function MusicPlayer({ className }) {
     togglePlay,
     nextTrack,
     prevTrack,
+    deleteUserSong,
+    playTrack,
     toggleRepeat,
     toggleShuffle,
     setVolume,
@@ -33,6 +35,9 @@ function MusicPlayer({ className }) {
     getStyle,
     getCenterStyle,
     cleanSvg,
+    uploadLocalSong,
+    allAvailableSongs,
+    totalStorageSize,
     // New playlist features
     isPlaylistOpen,
     togglePlaylistWindow,
@@ -391,8 +396,12 @@ function MusicPlayer({ className }) {
         createPlaylist={createPlaylist}
         deletePlaylist={deletePlaylist}
         toggleSongInPlaylist={toggleSongInPlaylist}
-        allSongs={SONG_PLAYLIST} // Pass the full list of songs
+        allSongs={allAvailableSongs} // Pass the combined list
         currentTrack={currentTrack} // Pass current track to highlight
+        uploadLocalSong={uploadLocalSong}
+        totalStorageSize={totalStorageSize}
+        deleteUserSong={deleteUserSong}
+        playTrack={playTrack}
       />
     </div>
   );
