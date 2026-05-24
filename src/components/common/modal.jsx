@@ -178,7 +178,7 @@ const Modal = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none p-4"
+      className="fixed inset-0 z-[1000000] flex items-center justify-center pointer-events-none p-4"
     >
       <div
         ref={containerRef} // 이 div의 크기를 측정하여 RoughJS를 그립니다.

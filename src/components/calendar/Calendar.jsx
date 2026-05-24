@@ -369,41 +369,58 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 cellHitbox.onpointerdown = (e) => e.stopPropagation(); // 칸 전체 클릭 시 드래그 방지용 전파 차단만 수행
                 cellHitbox.style.cursor = "default"; // 기본 커서로 설정
 
-                // 일정 추가용 + 버튼 그룹 (반투명 호버용)
-                const plusGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                plusGroup.style.opacity = "0"; // 초기 상태는 숨김
-                plusGroup.style.transition = "opacity 0.2s";
-                plusGroup.style.pointerEvents = "none";
                 const pX = cellX + cellWidth - 15;
                 const pY = cellY + 15;
-                const pSize = 10;
-                const l1 = rc.line(pX - pSize/2, pY, pX + pSize/2, pY, { strokeWidth: 2, roughness: 1, seed: SEED + index + 500 });
-                const l2 = rc.line(pX, pY - pSize/2, pX, pY + pSize/2, { strokeWidth: 2, roughness: 1, seed: SEED + index + 501 });
-                plusGroup.appendChild(l1);
-                plusGroup.appendChild(l2);
+                
+                // + 버튼을 위한 foreignObject 생성 (HTML div를 SVG 안에 넣기 위함)
+                const plusFO = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+                const hitAreaSize = 24; // 투명한 사각 영역의 크기 (아이콘 14px를 적절히 감쌈)
+                plusFO.setAttribute("x", (pX - hitAreaSize / 2).toString());
+                plusFO.setAttribute("y", (pY - hitAreaSize / 2).toString());
+                plusFO.setAttribute("width", hitAreaSize.toString());
+                plusFO.setAttribute("height", hitAreaSize.toString());
+                plusFO.style.overflow = "visible";
 
-                // + 버튼 전용 히트박스
-                const plusBtnHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                plusBtnHitbox.setAttribute("x", (pX - 17.5).toString()); // 중심점 기준 더 넓게 설정
-                plusBtnHitbox.setAttribute("y", (pY - 17.5).toString());
-                plusBtnHitbox.setAttribute("width", "35");
-                plusBtnHitbox.setAttribute("height", "35");
-                plusBtnHitbox.setAttribute("fill", "transparent");
-                plusBtnHitbox.style.cursor = "pointer";
-                plusBtnHitbox.style.pointerEvents = "none"; // 초기에는 클릭 방지
-                plusBtnHitbox.onpointerdown = (e) => {
+                // 투명한 사각 div 영역 (Hit Area)
+                const plusContainer = document.createElement("div");
+                plusContainer.style.width = "100%";
+                plusContainer.style.height = "100%";
+                plusContainer.style.display = "flex";
+                plusContainer.style.alignItems = "center";
+                plusContainer.style.justifyContent = "center";
+                plusContainer.style.opacity = "0"; // 기본적으로 히든
+                plusContainer.style.transition = "opacity 0.2s";
+                plusContainer.style.cursor = "pointer";
+                plusContainer.setAttribute("data-no-drag", "true");
+
+                // 디자인 유지를 위한 RoughJS 아이콘 SVG
+                const iconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                iconSvg.setAttribute("width", "14");
+                iconSvg.setAttribute("height", "14");
+                iconSvg.setAttribute("viewBox", "0 0 14 14");
+                const iconRc = rough.svg(iconSvg);
+                iconSvg.appendChild(iconRc.line(2, 7, 12, 7, { strokeWidth: 2, roughness: 1, seed: SEED + index + 500 }));
+                iconSvg.appendChild(iconRc.line(7, 2, 7, 12, { strokeWidth: 2, roughness: 1, seed: SEED + index + 501 }));
+                
+                plusContainer.appendChild(iconSvg);
+                plusFO.appendChild(plusContainer);
+
+                // 클릭 이벤트 핸들러 (div 영역 전체가 클릭 대상)
+                plusContainer.onpointerdown = (e) => {
                     e.stopPropagation();
-                    onDateClick(dateInfo.date, { x: cellX, y: cellY, w: cellWidth, h: cellHeight }); // 위치 정보 전달
+                    onDateClick(dateInfo.date, { x: cellX, y: cellY, w: cellWidth, h: cellHeight });
                 };
 
-                // 셀 호버 이벤트: + 버튼 표시 및 활성화
-                cellHitbox.onpointerenter = () => {
-                    plusGroup.style.opacity = "0.5";
-                    plusBtnHitbox.style.pointerEvents = "auto"; // 호버 시 클릭 가능
+                // 호버 상태 동기화 (셀 전체 호버 시 반투명, 버튼 영역 호버 시 불투명)
+                cellHitbox.onpointerenter = () => { plusContainer.style.opacity = "0.5"; };
+                cellHitbox.onpointerleave = (e) => {
+                    if (e.relatedTarget === plusContainer || e.relatedTarget === plusFO) return;
+                    plusContainer.style.opacity = "0";
                 };
-                cellHitbox.onpointerleave = () => {
-                    plusGroup.style.opacity = "0";
-                    plusBtnHitbox.style.pointerEvents = "none"; // 호버 해제 시 클릭 방지
+                plusContainer.onpointerenter = () => { plusContainer.style.opacity = "1"; };
+                plusContainer.onpointerleave = (e) => {
+                    if (e.relatedTarget === cellHitbox) plusContainer.style.opacity = "0.5";
+                    else plusContainer.style.opacity = "0";
                 };
 
                 // Draw frame for today's date
@@ -478,15 +495,14 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                         holidayDiv.title = dateInfo.holidayName;
                         div.appendChild(holidayDiv);
                     }
-                    
+
                     // 공휴일/일정 위에서도 +버튼이 유지되도록 이벤트 추가
                     fo.onpointerenter = () => {
-                        plusGroup.style.opacity = "0.5";
-                        plusBtnHitbox.style.pointerEvents = "auto";
+                        plusContainer.style.opacity = "0.5";
                     };
-                    fo.onpointerleave = () => {
-                        plusGroup.style.opacity = "0";
-                        plusBtnHitbox.style.pointerEvents = "none";
+                    fo.onpointerleave = (e) => {
+                        if (e.relatedTarget === cellHitbox || e.relatedTarget === plusContainer) return;
+                        plusContainer.style.opacity = "0";
                     };
 
                     // 사용자 일정 표시
@@ -613,8 +629,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 // 레이어 순서 조정: 툴팁과 클릭 판정을 모두 살리는 순서
                 svgRef.current.appendChild(cellHitbox); // 1. 가장 아래: 칸 호버 감지
                 if (fo) svgRef.current.appendChild(fo); // 2. 중간: 일정/공휴일 (툴팁 활성)
-                svgRef.current.appendChild(plusGroup); // 3. 상단: + 아이콘 시각 요소
-                svgRef.current.appendChild(plusBtnHitbox); // 4. 최상단: + 버튼 실제 클릭 판정 (35x35)
+                svgRef.current.appendChild(plusFO); // 3. 최상단: + 버튼 컨테이너 (투명 사각 영역 포함)
             });
         }
     }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick, onScheduleDetailsClick, onDeleteSchedule]);
@@ -664,6 +679,13 @@ function Calendar({ onExpandStateChange }) {
         selectedDate,
         setSelectedDate
     } = useExpandedCalendar(onExpandStateChange, { viewDate, holidays, schedules, today });
+
+    // 확장 모달에서 선택된 날짜의 최신 일정을 실시간으로 반영하기 위해 schedules 상태를 직접 필터링합니다.
+    const currentModalSchedules = selectedDate ? schedules.filter(s => {
+        const start = s.startDate || s.date;
+        const end = s.endDate || start;
+        return selectedDate.dateString >= start && selectedDate.dateString <= end;
+    }) : [];
 
     // 날짜 설정 미니 모달(피커) 외부 클릭 시 닫기 로직
     const miniPickerRef = useRef(null);
@@ -726,18 +748,6 @@ function Calendar({ onExpandStateChange }) {
             
             inputSvgRef.current.appendChild(rect);
 
-            // 위젯 모드(확장 안됨)일 때만 말풍선 꼬리 그리기
-            if (!isExpanded) {
-                const tail = rc.polygon([[5, 90], [5, 110], [-15, 100]], {
-                    fill: '#fff',
-                    fillStyle: 'solid',
-                    stroke: '#000',
-                    strokeWidth: 3,
-                    roughness: 1.5,
-                    seed: SEED + 1000
-                });
-                inputSvgRef.current.appendChild(tail);
-            }
         }
     }, [scheduleInput, isExpanded, popoverHeight]);
 
@@ -838,7 +848,7 @@ function Calendar({ onExpandStateChange }) {
                                             // 확장 모달에서는 고정된 위치(중앙)에 뜨도록 더미 좌표 전달
                                             handleDateClick(dayInfo.date, { x: 0, y: 0, w: 0, h: 0 });
                                         }}
-                                        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-white border border-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black hover:text-white text-xs font-bold shadow-sm"
+                                        className="absolute top-1 right-1 w-8 h-8 flex items-center justify-center bg-white border border-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black hover:text-white text-sm font-bold shadow-sm"
                                     >
                                         +
                                     </button>
@@ -888,8 +898,8 @@ function Calendar({ onExpandStateChange }) {
                         )}
                         <div className="flex flex-col gap-2">
                             <p className="text-sm font-bold text-gray-500">Schedules</p>
-                            {selectedDate.daySchedules.length > 0 ? (
-                                selectedDate.daySchedules.map(s => (
+                            {currentModalSchedules.length > 0 ? (
+                                currentModalSchedules.map(s => (
                                     <div key={s.id} className="flex justify-between items-center p-3 border rounded-lg shadow-sm" style={{ borderLeftColor: s.color, borderLeftWidth: '6px' }}>
                                         <div className="flex flex-col flex-1 overflow-hidden">
                                             <span className="font-bold">{s.title}</span>
@@ -922,11 +932,13 @@ function Calendar({ onExpandStateChange }) {
 
             {/* Schedule Input Popover */}
             {scheduleInput && sectionRef.current && createPortal(
-                <div
-                    className="fixed z-[10000] flex flex-col"
-                    style={(() => {
-                        if (isExpanded) {
-                            return {
+                (() => {
+                    const rect = sectionRef.current.getBoundingClientRect();
+                    const scale = rect.width / 522;
+                    
+                    let containerStyle = {};
+                    if (isExpanded) {
+                        containerStyle = {
                                 left: '50%',
                                 top: '50%',
                                 transform: 'translate(-50%, -50%)',
@@ -938,10 +950,7 @@ function Calendar({ onExpandStateChange }) {
                                 gap: '8px',
                                 filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.2))'
                             };
-                        }
-                        
-                        const rect = sectionRef.current.getBoundingClientRect();
-                        const scale = rect.width / 522;
+                    } else {
                         const buttonRightPx = (scheduleInput.pos.x + scheduleInput.pos.w + 5) * scale;
                         const cellCenterYPx = (scheduleInput.pos.y + scheduleInput.pos.h / 2) * scale;
                         const modalWidth = 480 * scale;
@@ -951,8 +960,7 @@ function Calendar({ onExpandStateChange }) {
                         if (left + modalWidth > window.innerWidth) {
                             left = rect.left + (scheduleInput.pos.x * scale) - modalWidth;
                         }
-
-                        return {
+                        containerStyle = {
                             left: `${left}px`,
                             top: `${rect.top + cellCenterYPx}px`,
                             width: `${modalWidth}px`,
@@ -963,7 +971,12 @@ function Calendar({ onExpandStateChange }) {
                             transform: 'translate(0, -50%)',
                             filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
                         };
-                    })()}
+                    }
+
+                    return (
+                        <div
+                            className="fixed z-[10000] flex flex-col"
+                            style={containerStyle}
                     onPointerDown={(e) => e.stopPropagation()} // 팝업 내 클릭 시 드래그 방지
                 >
                     {/* RoughJS 말풍선 SVG 배경 */}
@@ -1064,16 +1077,16 @@ function Calendar({ onExpandStateChange }) {
                             />
                         </div>
 
-                        <div className="flex justify-center w-full" style={{ gap: '12px', padding: '8px 0' }}>
+                    <div className="flex justify-center w-full" style={{ gap: isExpanded ? '12px' : `${12 * scale}px`, padding: isExpanded ? '8px 0' : `${8 * scale}px 0` }}>
                         {palette.map(color => (
                             <button
                                 key={color}
                                 onClick={() => setTempColor(color)}
-                                className={`rounded-full border-black transition-transform ${tempColor === color ? 'scale-125' : 'hover:scale-110'}`}
+                                className={`rounded-full border-black transition-transform flex-shrink-0 ${tempColor === color ? 'scale-125' : 'hover:scale-110'}`}
                                 style={{
                                     backgroundColor: color,
-                                    width: '40px',
-                                    height: '40px',
+                                    width: isExpanded ? '40px' : `${40 * scale}px`,
+                                    height: isExpanded ? '40px' : `${40 * scale}px`,
                                     borderWidth: '2px',
                                     boxShadow: tempColor === color ? '0 0 0 2px #9ca3af' : 'none'
                                 }}
@@ -1093,7 +1106,9 @@ function Calendar({ onExpandStateChange }) {
                             {scheduleInput.id ? 'UPDATE!' : 'SAVE IT!'}
                         </button>
                     </div>
-                </div>,
+                        </div>
+                    );
+                })(),
                 document.body
             )}
 
@@ -1120,6 +1135,7 @@ function Calendar({ onExpandStateChange }) {
                     isOpen={!!showScheduleDetails}
                     onClose={() => setShowScheduleDetails(null)}
                     date={showScheduleDetails.date}
+                    holidayForDate={holidays.find(h => String(h.locdate) === showScheduleDetails.date.replace(/-/g, ''))}
                     schedulesForDate={schedules.filter(s => {
                         const start = s.startDate || s.date;
                         const end = s.endDate || start;

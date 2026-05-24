@@ -102,20 +102,36 @@ export const useCalendar = () => {
 
     const saveSchedule = useCallback(() => {
         if (tempTitle.trim()) {
+            let finalStartDate = tempStartDate;
+            let finalEndDate = tempEndDate;
+            let finalStartTime = tempStartTime;
+            let finalEndTime = tempEndTime;
+
+            // 시작 날짜가 종료 날짜보다 늦을 경우 자동 조정 및 경고
+            if (finalStartDate > finalEndDate) {
+                finalEndDate = finalStartDate;
+                alert("종료 날짜가 시작 날짜보다 빨라, 시작 날짜와 동일하게 조정되었습니다.");
+            }
+            
+            // 날짜가 같을 때 시작 시간이 종료 시간보다 늦을 경우 자동 조정
+            if (finalStartDate === finalEndDate && finalStartTime > finalEndTime) {
+                finalEndTime = finalStartTime;
+            }
+
             if (scheduleInput.id) {
                 // 수정 모드
                 setSchedules(prev => prev.map(s => 
-                    s.id === scheduleInput.id ? { ...s, title: tempTitle, description: tempDescription, color: tempColor, startDate: tempStartDate, endDate: tempEndDate, startTime: tempStartTime, endTime: tempEndTime } : s
+                    s.id === scheduleInput.id ? { ...s, title: tempTitle, description: tempDescription, color: tempColor, startDate: finalStartDate, endDate: finalEndDate, startTime: finalStartTime, endTime: finalEndTime } : s
                 ));
             } else {
                 // 신규 추가 모드
                 const newSchedule = {
                     id: Date.now(),
                     description: tempDescription,
-                    startDate: tempStartDate,
-                    endDate: tempEndDate,
-                    startTime: tempStartTime,
-                    endTime: tempEndTime,
+                    startDate: finalStartDate,
+                    endDate: finalEndDate,
+                    startTime: finalStartTime,
+                    endTime: finalEndTime,
                     title: tempTitle,
                     color: tempColor
                 };

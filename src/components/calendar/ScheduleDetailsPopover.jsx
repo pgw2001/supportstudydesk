@@ -1,20 +1,22 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import rough from 'roughjs';
 import EditIcon from '../../assets/icons/edit';
+import Modal from '../common/modal';
 
 const SEED = 3333; // Calendar.jsx와 동일한 시드 사용
 
-const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, onDeleteSchedule, onEditSchedule, widgetRect }) => {
+const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holidayForDate, pos, onDeleteSchedule, onEditSchedule, widgetRect }) => {
     const svgRef = useRef(null);
+    const [infoSchedule, setInfoSchedule] = useState(null);
 
     useEffect(() => {
         if (isOpen && svgRef.current) {
             svgRef.current.innerHTML = "";
             const rc = rough.svg(svgRef.current);
             
-            const width = 320;
-            const height = 220;
+            const width = 350; // 너비 증가
+            const height = 240; // 높이 증가
 
             // 말풍선 본체 (사각형)
             const rect = rc.rectangle(5, 5, width - 10, height - 10, {
@@ -26,18 +28,7 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
                 seed: SEED + 1001 // ScheduleInputPopover와 다른 시드
             });
             
-            // 말풍선 꼬리: 왼쪽 중앙에서 왼쪽 밖을 가리키도록 설정 (+버튼 조준)
-            const tail = rc.polygon([[5, 90], [5, 110], [-15, 100]], {
-                fill: '#fff',
-                fillStyle: 'solid',
-                stroke: '#000',
-                strokeWidth: 3,
-                roughness: 1.5,
-                seed: SEED + 1002
-            });
-
             svgRef.current.appendChild(rect);
-            svgRef.current.appendChild(tail);
         }
     }, [isOpen]);
 
@@ -47,8 +38,8 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
     const scale = widgetRect.width / 522;
     const left = widgetRect.left + ((pos.x + pos.w) * scale);
     const top = widgetRect.top + ((pos.y + 15) * scale);
-    const width = 320 * scale;
-    const height = 220 * scale;
+    const width = 350 * scale;
+    const height = 240 * scale;
 
     return createPortal(
         <div
@@ -71,7 +62,7 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
             <svg 
                 ref={svgRef}
                 className="absolute inset-0 w-full h-full -z-10 overflow-visible"
-                viewBox="0 0 320 220"
+                viewBox="0 0 350 240"
                 preserveAspectRatio="none"
             />
 
@@ -84,16 +75,28 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
                 >✕</button>
             </div>
             
-            <div className="flex flex-col gap-1 overflow-y-auto mt-2" style={{ fontSize: 'clamp(9px, 4.8cqw, 14px)' }}>
+            <div 
+                className="flex flex-col gap-1 overflow-y-auto mt-2 pr-4" 
+                style={{ fontSize: 'clamp(9px, 4.8cqw, 14px)', scrollbarGutter: 'stable' }}
+            >
+                {holidayForDate && (
+                    <div 
+                        className="flex justify-between items-center"
+                        style={{ color: '#D43333', borderLeft: '2px solid #D43333', paddingLeft: '5px' }}
+                    >
+                        <span className="truncate">{holidayForDate.dateName}</span>
+                    </div>
+                )}
                 {schedulesForDate.length > 0 ? (
                     schedulesForDate.map(sched => (
                         <div 
                             key={sched.id} 
-                            className="flex justify-between items-center group"
-                            style={{ color: sched.color, borderLeft: `2px solid ${sched.color}`, paddingLeft: '5px' }}
+                            className="flex justify-between items-center group cursor-pointer hover:bg-black/5 rounded transition-colors"
+                            style={{ color: sched.color, borderLeft: `2px solid ${sched.color}`, paddingLeft: '5px', marginBottom: '2px' }}
+                            onClick={() => setInfoSchedule(sched)}
                         >
-                            <span className="truncate">{sched.title}</span>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                            <span className="truncate flex-1">{sched.title}</span>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all" onClick={(e) => e.stopPropagation()}>
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); onEditSchedule(sched); }}
                                     className="hover:scale-125 transition-transform"
@@ -113,6 +116,48 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, pos, 
                     <span className="text-gray-500 italic">No plans for this day.</span>
                 )}
             </div>
+
+            {/* 일정 상세 정보 모달 */}
+            {infoSchedule && (
+                <Modal
+                    isOpen={!!infoSchedule}
+                    onClose={() => setInfoSchedule(null)}
+                    title="Schedule Information"
+                    width="350px"
+                >
+                    <div className="p-4 font-['Comic_Sans_MS',_cursive] flex flex-col gap-5">
+                        <div>
+                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</h3>
+                            <p className="text-xl font-bold border-b-2 border-black/5 pb-2" style={{ color: infoSchedule.color }}>
+                                {infoSchedule.title}
+                            </p>
+                        </div>
+                        
+                        {infoSchedule.description && (
+                            <div>
+                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</h3>
+                                <p className="text-sm bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200 whitespace-pre-wrap italic text-gray-700 leading-relaxed">
+                                    {infoSchedule.description}
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-start gap-4 pt-2">
+                            <div className="flex-1">
+                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Period</h3>
+                                <p className="text-sm font-bold text-gray-800">
+                                    {infoSchedule.startDate || infoSchedule.date}
+                                    {infoSchedule.endDate && infoSchedule.endDate !== (infoSchedule.startDate || infoSchedule.date) ? ` ~ ${infoSchedule.endDate}` : ''}
+                                </p>
+                            </div>
+                            <div className="flex-1 border-l pl-4 border-gray-100">
+                                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Time</h3>
+                                <p className="text-sm font-bold text-gray-800">{infoSchedule.startTime} - {infoSchedule.endTime}</p>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </div>,
         document.body
     );
