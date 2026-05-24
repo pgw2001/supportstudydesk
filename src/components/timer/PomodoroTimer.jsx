@@ -1,7 +1,12 @@
+import {
+  saveUserData,
+  loadUserData,
+} from "../../services/userData";
+
 import { useEffect, useRef, useState } from "react";
 import TimerFrame from "./TimerFrame";
 
-function PomodoroTimer({ switchMode, onTick, setDeskTimerDisplay }) {
+function PomodoroTimer({ switchMode, onTick, setDeskTimerDisplay, user }) {
   const [time, setTime] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -12,6 +17,63 @@ function PomodoroTimer({ switchMode, onTick, setDeskTimerDisplay }) {
   const [focusFinished, setFocusFinished] = useState(false);
 
   const notifiedRef = useRef(false);
+  const [isLoaded, setIsLoaded] =
+  useState(false);
+
+  const hasInitializedRef =
+  useRef(false);
+
+  useEffect(() => {
+
+  const loadPomodoro =
+    async () => {
+
+      if (!user?.uid) {
+
+        return;
+      }
+
+      const data =
+        await loadUserData(
+          user.uid
+        );
+
+      if (
+        typeof data?.pomoTime
+        === "number"
+      ) {
+
+        setTime(
+          data.pomoTime
+        );
+      }
+
+      setIsRunning(false);
+
+      if (data?.pomoMode) {
+
+        setMode(
+          data.pomoMode
+        );
+      }
+
+      if (
+        typeof data?.pomoFocusMinutes
+        === "number"
+      ) {
+
+        setFocusMinutes(
+          data.pomoFocusMinutes
+        );
+      }
+
+      setIsLoaded(true);
+      hasInitializedRef.current = true;
+    };
+
+  loadPomodoro();
+
+}, [user]);
 
   useEffect(() => {
     let timer;
@@ -78,6 +140,37 @@ function PomodoroTimer({ switchMode, onTick, setDeskTimerDisplay }) {
       setTime(next * 60);
     }
   };
+
+  useEffect(() => {
+
+  if (
+    !isLoaded ||
+    !hasInitializedRef.current ||
+    !user?.uid ||
+    user?.isGuest
+  ) {
+    return;
+  }
+
+  saveUserData(
+    user.uid,
+    {
+      pomoTime: time,
+      pomoRunning: isRunning,
+      pomoMode: mode,
+      pomoFocusMinutes:
+        focusMinutes,
+    }
+  );
+
+}, [
+  time,
+  isRunning,
+  mode,
+  focusMinutes,
+  user,
+  isLoaded,
+]);
 
   const formatTime = () => {
     const minutes = String(Math.floor(time / 60)).padStart(2, "0");

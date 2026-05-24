@@ -320,6 +320,8 @@ function Dashboard({ user, setUser }) {
           disabled={!isEditMode}
         >
           <Timer
+          key={user?.uid || "logout"}
+          user={user}
           onTick={handleTick}
           onPomoTick={handleTick} 
           onPomodoroTick={handleTick}

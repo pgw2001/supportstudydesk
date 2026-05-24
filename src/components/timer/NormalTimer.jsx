@@ -1,9 +1,60 @@
-import { useEffect, useState } from "react";
+import {
+  saveUserData,
+  loadUserData,
+} from "../../services/userData";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import TimerFrame from "./TimerFrame";
 
-function NormalTimer({ switchMode, onTick,setDeskTimerDisplay }) {
+function NormalTimer({ switchMode, onTick,setDeskTimerDisplay, user }) {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [isLoaded, setIsLoaded] =
+  useState(false);
+
+  const hasInitializedRef =
+  useRef(false);
+
+  useEffect(() => {
+
+  const loadTimer =
+    async () => {
+
+      if (!user?.uid) {
+
+        return;
+      }
+
+      const data =
+        await loadUserData(
+          user.uid
+        );
+
+      if (
+        typeof data?.timerTime
+        === "number"
+      ) {
+
+        setTime(
+          data.timerTime
+        );
+      }
+
+      setIsRunning(false);
+
+      setIsLoaded(true);
+
+      hasInitializedRef.current =
+      true;
+    };
+
+  loadTimer();
+
+}, [user]);
 
   useEffect(() => {
     let timer;
@@ -31,6 +82,31 @@ function NormalTimer({ switchMode, onTick,setDeskTimerDisplay }) {
   );
 
   }, [time]);
+  useEffect(() => {
+
+  if (
+    !isLoaded ||
+    !hasInitializedRef.current ||
+    !user?.uid ||
+    user?.isGuest
+  ) {
+    return;
+  }
+
+  saveUserData(
+    user.uid,
+    {
+      timerTime: time,
+      timerRunning: isRunning,
+    }
+  );
+
+}, [
+  time,
+  isRunning,
+  user,
+  isLoaded,
+]);
 
   const formatTime = () => {
     const minutes = String(Math.floor(time / 60)).padStart(2, "0");
