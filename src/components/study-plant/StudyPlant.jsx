@@ -6,9 +6,11 @@ import Modal from "../common/modal";
 const PLANT_SEQUENCE = ['rose', 'sunflower', 'hydrangea', 'lilyOfTheValley', 'hyacinth'];
 const MAX_TIME_PER_PLANT = LEVEL_THRESHOLDS[4]; // 한 화분당 최고 레벨(Lv.5)까지 걸리는 시간 (useStudyPlant의 LEVEL_THRESHOLDS와 동기화)
 
-function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChange }) {
+function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChange, focusTime, plantType }) {
   // 현재 선택된 화분의 개별 진행 시간
-  const currentPlantFocusTime = plantProgress[activePlantType] || 0;
+  // focusTime이 직접 전달되면 그것을 사용하고, 아니면 plantProgress에서 추출합니다.
+  const currentPlantFocusTime = focusTime !== undefined ? focusTime : (plantProgress[activePlantType] || 0);
+  const currentPlantType = plantType || activePlantType;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -20,14 +22,14 @@ function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChang
     progress, 
     remainingTimeText, 
     isMaxLevel 
-  } = useStudyPlant(currentPlantFocusTime, activePlantType);
+  } = useStudyPlant(currentPlantFocusTime, currentPlantType);
 
   // 모달 탭 정의: return 문 이전에 정의해야 합니다.
   const plantTabs = [
     {
       id: 'status', 
       label: '성장상태', 
-      title: `${activePlantType.toUpperCase()} 성장 정보`,
+      title: `${currentPlantType.toUpperCase()} 성장 정보`,
       color: '#fef3c7', // 노란색 포스트잇
       content: (
         <div className="flex flex-col gap-4 py-2 font-['Patrick_Hand']">
@@ -77,7 +79,7 @@ function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChang
                   onClick={() => isUnlocked && onPlantChange && onPlantChange(type)}
                   className={`flex-shrink-0 w-20 h-24 border-2 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-sm ${
                     isUnlocked 
-                      ? (activePlantType === type ? "bg-green-50 border-green-500 scale-105" : "bg-white border-green-200 cursor-pointer hover:border-green-400") 
+                      ? (currentPlantType === type ? "bg-green-50 border-green-500 scale-105" : "bg-white border-green-200 cursor-pointer hover:border-green-400") 
                       : "bg-gray-50 border-black/5 opacity-60"
                   }`}
                 >
@@ -121,7 +123,7 @@ function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChang
         <div className={`w-24 h-24 flex items-center justify-center transition-all duration-500 ${isLevelUpAnimation ? 'scale-110' : ''}`}>
           <img
             src={svgSrc}
-            alt={`${activePlantType} level ${displayedLevel}`}
+            alt={`${currentPlantType} level ${displayedLevel}`}
             onClick={() => setIsModalOpen(true)}
             data-no-drag="true"
             className="max-h-full max-w-full object-contain transition-transform duration-700 transform hover:scale-110 filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)] pointer-events-auto cursor-pointer"

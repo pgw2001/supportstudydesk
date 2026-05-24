@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-function Draggable({ children, initialLeft = "0%", initialTop = "0%", className = "", style = {}, disabled = false }) {
+function Draggable({ children, initialLeft = "0%", initialTop = "0%", className = "", style = {}, disabled = false, onDragEnd }) {
   const [position, setPosition] = useState({ left: initialLeft, top: initialTop });
   const [isDragging, setIsDragging] = useState(false);
   const dragging = useRef(false);
@@ -50,6 +50,9 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
   };
 
   const onPointerUp = (e) => {
+    if (dragging.current && onDragEnd) {
+      onDragEnd(position);
+    }
     dragging.current = false;
     setIsDragging(false);
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {

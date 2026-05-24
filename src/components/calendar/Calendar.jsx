@@ -1,11 +1,24 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import rough from "roughjs";
-import { getHolidays } from "../../utils/HolidayAPI";
 import ExpandedModal from "../common/ExpandedModal";
 import ScheduleDetailsPopover from "./ScheduleDetailsPopover";
+import { getLocalDateString } from "../../utils/dateUtils";
+import { useCalendar } from "./useCalendar";
+import { useExpandedCalendar } from "./useExpandedCalendar";
+import Modal from "../common/modal";
+import EditIcon from "../../assets/icons/edit";
 
 const SEED = 3333; // 고정된 시드값을 사용하여 새로고침 후에도 항상 동일한 결과 유지
+
+// 시간 포맷팅 헬퍼 (seconds -> HH:mm:ss)
+const formatStudyTime = (seconds) => {
+    if (!seconds || seconds <= 0) return "";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
 
 function CalendarPin({className}) {
     const svgRef = useRef(null);
@@ -72,7 +85,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             const currentMonth = viewDate.getMonth(); // 0-11
             const monthName = viewDate.toLocaleString("en-US", { month: "long" });
             const displayTitle = `${monthName} ${currentYear}`;
-            const today = now.getDate();
+            const todayDateString = getLocalDateString(now);
             
             // Dimensions of the main calendar body rectangle
             const mainRectX = 5;
@@ -304,17 +317,21 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 tempDate.setDate(startDate.getDate() + i);
                 
                 const holidayDateString = `${tempDate.getFullYear()}${String(tempDate.getMonth() + 1).padStart(2, '0')}${String(tempDate.getDate()).padStart(2, '0')}`;
-                const scheduleDateString = tempDate.toISOString().split('T')[0];
+                const scheduleDateString = getLocalDateString(tempDate);
                 
                 const holiday = (holidays || []).find(h => String(h.locdate) === holidayDateString);
-                const daySchedules = (schedules || []).filter(s => s.date === scheduleDateString);
+                const daySchedules = (schedules || []).filter(s => {
+                    const targetDate = s.startDate || s.date;
+                    return scheduleDateString >= targetDate && scheduleDateString <= (s.endDate || s.startDate || s.date);
+                });
 
                 calendarDays.push({
                     date: new Date(tempDate),
                     isCurrentMonth: tempDate.getMonth() === currentMonth,
-                    isToday: tempDate.toDateString() === now.toDateString(),
+                    isToday: scheduleDateString === todayDateString,
                     isHoliday: !!holiday,
-                    holidayName: holiday ? holiday.dateName : ""
+                    holidayName: holiday ? holiday.dateName : "",
+                    daySchedules // 필터링된 일정을 객체에 포함
                 });
             }
 
@@ -361,41 +378,58 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 cellHitbox.onpointerdown = (e) => e.stopPropagation(); // 칸 전체 클릭 시 드래그 방지용 전파 차단만 수행
                 cellHitbox.style.cursor = "default"; // 기본 커서로 설정
 
-                // 일정 추가용 + 버튼 그룹 (반투명 호버용)
-                const plusGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                plusGroup.style.opacity = "0"; // 초기 상태는 숨김
-                plusGroup.style.transition = "opacity 0.2s";
-                plusGroup.style.pointerEvents = "none";
                 const pX = cellX + cellWidth - 15;
                 const pY = cellY + 15;
-                const pSize = 10;
-                const l1 = rc.line(pX - pSize/2, pY, pX + pSize/2, pY, { strokeWidth: 2, roughness: 1, seed: SEED + index + 500 });
-                const l2 = rc.line(pX, pY - pSize/2, pX, pY + pSize/2, { strokeWidth: 2, roughness: 1, seed: SEED + index + 501 });
-                plusGroup.appendChild(l1);
-                plusGroup.appendChild(l2);
+                
+                // + 버튼을 위한 foreignObject 생성 (HTML div를 SVG 안에 넣기 위함)
+                const plusFO = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+                const hitAreaSize = 24; // 투명한 사각 영역의 크기 (아이콘 14px를 적절히 감쌈)
+                plusFO.setAttribute("x", (pX - hitAreaSize / 2).toString());
+                plusFO.setAttribute("y", (pY - hitAreaSize / 2).toString());
+                plusFO.setAttribute("width", hitAreaSize.toString());
+                plusFO.setAttribute("height", hitAreaSize.toString());
+                plusFO.style.overflow = "visible";
 
-                // + 버튼 전용 히트박스
-                const plusBtnHitbox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                plusBtnHitbox.setAttribute("x", (pX - 17.5).toString()); // 중심점 기준 더 넓게 설정
-                plusBtnHitbox.setAttribute("y", (pY - 17.5).toString());
-                plusBtnHitbox.setAttribute("width", "35");
-                plusBtnHitbox.setAttribute("height", "35");
-                plusBtnHitbox.setAttribute("fill", "transparent");
-                plusBtnHitbox.style.cursor = "pointer";
-                plusBtnHitbox.style.pointerEvents = "none"; // 초기에는 클릭 방지
-                plusBtnHitbox.onpointerdown = (e) => {
+                // 투명한 사각 div 영역 (Hit Area)
+                const plusContainer = document.createElement("div");
+                plusContainer.style.width = "100%";
+                plusContainer.style.height = "100%";
+                plusContainer.style.display = "flex";
+                plusContainer.style.alignItems = "center";
+                plusContainer.style.justifyContent = "center";
+                plusContainer.style.opacity = "0"; // 기본적으로 히든
+                plusContainer.style.transition = "opacity 0.2s";
+                plusContainer.style.cursor = "pointer";
+                plusContainer.setAttribute("data-no-drag", "true");
+
+                // 디자인 유지를 위한 RoughJS 아이콘 SVG
+                const iconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                iconSvg.setAttribute("width", "14");
+                iconSvg.setAttribute("height", "14");
+                iconSvg.setAttribute("viewBox", "0 0 14 14");
+                const iconRc = rough.svg(iconSvg);
+                iconSvg.appendChild(iconRc.line(2, 7, 12, 7, { strokeWidth: 2, roughness: 1, seed: SEED + index + 500 }));
+                iconSvg.appendChild(iconRc.line(7, 2, 7, 12, { strokeWidth: 2, roughness: 1, seed: SEED + index + 501 }));
+                
+                plusContainer.appendChild(iconSvg);
+                plusFO.appendChild(plusContainer);
+
+                // 클릭 이벤트 핸들러 (div 영역 전체가 클릭 대상)
+                plusContainer.onpointerdown = (e) => {
                     e.stopPropagation();
-                    onDateClick(dateInfo.date, { x: cellX, y: cellY, w: cellWidth, h: cellHeight }); // 위치 정보 전달
+                    onDateClick(dateInfo.date, { x: cellX, y: cellY, w: cellWidth, h: cellHeight });
                 };
 
-                // 셀 호버 이벤트: + 버튼 표시 및 활성화
-                cellHitbox.onpointerenter = () => {
-                    plusGroup.style.opacity = "0.5";
-                    plusBtnHitbox.style.pointerEvents = "auto"; // 호버 시 클릭 가능
+                // 호버 상태 동기화 (셀 전체 호버 시 반투명, 버튼 영역 호버 시 불투명)
+                cellHitbox.onpointerenter = () => { plusContainer.style.opacity = "0.5"; };
+                cellHitbox.onpointerleave = (e) => {
+                    if (e.relatedTarget === plusContainer || e.relatedTarget === plusFO) return;
+                    plusContainer.style.opacity = "0";
                 };
-                cellHitbox.onpointerleave = () => {
-                    plusGroup.style.opacity = "0";
-                    plusBtnHitbox.style.pointerEvents = "none"; // 호버 해제 시 클릭 방지
+                plusContainer.onpointerenter = () => { plusContainer.style.opacity = "1"; };
+                plusContainer.onpointerleave = (e) => {
+                    if (e.relatedTarget === cellHitbox) plusContainer.style.opacity = "0.5";
+                    else plusContainer.style.opacity = "0";
                 };
 
                 // Draw frame for today's date
@@ -470,19 +504,18 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                         holidayDiv.title = dateInfo.holidayName;
                         div.appendChild(holidayDiv);
                     }
-                    
+
                     // 공휴일/일정 위에서도 +버튼이 유지되도록 이벤트 추가
                     fo.onpointerenter = () => {
-                        plusGroup.style.opacity = "0.5";
-                        plusBtnHitbox.style.pointerEvents = "auto";
+                        plusContainer.style.opacity = "0.5";
                     };
-                    fo.onpointerleave = () => {
-                        plusGroup.style.opacity = "0";
-                        plusBtnHitbox.style.pointerEvents = "none";
+                    fo.onpointerleave = (e) => {
+                        if (e.relatedTarget === cellHitbox || e.relatedTarget === plusContainer) return;
+                        plusContainer.style.opacity = "0";
                     };
 
                     // 사용자 일정 표시
-                    const daySchedules = schedules.filter(s => s.date === dateInfo.date.toISOString().split('T')[0]);
+                    const daySchedules = dateInfo.daySchedules || [];
 
                     if (daySchedules.length >= 3) {
                         // 3개 이상의 일정이 있을 경우: 첫 번째는 바 형태, 나머지는 점 형태로 표시
@@ -605,8 +638,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 // 레이어 순서 조정: 툴팁과 클릭 판정을 모두 살리는 순서
                 svgRef.current.appendChild(cellHitbox); // 1. 가장 아래: 칸 호버 감지
                 if (fo) svgRef.current.appendChild(fo); // 2. 중간: 일정/공휴일 (툴팁 활성)
-                svgRef.current.appendChild(plusGroup); // 3. 상단: + 아이콘 시각 요소
-                svgRef.current.appendChild(plusBtnHitbox); // 4. 최상단: + 버튼 실제 클릭 판정 (35x35)
+                svgRef.current.appendChild(plusFO); // 3. 최상단: + 버튼 컨테이너 (투명 사각 영역 포함)
             });
         }
     }, [viewDate, onPrev, onNext, canPrev, canNext, onTitleClick, onGoToday, onExpand, holidays, schedules, onDateClick, onScheduleDetailsClick, onDeleteSchedule]);
@@ -618,125 +650,131 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
     );
 }
 
-function Calendar({ onExpandStateChange }) {
-    const today = useMemo(() => new Date(), []);
-    // 현재 보고 있는 달력을 관리하는 상태 (해당 월의 1일로 설정)
-    const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-    const [showPicker, setShowPicker] = useState(false);
-    const [holidays, setHolidays] = useState([]);
-    const [showScheduleDetails, setShowScheduleDetails] = useState(null); // { date: string, pos: {x, y, w, h} }
-    const [isExpanded, setIsExpanded] = useState(false);
+function Calendar({ onExpandStateChange, dailyStudyTime = {} }) {
+    const sectionRef = useRef(null);
+    const [isStudyTimeMode, setIsStudyTimeMode] = useState(false);
 
-    // 확장 상태가 바뀔 때마다 부모(Dashboard)에게 알림
-    useEffect(() => {
-        onExpandStateChange?.(isExpanded);
-    }, [isExpanded, onExpandStateChange]);
+    const {
+        today,
+        viewDate, setViewDate,
+        showPicker, setShowPicker,
+        holidays,
+        showScheduleDetails, setShowScheduleDetails,
+        scheduleInput, setScheduleInput,
+        tempTitle, setTempTitle,
+        tempDescription, setTempDescription,
+        tempColor, setTempColor,
+        tempStartTime, setTempStartTime,
+        tempEndTime, setTempEndTime,
+        tempStartDate, setTempStartDate,
+        tempEndDate, setTempEndDate,
+        categories,
+        visibleCategoryIds,
+        tempCategoryId, setTempCategoryId,
+        toggleCategory,
+        filteredSchedules,
+        miniPickerMode, setMiniPickerMode,
+        schedules,
+        minDate, maxDate,
+        handlePrevMonth,
+        handleNextMonth,
+        handleGoToday,
+        handleDeleteSchedule,
+        handleDateClick,
+        handleScheduleDetailsClick,
+        handleEditSchedule,
+        saveSchedule
+    } = useCalendar();
 
-    // 일정 입력 관련 상태
-    const [scheduleInput, setScheduleInput] = useState(null); // { date: string }
-    const [tempTitle, setTempTitle] = useState("");
-    const [tempColor, setTempColor] = useState("#3b82f6");
-    
-    const [schedules, setSchedules] = useState(() => {
-        const saved = localStorage.getItem("calendar_schedules");
-        return saved ? JSON.parse(saved) : [];
+    // 사이드바 미니 캘린더를 위한 별도 보기 날짜 상태
+    const [miniViewDate, setMiniViewDate] = useState(new Date(viewDate.getFullYear(), viewDate.getMonth(), 1));
+
+    // 미니 캘린더 7x6 그리드 날짜 계산
+    const miniDays = useMemo(() => {
+        const days = [];
+        const start = new Date(miniViewDate.getFullYear(), miniViewDate.getMonth(), 1);
+        start.setDate(1 - start.getDay());
+        for (let i = 0; i < 42; i++) {
+            days.push(new Date(start));
+            start.setDate(start.getDate() + 1);
+        }
+        return days;
+    }, [miniViewDate]);
+
+    const expanded = useExpandedCalendar(onExpandStateChange, { 
+        viewDate, 
+        holidays: visibleCategoryIds.includes('holidays') ? holidays : [], 
+        schedules: filteredSchedules,
+        today 
     });
 
-    const minDate = useMemo(() => new Date(today.getFullYear() - 10, today.getMonth(), 1), [today]);
-    const maxDate = useMemo(() => new Date(today.getFullYear() + 10, today.getMonth(), 1), [today]);
+    const {
+        isExpanded,
+        handleExpand,
+        handleClose,
+        expandedCalendarDays,
+        selectedDate,
+        setSelectedDate
+    } = expanded;
+
+    // 확장 모달에서 선택된 날짜의 최신 일정을 실시간으로 반영하기 위해 schedules 상태를 직접 필터링합니다.
+    const currentModalSchedules = selectedDate ? filteredSchedules.filter(s => {
+        const start = s.startDate || s.date;
+        const end = s.endDate || start;
+        return selectedDate.dateString >= start && selectedDate.dateString <= end;
+    }) : [];
+
+    // 날짜 설정 미니 모달(피커) 외부 클릭 시 닫기 로직
+    const miniPickerRef = useRef(null);
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (miniPickerRef.current && !miniPickerRef.current.contains(event.target)) {
+                setMiniPickerMode(null);
+            }
+        };
+        if (miniPickerMode) {
+            // 다른 요소의 stopPropagation 영향을 받지 않도록 capture: true 사용
+            document.addEventListener("mousedown", handleClickOutside, true);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside, true);
+    }, [miniPickerMode, setMiniPickerMode]);
 
     const palette = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#6366f1', '#a855f7']; // 무지개 색상 팔레트
 
-    const handlePrevMonth = () => {
-        const prev = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
-        if (prev >= minDate) {
-            setViewDate(prev);
-        }
-    };
-
-    const handleNextMonth = () => {
-        const next = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
-        if (next <= maxDate) {
-            setViewDate(next);
-        }
-    };
-
-    const handleGoToday = () => {
-        setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
-    };
-
-    const handleDeleteSchedule = useCallback((id) => {
-        setSchedules(prev => prev.filter(s => s.id !== id));
-    }, []);
-
-    const handleDateClick = (date, pos) => {
-        setScheduleInput({ date: date.toISOString().split('T')[0], pos });
-        setTempTitle("");
-        setTempColor("#3b82f6");
-    };
-
-    const handleScheduleDetailsClick = (date, pos) => {
-        setShowScheduleDetails({ date: date.toISOString().split('T')[0], pos });
-    };
-
-    const handleEditSchedule = (schedule) => {
-        setScheduleInput({ 
-            date: schedule.date, 
-            pos: showScheduleDetails.pos, 
-            id: schedule.id 
-        });
-        setTempTitle(schedule.title);
-        setTempColor(schedule.color);
-        setShowScheduleDetails(null); // 상세 창 닫기
-    };
-
-    const saveSchedule = () => {
-        if (tempTitle.trim()) {
-            if (scheduleInput.id) {
-                // 수정 모드
-                setSchedules(prev => prev.map(s => 
-                    s.id === scheduleInput.id ? { ...s, title: tempTitle, color: tempColor } : s
-                ));
-            } else {
-                // 신규 추가 모드
-                const newSchedule = {
-                    id: Date.now(),
-                    date: scheduleInput.date,
-                    title: tempTitle,
-                    color: tempColor
-                };
-                setSchedules(prev => [...prev, newSchedule]);
-            }
-        }
-        setScheduleInput(null);
-        setTempTitle("");
-    };
+    // 일정 입력창 동적 높이 계산을 위한 상태와 Ref
+    const [popoverHeight, setPopoverHeight] = useState(isExpanded ? 500 : 380);
+    const popoverContentRef = useRef(null);
 
     useEffect(() => {
-        localStorage.setItem("calendar_schedules", JSON.stringify(schedules));
-    }, [schedules]);
-
-    // 월이 변경될 때마다 공휴일 데이터를 가져옵니다.
-    useEffect(() => {
-        const fetchHolidays = async () => {
-            const year = viewDate.getFullYear();
-            const month = viewDate.getMonth() + 1;
-            const data = await getHolidays(year, month);
-            setHolidays(data);
-        };
-        fetchHolidays();
-    }, [viewDate]);
+        if (scheduleInput && popoverContentRef.current) {
+            const measure = () => {
+                // 요소들이 차지하는 실제 높이 측정
+                const contentH = popoverContentRef.current.offsetHeight;
+                const rect = sectionRef.current?.getBoundingClientRect();
+                const scale = rect ? rect.width / 522 : 1;
+                // 상하 패딩(40px)과 RoughJS 테두리 여유분(20px)을 스케일에 맞춰 계산
+                const verticalMargin = isExpanded ? 80 : (60 * scale);
+                setPopoverHeight(contentH + verticalMargin);
+            };
+            measure();
+            const observer = new ResizeObserver(measure);
+            observer.observe(popoverContentRef.current);
+            return () => observer.disconnect();
+        }
+    }, [scheduleInput, isExpanded]);
 
     // 일정 입력창용 RoughJS 말풍선 배경 그리기
     const inputSvgRef = useRef(null);
     useEffect(() => {
         if (scheduleInput && inputSvgRef.current) {
-            // Clear previous drawings
             inputSvgRef.current.innerHTML = "";
             const rc = rough.svg(inputSvgRef.current);
-            
+
+            const width = isExpanded ? 550 : 480; 
+            const height = popoverHeight; 
+
             // 말풍선 본체 (사각형)
-            const rect = rc.rectangle(5, 5, 270, 190, {
+            const rect = rc.rectangle(5, 5, width - 10, height - 10, {
                 fill: '#fff',
                 fillStyle: 'solid',
                 stroke: '#000',
@@ -745,23 +783,21 @@ function Calendar({ onExpandStateChange }) {
                 seed: SEED + 999
             });
             
-            // 말풍선 꼬리: 왼쪽 중앙에서 왼쪽 밖을 가리키도록 설정 (+버튼 조준)
-            const tail = rc.polygon([[5, 90], [5, 110], [-15, 100]], {
-                fill: '#fff',
-                fillStyle: 'solid',
-                stroke: '#000',
-                strokeWidth: 3,
-                roughness: 1.5,
-                seed: SEED + 1000
-            });
-
             inputSvgRef.current.appendChild(rect);
-            inputSvgRef.current.appendChild(tail);
+
         }
-    }, [scheduleInput]);
+    }, [scheduleInput, isExpanded, popoverHeight]);
 
     return (
-        <section className="relative w-full aspect-[522/506]" style={{ containerType: 'inline-size' }}>
+        <section 
+            ref={sectionRef} 
+            className={`relative w-full aspect-[522/506] ${
+                (scheduleInput || showScheduleDetails || showPicker) 
+                ? 'z-[1000]' 
+                : 'z-0'
+            }`} 
+            style={{ containerType: 'inline-size' }}
+        >
             <CalendarPin className="absolute w-[15%] aspect-[77/71] left-1/2 -translate-x-1/2 z-0"/>
             
             {/* Month/Year Picker Dropdown */}
@@ -797,92 +833,486 @@ function Calendar({ onExpandStateChange }) {
             {/* Expanded Modal UI (16:9 Floating Window) */}
             <ExpandedModal 
                 isOpen={isExpanded} 
-                onClose={() => setIsExpanded(false)} 
-                title="Expanded Calendar View"
+                onClose={handleClose} 
+                title={
+                    <div className="relative inline-block">
+                        <span 
+                            className="text-3xl font-bold cursor-pointer hover:opacity-70 transition-opacity text-black"
+                            onClick={() => setShowPicker(!showPicker)}
+                        >
+                            {viewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
+                        </span>
+                        {showPicker && (
+                            <div className="absolute top-full left-0 mt-2 z-[101] bg-white border-2 border-black p-2 rounded shadow-lg flex gap-2 items-center min-w-max text-base font-sans not-italic">
+                                <select 
+                                    className="p-1 border border-gray-300 rounded text-black"
+                                    value={viewDate.getMonth()} 
+                                    onChange={(e) => {
+                                        setViewDate(new Date(viewDate.getFullYear(), parseInt(e.target.value), 1));
+                                    }}
+                                >
+                                    {Array.from({ length: 12 }).map((_, i) => (
+                                        <option key={i} value={i}>{new Date(0, i).toLocaleString('en-US', { month: 'long' })}</option>
+                                    ))}
+                                </select>
+                                <select 
+                                    className="p-1 border border-gray-300 rounded text-black"
+                                    value={viewDate.getFullYear()} 
+                                    onChange={(e) => {
+                                        setViewDate(new Date(parseInt(e.target.value), viewDate.getMonth(), 1));
+                                    }}
+                                >
+                                    {Array.from({ length: 21 }).map((_, i) => {
+                                        const year = today.getFullYear() - 10 + i;
+                                        return <option key={year} value={year}>{year}</option>;
+                                    })}
+                                </select>
+                                <button onClick={() => setShowPicker(false)} className="px-2 text-gray-500 hover:text-black font-bold">✕</button>
+                            </div>
+                        )}
+                    </div>
+                }
             >
-                {/* 여기에 확장되었을 때 보여줄 내용을 넣습니다. 필요하다면 더 큰 CalendarBody를 넣을 수 있습니다. */}
-                <span className="text-gray-400 italic text-2xl" style={{ fontFamily: "'Comic Sans MS', cursive" }}>Calendar Content Here</span>
+                <div className="flex h-full w-full bg-white rounded-b-xl overflow-hidden font-['Comic_Sans_MS',_cursive]">
+                    {/* Sidebar: 1/4 */}
+                    <aside className="w-[28%] flex-shrink-0 border-r border-gray-200 bg-gray-50/50 py-6 px-4 flex flex-col gap-4 overflow-y-auto h-full">
+                        <button 
+                            onClick={() => handleDateClick(today, { x: 0, y: 0, w: 0, h: 0 })}
+                            className="w-full py-3 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all flex-shrink-0 flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-95"
+                        >
+                            <span className="text-xl">+</span>
+                            <span>일정</span>
+                        </button>
+
+                        {/* Mini Calendar Area */}
+                        <div className="w-full select-none flex-shrink-0">
+                            <div className="flex justify-between items-center mb-1 px-1">
+                                <span className="text-sm font-bold text-gray-700">
+                                    {miniViewDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
+                                </span>
+                                <div className="flex gap-1">
+                                    <button 
+                                        onClick={() => setMiniViewDate(new Date(miniViewDate.getFullYear(), miniViewDate.getMonth() - 1, 1))}
+                                        className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-md transition-colors text-xs font-bold"
+                                    >
+                                        &lt;
+                                    </button>
+                                    <button 
+                                        onClick={() => setMiniViewDate(new Date(miniViewDate.getFullYear(), miniViewDate.getMonth() + 1, 1))}
+                                        className="w-6 h-6 flex items-center justify-center hover:bg-gray-200 rounded-md transition-colors text-xs font-bold"
+                                    >
+                                        &gt;
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-7 gap-y-1">
+                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                                    <div key={i} className={`text-center text-[10px] font-bold pb-1 ${i === 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                                        {day}
+                                    </div>
+                                ))}
+                                {miniDays.map((date, i) => {
+                                    const isCurrentMonth = date.getMonth() === miniViewDate.getMonth();
+                                    const isToday = date.toDateString() === today.toDateString();
+                                    return (
+                                        <div 
+                                            key={i}
+                                            onClick={() => {
+                                                const newDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                                                setViewDate(newDate);
+                                                setMiniViewDate(newDate);
+                                            }}
+                                            className={`
+                                                text-center text-[11px] py-1.5 cursor-pointer rounded-lg transition-all
+                                                ${isCurrentMonth ? 'text-gray-800' : 'text-gray-300'}
+                                                ${isToday ? 'bg-black text-white font-bold' : 'hover:bg-gray-200'}
+                                            `}
+                                        >
+                                            {date.getDate()}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* My Calendars Filter Section */}
+                        <div className="w-full mt-2 border-t pt-4">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">My Calendars</h3>
+                            <div className="flex flex-col gap-2">
+                                {categories.map(cat => (
+                                    <label key={cat.id} className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors group w-full">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={visibleCategoryIds.includes(cat.id)}
+                                            onChange={() => toggleCategory(cat.id)}
+                                            className="w-4 h-4 rounded cursor-pointer flex-shrink-0"
+                                            style={{ accentColor: cat.color }}
+                                        />
+                                        <span className={`text-sm font-medium ${visibleCategoryIds.includes(cat.id) ? 'text-gray-800' : 'text-gray-400'}`}>
+                                            {cat.name}
+                                        </span>
+                                        <div className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                                    </label>
+                                ))}
+                                {/* Holiday Toggle */}
+                                <label className="flex items-center gap-3 px-2 py-1 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors mt-1">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={visibleCategoryIds.includes('holidays')}
+                                        onChange={() => toggleCategory('holidays')}
+                                            className="w-4 h-4 rounded cursor-pointer accent-red-500 flex-shrink-0"
+                                    />
+                                    <span className={`text-sm font-medium ${visibleCategoryIds.includes('holidays') ? 'text-gray-800' : 'text-gray-400'}`}>
+                                        Holidays
+                                    </span>
+                                    <div className="ml-auto w-2 h-2 rounded-full bg-red-500"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Calendar Grid: 3/4 -> 72% */}
+                    <main 
+                        className="w-[72%] p-6 flex flex-col overflow-y-auto"
+                        style={{ containerType: 'inline-size' }}
+                    >
+                        <div className="flex justify-end items-center mb-6">
+                            <div className="flex gap-2 items-center">
+                                <button 
+                                    onClick={() => setIsStudyTimeMode(!isStudyTimeMode)} 
+                                    className={`px-3 py-2 border border-black rounded-lg transition-colors text-[13px] font-bold ${isStudyTimeMode ? 'bg-red-500 text-white' : 'hover:bg-gray-100'}`}
+                                >
+                                    Study Time
+                                </button>
+                                <button onClick={handlePrevMonth} className="px-4 py-2 border border-black rounded-lg hover:bg-gray-100 transition-colors">Prev</button>
+                                <button onClick={handleGoToday} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">Today</button>
+                                <button onClick={handleNextMonth} className="px-4 py-2 border border-black rounded-lg hover:bg-gray-100 transition-colors">Next</button>
+                            </div>
+                        </div>
+
+                        {/* 7x6 Grid Layout */}
+                        <div className="grid grid-cols-7 grid-rows-[auto_repeat(6,minmax(100px,1fr))] gap-2 flex-grow min-h-0">
+                            {['SUN', 'MON', 'TUE', 'WED', 'THR', 'FRI', 'SAT'].map((day, idx) => (
+                                <div key={day} className={`text-center font-bold pb-2 text-sm ${idx === 0 ? 'text-red-500' : 'text-gray-600'}`}>
+                                    {day}
+                                </div>
+                            ))}
+                            {expandedCalendarDays.map((dayInfo, idx) => (
+                                <div 
+                                    key={idx}
+                                    onClick={(e) => {
+                                        // 클릭 시 상세 모달 열기
+                                        setSelectedDate(dayInfo);
+                                    }}
+                                    className={`group relative p-2 border rounded-lg transition-all cursor-pointer hover:shadow-md hover:border-black flex flex-col gap-1
+                                        ${dayInfo.isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-300'}
+                                        ${dayInfo.isToday ? 'border-2 border-black ring-2 ring-black/5' : 'border-gray-200'}
+                                    `}
+                                >
+                                    {/* 일정 추가 버튼 (+): 호버 시에만 노출 */}
+                                    <button
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // 확장 모달에서는 고정된 위치(중앙)에 뜨도록 더미 좌표 전달
+                                            handleDateClick(dayInfo.date, { x: 0, y: 0, w: 0, h: 0 });
+                                        }}
+                                        className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-white border border-black rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-black hover:text-white text-xs font-bold shadow-sm"
+                                    >
+                                        +
+                                    </button>
+
+                                    <span className={`text-sm font-bold ${dayInfo.isCurrentMonth && (idx % 7 === 0 || dayInfo.holiday) ? 'text-red-500' : ''}`}>
+                                        {dayInfo.date.getDate()}
+                                    </span>
+                                    
+                                    {/* Holiday/Schedules Preview */}
+                                    <div className="flex flex-col gap-0.5 overflow-hidden flex-grow">
+                                        {isStudyTimeMode ? (
+                                            <div 
+                                                className="text-center font-bold mt-auto mb-auto whitespace-nowrap overflow-hidden"
+                                                style={{ fontSize: 'clamp(5px, 1.6cqw, 15px)' }}
+                                            >
+                                                {formatStudyTime(dailyStudyTime[dayInfo.dateString] || 0)}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {dayInfo.holiday && (
+                                                    <div className="text-[10px] bg-green-100 text-green-700 px-1 rounded truncate" title={dayInfo.holiday.dateName}>
+                                                        {dayInfo.holiday.dateName}
+                                                    </div>
+                                                )}
+                                                {dayInfo.daySchedules.slice(0, 2).map(s => (
+                                                    <div key={s.id} className="text-[10px] px-1 rounded truncate text-white" style={{ backgroundColor: s.color }}>
+                                                        {s.title}
+                                                    </div>
+                                                ))}
+                                                {dayInfo.daySchedules.length > 2 && (
+                                                    <div className="text-[9px] text-gray-400 pl-1 font-bold">+{dayInfo.daySchedules.length - 2} more</div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+                </div>
             </ExpandedModal>
 
+            {/* Expanded Day Details Modal (Rectangular) */}
+            {selectedDate && (
+                <Modal
+                    isOpen={!!selectedDate}
+                    onClose={() => setSelectedDate(null)}
+                    title={`Schedule Info`}
+                    width="400px"
+                >
+                    <div className="flex flex-col gap-3 font-['Comic_Sans_MS',_cursive] p-2">
+                        <p className="text-center font-bold text-gray-400 mb-2">{selectedDate.dateString}</p>
+                        {selectedDate.holiday && (
+                            <div className="p-3 bg-red-50 border-l-4 border-red-500 rounded text-red-700">
+                                <p className="text-xs font-bold uppercase">Holiday</p>
+                                <p className="text-lg font-bold">{selectedDate.holiday.dateName}</p>
+                            </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                            <p className="text-sm font-bold text-gray-500">Schedules</p>
+                            {currentModalSchedules.length > 0 ? (
+                                currentModalSchedules.map(s => (
+                                    <div key={s.id} className="flex justify-between items-center p-3 border rounded-lg shadow-sm" style={{ borderLeftColor: s.color, borderLeftWidth: '6px' }}>
+                                        <div className="flex flex-col flex-1 overflow-hidden">
+                                            <span className="font-bold">{s.title}</span>
+                                            <span className="text-[10px] text-gray-400">{(s.startDate || s.date)} ~ {(s.endDate || s.date)} | {s.startTime} - {s.endTime}</span>
+                                            {s.description && (
+                                                <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded border border-dashed border-gray-200 italic whitespace-pre-wrap">{s.description}</p>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-2 ml-2 flex-shrink-0">
+                                            <button 
+                                                onClick={() => {
+                                                    handleEditSchedule(s);
+                                                    setSelectedDate(null); // 수정창을 명확히 보여주기 위해 상세 모달 닫기
+                                                }} 
+                                                className="text-gray-400 hover:text-blue-500 transition-colors"
+                                            >
+                                                <EditIcon width="16" height="16" />
+                                            </button>
+                                            <button onClick={() => handleDeleteSchedule(s.id)} className="text-gray-400 hover:text-red-500 transition-colors">✕</button>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-center py-6 text-gray-400 italic">No plans scheduled.</p>
+                            )}
+                        </div>
+                        {dailyStudyTime[selectedDate.dateString] > 0 && (
+                            <div className="mt-1 pt-2 border-t border-black/10 flex justify-between items-center italic text-gray-500">
+                                <span>Study Time</span>
+                                <span>{formatStudyTime(dailyStudyTime[selectedDate.dateString])}</span>
+                            </div>
+                        )}
+                    </div>
+                </Modal>
+            )}
+
             {/* Schedule Input Popover */}
-            {scheduleInput && (
-                <div
-                    className="absolute z-[100] flex flex-col"
-                    style={{ 
-                        fontFamily: "'Comic Sans MS', cursive",
-                        containerType: 'both', // 내부 요소들이 컨테이너 크기에 반응하도록 설정
-                        // + 버튼(x + w - 15)의 바로 오른쪽으로 배치 (약 2% 정도 여백)
-                        left: `${(scheduleInput.pos.x + scheduleInput.pos.w) / 522 * 100}%`,
-                        top: `${(scheduleInput.pos.y + 15) / 506 * 100}%`,
-                        width: '53.6%',  // 280px / 522px (기존 크기 비율 유지)
-                        height: '39.5%', // 200px / 506px
-                        padding: '4% 5%',
-                        gap: '3%',
-                        transform: 'translate(5%, -50%)', // 버튼 우측 여백도 비율로 조정
-                        filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
-                    }}
+            {scheduleInput && sectionRef.current && createPortal(
+                (() => {
+                    const rect = sectionRef.current.getBoundingClientRect();
+                    const scale = rect.width / 522;
+                    
+                    let containerStyle = {};
+                    if (isExpanded) {
+                        containerStyle = {
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                    width: '550px',
+                                height: `${popoverHeight}px`,
+                                containerType: 'both',
+                                fontFamily: "'Comic Sans MS', cursive",
+                                padding: '20px 30px',
+                                gap: '8px',
+                                filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.2))'
+                            };
+                    } else {
+                        const buttonRightPx = (scheduleInput.pos.x + scheduleInput.pos.w + 5) * scale;
+                        const cellCenterYPx = (scheduleInput.pos.y + scheduleInput.pos.h / 2) * scale;
+                        const modalWidth = 480 * scale;
+
+                        let left = rect.left + buttonRightPx;
+                        // 화면 우측을 벗어날 경우 왼쪽으로 배치
+                        if (left + modalWidth > window.innerWidth) {
+                            left = rect.left + (scheduleInput.pos.x * scale) - modalWidth;
+                        }
+                        containerStyle = {
+                            left: `${left}px`,
+                            top: `${rect.top + cellCenterYPx}px`,
+                            width: `${modalWidth}px`,
+                            height: `${popoverHeight}px`,
+                            fontFamily: "'Comic Sans MS', cursive",
+                            padding: `${20 * scale}px ${30 * scale}px`,
+                            gap: `${12 * scale}px`,
+                            transform: 'translate(0, -50%)',
+                            filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.2))'
+                        };
+                    }
+
+                    return (
+                        <div
+                            className="fixed z-[10000] flex flex-col"
+                            style={containerStyle}
                     onPointerDown={(e) => e.stopPropagation()} // 팝업 내 클릭 시 드래그 방지
                 >
                     {/* RoughJS 말풍선 SVG 배경 */}
-                    <svg 
+                    <svg
                         ref={inputSvgRef}
                         className="absolute inset-0 w-full h-full -z-10 overflow-visible"
-                        viewBox="0 0 280 200"
+                        viewBox={`0 0 ${isExpanded ? 550 : 480} ${popoverHeight}`}
                         preserveAspectRatio="none"
                     />
 
-                    <div className="flex justify-between items-center">
-                        <span className="font-bold italic" style={{ fontSize: 'clamp(10px, 5.5cqw, 16px)' }}>{scheduleInput.id ? 'Edit Plan:' : 'Plan:'} {scheduleInput.date}</span>
-                        <button 
-                            onClick={() => { setScheduleInput(null); setTempTitle(""); }} 
-                            className="font-bold hover:scale-110 leading-none"
-                            style={{ fontSize: 'clamp(12px, 7cqw, 20px)' }}
-                        >✕</button>
-                    </div>
-                    
-                    <input 
-                        autoFocus
-                        className="border-black outline-none bg-transparent"
-                        style={{ 
-                            fontSize: 'clamp(9px, 4.8cqw, 14px)', 
-                            borderWidth: 'clamp(1px, 0.8cqw, 2.5px)',
-                            padding: '2% 3%'
-                        }}
-                        placeholder="What's the plan?"
-                        value={tempTitle}
-                        onChange={e => setTempTitle(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && saveSchedule()}
-                    />
+                    <div ref={popoverContentRef} className="flex flex-col w-full">
+                        <div className="flex justify-end items-start -mb-2 w-full">
+                            <button
+                                onClick={() => { setScheduleInput(null); setTempTitle(""); }}
+                                className="font-bold hover:scale-110 leading-none"
+                                style={{ fontSize: '16px' }}
+                            >✕</button>
+                        </div>
 
-                    <div className="flex justify-center" style={{ gap: '2.5%', padding: '2% 0' }}>
+                        <input
+                            autoFocus
+                            className="border-black outline-none bg-transparent font-bold w-full text-center"
+                            style={{
+                                fontSize: '16px',
+                                borderWidth: '0 0 2px 0',
+                                paddingBottom: '8px'
+                            }}
+                            placeholder="Schedule Title"
+                            value={tempTitle}
+                            onChange={e => setTempTitle(e.target.value)}
+                        />
+
+                        <div className="flex flex-col gap-1 w-full items-center mt-3">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">Calendar</span>
+                            <div className="flex gap-2">
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => {
+                                            setTempCategoryId(cat.id);
+                                            setTempColor(cat.color);
+                                        }}
+                                        className={`px-3 py-1 rounded-full text-[10px] font-bold border-2 transition-all ${tempCategoryId === cat.id ? 'text-white' : 'bg-white'}`}
+                                        style={{ borderColor: cat.color, backgroundColor: tempCategoryId === cat.id ? cat.color : 'white', color: tempCategoryId === cat.id ? 'white' : cat.color }}
+                                    >{cat.name}</button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1 w-full items-center mt-2">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase">Date Range</span>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setMiniPickerMode('start')}
+                                    className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'start' ? 'bg-yellow-200' : 'bg-white'}`}
+                                >{tempStartDate}</button>
+                                <span className="font-bold text-xs">~</span>
+                                <button 
+                                    onClick={() => setMiniPickerMode('end')}
+                                    className={`px-2 py-1 border-2 border-black rounded font-bold text-xs ${miniPickerMode === 'end' ? 'bg-yellow-200' : 'bg-white'}`}
+                                >{tempEndDate}</button>
+                            </div>
+                        </div>
+
+                        {/* Custom Mini Date Picker */}
+                        {miniPickerMode && (
+                            <div 
+                                ref={miniPickerRef}
+                                className="absolute top-16 left-8 z-[10001] bg-white border-[3px] border-black p-3 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-sm animate-in fade-in slide-in-from-top-2 duration-200"
+                            >
+                                <p className="text-[10px] font-bold mb-2 underline decoration-2">SELECT {miniPickerMode.toUpperCase()} DATE</p>
+                                <input 
+                                    type="date" 
+                                    value={miniPickerMode === 'start' ? tempStartDate : tempEndDate}
+                                    onChange={(e) => {
+                                        if (miniPickerMode === 'start') setTempStartDate(e.target.value);
+                                        else setTempEndDate(e.target.value);
+                                        setMiniPickerMode(null);
+                                    }}
+                                    className="font-sans text-xs outline-none p-1 border-2 border-black"
+                                />
+                            </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 w-full justify-center mt-2" style={{ fontSize: '11px' }}>
+                            <div className="flex flex-col flex-1">
+                                <label className="font-bold text-gray-500 ml-1">START</label>
+                                <input
+                                    type="time"
+                                    value={tempStartTime}
+                                    onChange={e => setTempStartTime(e.target.value)}
+                                    className="border border-black rounded p-1 bg-transparent outline-none"
+                                />
+                            </div>
+                            <span className="mt-4 font-bold">~</span>
+                            <div className="flex flex-col flex-1">
+                                <label className="font-bold text-gray-500 ml-1">END</label>
+                                <input
+                                    type="time"
+                                    value={tempEndTime}
+                                    onChange={e => setTempEndTime(e.target.value)}
+                                    className="border border-black rounded p-1 bg-transparent outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1 w-full items-center mt-2">
+                            <label className="text-[9px] font-bold text-gray-400 uppercase">Description</label>
+                            <textarea
+                                    className="border-2 border-black rounded p-2 bg-transparent outline-none resize-none h-16 w-full"
+                                style={{ fontSize: '12px' }}
+                                placeholder="Add more details..."
+                                value={tempDescription}
+                                onChange={e => setTempDescription(e.target.value)}
+                            />
+                        </div>
+
+                    <div className="flex justify-center w-full" style={{ gap: isExpanded ? '12px' : `${12 * scale}px`, padding: isExpanded ? '8px 0' : `${8 * scale}px 0` }}>
                         {palette.map(color => (
-                            <button 
+                            <button
                                 key={color}
                                 onClick={() => setTempColor(color)}
-                                className={`rounded-full border-black transition-transform ${tempColor === color ? 'scale-125' : 'hover:scale-110'}`}
-                                style={{ 
-                                    backgroundColor: color, 
-                                    width: '10%', 
-                                    aspectRatio: '1/1',
-                                    borderWidth: 'min(1.5px, 0.5cqw)',
-                                    boxShadow: tempColor === color ? '0 0 0 min(1.5px, 0.5cqw) #9ca3af' : 'none'
+                                className={`rounded-full border-black transition-transform flex-shrink-0 ${tempColor === color ? 'scale-125' : 'hover:scale-110'}`}
+                                style={{
+                                    backgroundColor: color,
+                                    width: isExpanded ? '40px' : `${40 * scale}px`,
+                                    height: isExpanded ? '40px' : `${40 * scale}px`,
+                                    borderWidth: '2px',
+                                    boxShadow: tempColor === color ? '0 0 0 2px #9ca3af' : 'none'
                                 }}
                             />
                         ))}
                     </div>
 
-                    <button 
-                        onClick={saveSchedule}
-                        className="bg-black text-white font-bold hover:bg-gray-800 transition-colors mt-auto"
-                        style={{ 
-                            fontSize: 'clamp(10px, 5.5cqw, 16px)', 
-                            padding: '3% 0',
-                            borderRadius: 'clamp(2px, 1.5cqw, 5px)'
-                        }}
-                    >
-                        {scheduleInput.id ? 'UPDATE!' : 'SAVE IT!'}
-                    </button>
-                </div>
+                        <button
+                            onClick={saveSchedule}
+                            className="bg-black text-white font-bold hover:bg-gray-800 transition-colors mt-auto w-full"
+                            style={{
+                                fontSize: '14px',
+                                padding: '12px 0',
+                                borderRadius: '4px'
+                            }}
+                        >
+                            {scheduleInput.id ? 'UPDATE!' : 'SAVE IT!'}
+                        </button>
+                    </div>
+                        </div>
+                    );
+                })(),
+                document.body
             )}
 
             <CalendarBody 
@@ -894,9 +1324,9 @@ function Calendar({ onExpandStateChange }) {
                 canNext={viewDate < maxDate}
                 onTitleClick={() => setShowPicker(!showPicker)}
                 onGoToday={handleGoToday}
-                onExpand={() => setIsExpanded(true)}
-                holidays={holidays}
-                schedules={schedules}
+                onExpand={handleExpand}
+                holidays={visibleCategoryIds.includes('holidays') ? holidays : []}
+                schedules={filteredSchedules}
                 onDateClick={handleDateClick}
                 onScheduleDetailsClick={handleScheduleDetailsClick}
                 onDeleteSchedule={handleDeleteSchedule}
@@ -908,8 +1338,15 @@ function Calendar({ onExpandStateChange }) {
                     isOpen={!!showScheduleDetails}
                     onClose={() => setShowScheduleDetails(null)}
                     date={showScheduleDetails.date}
-                    schedulesForDate={schedules.filter(s => s.date === showScheduleDetails.date)}
+                    holidayForDate={holidays.find(h => String(h.locdate) === showScheduleDetails.date.replace(/-/g, ''))}
+                    schedulesForDate={filteredSchedules.filter(s => {
+                        const start = s.startDate || s.date;
+                        const end = s.endDate || start;
+                        return showScheduleDetails.date >= start && showScheduleDetails.date <= end;
+                    })}
                     pos={showScheduleDetails.pos}
+                    widgetRect={sectionRef.current?.getBoundingClientRect()}
+                    dailyStudyTime={dailyStudyTime}
                     onDeleteSchedule={handleDeleteSchedule}
                     onEditSchedule={handleEditSchedule}
                 />

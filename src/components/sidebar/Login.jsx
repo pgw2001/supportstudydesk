@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
+
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
 
@@ -60,6 +61,7 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
   // 목표 시간 (분)
   const [dailyGoal, setDailyGoal] =
     useState(120);
+
 
   const [
     goalInput,
@@ -115,7 +117,6 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
       ),
       info: deskTimerDisplay,
     },
-
     {
       name: "Todo List",
       icon: (

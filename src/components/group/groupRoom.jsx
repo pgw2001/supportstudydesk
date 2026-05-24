@@ -277,6 +277,7 @@ function GroupRoom({
         group.id,
         "members"
       );
+      
 
     const unsubscribe =
       onSnapshot(
