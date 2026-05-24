@@ -1,8 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  saveUserData,
+  loadUserData,
+} from "../../services/userData";
+
 import { getHolidays } from "../../utils/HolidayAPI";
 import { getLocalDateString } from "../../utils/dateUtils";
 
-export const useCalendar = () => {
+export const useCalendar = (user) => {
     const today = useMemo(() => new Date(), []);
     
     // 현재 보고 있는 달력을 관리하는 상태 (해당 월의 1일로 설정)
@@ -32,18 +37,82 @@ export const useCalendar = () => {
 
     const [miniPickerMode, setMiniPickerMode] = useState(null); // 'start' | 'end' | null
     
-    const [schedules, setSchedules] = useState(() => {
-        const saved = localStorage.getItem("calendar_schedules");
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [schedules, setSchedules] =
+        useState([]);
+
+    const [isLoaded, setIsLoaded] =
+        useState(false);
 
     const minDate = useMemo(() => new Date(today.getFullYear() - 10, today.getMonth(), 1), [today]);
     const maxDate = useMemo(() => new Date(today.getFullYear() + 10, today.getMonth(), 1), [today]);
 
-    // 일정 변경 시 로컬 스토리지 동기화
     useEffect(() => {
-        localStorage.setItem("calendar_schedules", JSON.stringify(schedules));
-    }, [schedules]);
+
+    const loadSchedules =
+    async () => {
+
+      if (!user?.uid) {
+
+        setSchedules([]);
+        setIsLoaded(true);
+
+        return;
+      }
+      if(!user?.uid){
+        return;
+      }
+
+    const data =
+        await loadUserData(
+          user.uid
+        );
+
+      if (
+        Array.isArray(
+          data?.calendarSchedules
+        )
+      ) {
+
+        setSchedules(
+          data.calendarSchedules
+        );
+
+      } else {
+
+        setSchedules([]);
+      }
+
+      setIsLoaded(true);
+    };
+
+    loadSchedules();
+
+    }, [user]);
+
+    useEffect(() => {
+
+    if (
+    !isLoaded ||
+    !user?.uid ||
+    user?.isGuest
+    ) {
+    return;
+    }
+
+    saveUserData(
+    user.uid,
+    {
+      calendarSchedules:
+        schedules,
+    }
+    );
+
+    }, [
+    schedules,
+    user,
+    isLoaded,
+    ]);
+
 
     // 월이 변경될 때마다 공휴일 데이터를 가져옵니다.
     useEffect(() => {

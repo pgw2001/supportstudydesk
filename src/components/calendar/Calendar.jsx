@@ -650,7 +650,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
     );
 }
 
-function Calendar({ onExpandStateChange, dailyStudyTime = {} }) {
+function Calendar({ user, onExpandStateChange, dailyStudyTime = {} }) {
     const sectionRef = useRef(null);
     const [isStudyTimeMode, setIsStudyTimeMode] = useState(false);
 
@@ -684,7 +684,7 @@ function Calendar({ onExpandStateChange, dailyStudyTime = {} }) {
         handleScheduleDetailsClick,
         handleEditSchedule,
         saveSchedule
-    } = useCalendar();
+    } = useCalendar(user);
 
     // 사이드바 미니 캘린더를 위한 별도 보기 날짜 상태
     const [miniViewDate, setMiniViewDate] = useState(new Date(viewDate.getFullYear(), viewDate.getMonth(), 1));

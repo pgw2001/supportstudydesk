@@ -280,6 +280,8 @@ function Dashboard({ user, setUser }) {
           disabled={!isEditMode}
         >
           <Calendar 
+            key={user?.uid || "logout"}
+            user={user}
             onExpandStateChange={setIsCalendarExpanded} 
             dailyStudyTime={dailyStudyTime}
           />
