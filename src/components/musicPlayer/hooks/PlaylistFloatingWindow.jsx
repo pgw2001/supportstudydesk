@@ -131,7 +131,15 @@ const PlaylistFloatingWindow = ({
       <div className="flex-grow overflow-y-auto border-t border-gray-200 pt-4 flex flex-col">
         <h4 className="font-semibold mb-2 flex justify-between items-center">
           <span className="truncate">
-            {activePlaylist ? activePlaylist.name : 'Select a Playlist'} ({activePlaylist ? activePlaylist.songIds.length : 0} songs)
+            {activePlaylist ? activePlaylist.name : 'Select a Playlist'} 
+            (
+              {activePlaylist
+                ? activePlaylist.isSystem
+                  ? allSongs.length
+              : activePlaylist.songIds.length
+            : 0
+          } songs
+          )
           </span>
           {activePlaylist && !activePlaylist.isSystem && (
             <button 

@@ -548,7 +548,7 @@ useEffect(() => {
           disabled={!isEditMode}
         >
           <div className="p-2">
-            <PlannerButton />
+            <PlannerButton user={user}/>
           </div>
         </Draggable>
 
@@ -594,7 +594,7 @@ useEffect(() => {
           initialLeft={widgetPositions.plant.left}
           initialTop={widgetPositions.plant.top}
           onDragEnd={(pos) => handleDragEnd("plant", pos)}
-          className="z-30"
+          className="z-10"
           disabled={!isEditMode}
         >
           <StudyPlant

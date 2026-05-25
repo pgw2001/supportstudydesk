@@ -5,7 +5,7 @@ import openedBook from "./bookopened.svg";
 
 import Planner from "./Planner";
 
-function PlannerButton() {
+function PlannerButton({user}) {
   const [hovered, setHovered] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -38,7 +38,7 @@ function PlannerButton() {
       </button>
 
       {open && (
-        <Planner onClose={() => setOpen(false)} />
+        <Planner user={user} onClose={() => setOpen(false)} />
       )}
     </>
   );
