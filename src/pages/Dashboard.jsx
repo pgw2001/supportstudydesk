@@ -7,7 +7,8 @@ import { Check, CloudRain, ImagePlus, Layout, Moon, RotateCcw, Save, Sun, Upload
 import Sidebar from "../components/sidebar/Sidebar";
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
-import Memo from "../components/memo/Memo";
+import MemoBoard from "../components/memo/MemoBoard";
+import MemoHolder from "../components/memo/MemoHolder";
 import Quotes from "../components/quotes/Quotes";
 import Calendar from "../components/calendar/Calendar";
 import PlannerButton from "../components/planner/PlannerButton";
@@ -33,6 +34,7 @@ const CONTROL_BUTTON_SIZE = 54;
 const DEFAULT_POSITIONS = {
   calendar: { left: "28%", top: "8%" },
   memo: { left: "61%", top: "18%" },
+  memoHolder: { left: "80%", top: "25%" },
   quotes: { left: "80%", top: "25%" },
   timer: { left: "34%", top: "auto" }, // style에서 bottom 사용 중
   planner: { left: "70%", top: "80%" },
@@ -148,6 +150,7 @@ function Dashboard({ user, setUser }) {
   loadWidgetPositions();
 
   }, [user]);
+  const memoBoardRef = useRef(null);
 
 
   // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
@@ -557,11 +560,23 @@ useEffect(() => {
           className="z-10 transition-shadow duration-300"
           style={{ 
             width: "16%",
+            aspectRatio: "1 / 1.2", // 높이를 확보하여 Draggable 덮개가 생성되도록 함
             filter: isDarkMode ? "drop-shadow(0 12px 24px rgba(0,0,0,0.4))" : "none"
           }}
           disabled={!isEditMode}
         >
-          <Memo />
+          <MemoBoard ref={memoBoardRef} isEditMode={isEditMode} />
+        </Draggable>
+
+        <Draggable
+          initialLeft={widgetPositions.memoHolder?.left || DEFAULT_POSITIONS.memoHolder.left}
+          initialTop={widgetPositions.memoHolder?.top || DEFAULT_POSITIONS.memoHolder.top}
+          onDragEnd={(pos) => handleDragEnd("memoHolder", pos)}
+          className="z-30"
+          disabled={!isEditMode}
+        >
+          {/* 클릭 시 ref를 통해 MemoBoard 안의 startCreate 실행 */}
+          <MemoHolder onStart={() => memoBoardRef.current?.startCreate()} />
         </Draggable>
 
         <Draggable
