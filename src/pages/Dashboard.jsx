@@ -632,7 +632,10 @@ useEffect(() => {
           disabled={!isEditMode}
         >
           <div className="p-2">
-            <PlannerButton user={user}/>
+            <PlannerButton
+              user={user}
+              dailyStudyTime={dailyStudyTime}
+            />
           </div>
         </Draggable>
 
