@@ -245,7 +245,7 @@ setIsLoaded(true);
       const input = document.createElement("input");
       input.value = title;
       input.dataset.noDrag = "true";
-      input.style.cssText = "width: 100%; height: 100%; font-family: 'Comic Sans MS', cursive; font-size: 31.2px; font-weight: bold; border: none; outline: none; background: transparent; padding: 0; margin: 0;";
+      input.style.cssText = "width: 100%; height: 100%; font-family: 'Comic Sans MS', 'Pretendard', cursive; font-size: 31.2px; font-weight: bold; border: none; outline: none; background: transparent; padding: 0; margin: 0;";
 
       const saveTitle = () => {
         setTitle(input.value || "Todo");
@@ -267,7 +267,7 @@ setIsLoaded(true);
       const titleText = document.createElementNS("http://www.w3.org/2000/svg", "text");
       titleText.setAttribute("x", "26");
       titleText.setAttribute("y", "65");
-      titleText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 31.2px; font-weight: bold; cursor: pointer;");
+      titleText.setAttribute("style", "font-family: 'Comic Sans MS', 'Pretendard', cursive; font-size: 31.2px; font-weight: bold; cursor: pointer;");
       titleText.textContent = title;
       titleText.onpointerdown = (e) => {
         e.stopPropagation();
@@ -307,7 +307,7 @@ setIsLoaded(true);
     statusText.setAttribute("x", "170");
     statusText.setAttribute("y", "370");
     statusText.setAttribute("text-anchor", "middle");
-    statusText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 14px; fill: ${isAllDone ? "#2ecc71" : "#888"}; font-weight: bold; pointer-events: none; transition: fill 0.3s;`);
+    statusText.setAttribute("style", `font-family: 'Comic Sans MS', 'Pretendard', cursive; font-size: 14px; fill: ${isAllDone ? "#2ecc71" : "#888"}; font-weight: bold; pointer-events: none; transition: fill 0.3s;`);
     statusText.textContent = isAllDone ? "All done!" : `${completedCount} / ${totalCount} done`;
     svgRef.current.appendChild(statusText);
 

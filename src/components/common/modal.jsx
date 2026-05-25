@@ -31,7 +31,7 @@ const TabFlag = ({ label, isActive, onClick, color = "#fff", seedOffset = 0 }) =
         ${isActive ? '-translate-y-1 z-10' : 'translate-y-1 opacity-80 hover:translate-y-0'}`}
     >
       <svg ref={svgRef} className="absolute inset-0 w-full h-full" viewBox="0 0 80 30" preserveAspectRatio="none" />
-      <span className="relative z-10 font-['Patrick_Hand'] text-xs font-bold truncate px-2 select-none">
+      <span className="relative z-10 text-xs font-bold truncate px-2 select-none">
         {label}
       </span>
     </div>
@@ -49,6 +49,7 @@ const Modal = ({
   width = "300px", // 기본 너비
   height = "auto", // 기본 높이 (콘텐츠에 따라 조절)
   className = "", // 내부 콘텐츠 div에 추가할 클래스
+  style = {}, // 추가: 외부에서 전달된 인라인 스타일 지원
 }) => {
   const containerRef = useRef(null); // RoughJS 드로잉의 기준이 될 메인 컨테이너
   const svgRef = useRef(null);
@@ -190,6 +191,8 @@ const Modal = ({
           minHeight: "100px", // 최소 높이
           transform: `translate(${position.x}px, ${position.y}px)`,
           touchAction: 'none', // 터치 드래그를 위한 필수 설정
+          fontFamily: "'Comic Sans MS', 'Pretendard', cursive",
+          ...style, // 전달받은 스타일(fontFamily 등)을 적용하여 기본 폰트를 덮어씌움
         }}
       >
         {/* RoughJS 배경 SVG */}
@@ -226,7 +229,7 @@ const Modal = ({
           onPointerCancel={handlePointerUp} // 드래그 도중 중단되는 예외 상황 대응
         >
           {displayTitle ? (
-            <h3 className="text-lg font-semibold font-['Patrick_Hand'] leading-none">{displayTitle}</h3>
+            <h3 className="text-lg font-semibold leading-none">{displayTitle}</h3>
           ) : (
             <div /> // 제목이 없을 때도 닫기 버튼 배치를 위해 공간 유지
           )}

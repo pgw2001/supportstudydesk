@@ -110,8 +110,8 @@ function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChang
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center transition-all duration-500 pointer-events-none">
-      <div className="relative group">
+    <div className="flex h-full w-full items-center justify-center transition-all duration-500 pointer-events-none">
+      <div className="relative group h-full w-full">
         {/* 레벨업 반짝임 애니메이션 */}
         {isLevelUpAnimation && (
           <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -120,13 +120,13 @@ function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChang
           </div>
         )}
 
-        <div className={`w-24 h-24 flex items-center justify-center transition-all duration-500 ${isLevelUpAnimation ? 'scale-110' : ''}`}>
+        <div className={`flex h-full w-full items-end justify-center transition-all duration-500 ${isLevelUpAnimation ? 'scale-110' : ''}`}>
           <img
             src={svgSrc}
             alt={`${currentPlantType} level ${displayedLevel}`}
             onClick={() => setIsModalOpen(true)}
             data-no-drag="true"
-            className="max-h-full max-w-full object-contain transition-transform duration-700 transform hover:scale-110 filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)] pointer-events-auto cursor-pointer"
+            className="block h-full w-full object-contain object-bottom transition-transform duration-700 transform hover:scale-110 filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)] pointer-events-auto cursor-pointer"
             onError={(e) => {
               e.target.style.opacity = '0'; // 이미지 로딩 실패 시 이미지를 숨김
               console.error(`Failed to load image: ${svgSrc}`); // 콘솔에 어떤 이미지가 로딩 실패했는지 출력

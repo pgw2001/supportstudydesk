@@ -44,7 +44,7 @@ const TodoItem = ({
 
       if (todo.text) {
         const div = document.createElement("div");
-        div.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 23.4px; line-height: 45.5px; pointer-events: none; word-break: break-all; white-space: pre-wrap; ${todo.completed ? 'text-decoration: line-through; opacity: 0.5;' : ''}`);
+        div.setAttribute("style", `font-family: 'Comic Sans MS', 'Pretendard', cursive; font-size: 23.4px; line-height: 45.5px; pointer-events: none; word-break: break-all; white-space: pre-wrap; ${todo.completed ? 'text-decoration: line-through; opacity: 0.5;' : ''}`);
         div.textContent = todo.text;
         fo.appendChild(div);
         gRef.current.appendChild(fo);
@@ -190,7 +190,7 @@ const TodoItem = ({
             onMouseDown={(e) => e.stopPropagation()}
             data-no-drag="true"
             style={{
-              width: '100%', height: '100%', fontFamily: "'Comic Sans MS', cursive",
+              width: '100%', height: '100%', fontFamily: "'Comic Sans MS', 'Pretendard', cursive",
               fontSize: '23.4px', lineHeight: '45.5px', border: 'none', outline: 'none',
               background: 'transparent', padding: 0, margin: 0, resize: 'none',
               overflow: 'hidden', wordBreak: 'break-all', whiteSpace: 'pre-wrap'

@@ -15,6 +15,8 @@ const formatStudyTime = (seconds) => {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 };
 
+const CALENDAR_FONT_STACK = `var(--calendar-mixed-font)`;
+
 const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holidayForDate, pos, onDeleteSchedule, onEditSchedule, widgetRect, dailyStudyTime }) => {
     const svgRef = useRef(null);
     const [infoSchedule, setInfoSchedule] = useState(null);
@@ -56,7 +58,7 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holid
         <div
             className="fixed z-[999999] flex flex-col"
             style={{ 
-                fontFamily: "'Comic Sans MS', cursive",
+                fontFamily: CALENDAR_FONT_STACK,
                 containerType: 'both',
                 left: `${left}px`,
                 top: `${top}px`,
@@ -143,7 +145,7 @@ const ScheduleDetailsPopover = ({ isOpen, onClose, date, schedulesForDate, holid
                     title="Schedule Information"
                     width="350px"
                 >
-                    <div className="p-4 font-['Comic_Sans_MS',_cursive] flex flex-col gap-5">
+                    <div className="calendar-mixed-font p-4 flex flex-col gap-5">
                         <div>
                             <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Title</h3>
                             <p className="text-xl font-bold border-b-2 border-black/5 pb-2" style={{ color: infoSchedule.color }}>

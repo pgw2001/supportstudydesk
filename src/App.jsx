@@ -18,12 +18,10 @@ function App() {
 
     <div className="relative">
 
-      
-
       <Dashboard
-  user={user}
-  setUser={setUser}
-/>
+        user={user}
+        setUser={setUser}
+      />
 
     </div>
   );

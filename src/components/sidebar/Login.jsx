@@ -1421,9 +1421,18 @@ if (taskSvgRef.current) {
   if (user?.isGuest) {
   localStorage.removeItem(
     "support-study-desk:todo-lists"
+    
   );
+  localStorage.removeItem(
+  "plantProgress"
+  );
+
+  localStorage.removeItem(
+  "activePlantType"
+  );
+ 
 }
-setTasks([]);
+
 setUser(null);
 }}
 

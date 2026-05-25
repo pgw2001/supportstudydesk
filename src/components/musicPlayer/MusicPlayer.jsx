@@ -243,10 +243,11 @@ function MusicPlayer({ className }) {
         {controlBarMode === "title" ? (
           <div
             ref={marqueeTextRef}
-            className="whitespace-nowrap font-mono font-bold"
+            className="whitespace-nowrap font-bold"
             style={{
               animation: shouldMarquee ? "marquee 12s linear infinite" : "none",
               fontSize: "10px",
+              fontFamily: "'Comic Sans MS', 'Pretendard', cursive",
               color: "#16a34a",
               display: "inline-block",
               whiteSpace: "nowrap",
@@ -259,7 +260,10 @@ function MusicPlayer({ className }) {
         ) : (
           <div className="w-full px-1">
             <div className="flex items-center justify-center">
-              <div className="text-[9px] font-mono font-bold text-[#16a34a] tabular-nums">
+              <div 
+                className="text-[9px] font-bold text-[#16a34a] tabular-nums"
+                style={{ fontFamily: "'Comic Sans MS', 'Pretendard', cursive" }}
+              >
                 {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>

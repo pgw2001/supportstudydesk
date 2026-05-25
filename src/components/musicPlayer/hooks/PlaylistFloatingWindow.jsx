@@ -47,7 +47,8 @@ const PlaylistFloatingWindow = ({
       title="Music Playlists"
       width="320px"
       height="450px"
-      className="font-mono select-none"
+      className="select-none"
+      style={{ fontFamily: "'Comic Sans MS', 'Pretendard', cursive" }}
     >
       {/* Playlist Management */}
       <div className="mb-4">
