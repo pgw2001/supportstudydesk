@@ -46,8 +46,8 @@ function Memo({
         group
         absolute
         select-none
-        w-[80%]
-        h-[88%]
+        w-[60%]
+        h-[66%]
         min-w-[100px]
         min-h-[110px]
       "
@@ -146,19 +146,23 @@ function Memo({
         readOnly={isEditMode}
         className={`
           absolute
-          inset-0
+          top-[16%]
+          left-[10%]
+          w-[80%]
+          h-[74%]
           z-10
-          h-full
-          w-full
           resize-none
           bg-transparent
-          pt-[18%]
-          px-[12%]
-          pb-[10%]
+          p-0
           text-[14px]
           leading-[1.3]
           text-neutral-900
           outline-none
+          break-words
+          overflow-y-auto
+          [scrollbar-width:none]
+          [-ms-overflow-style:none]
+          [&::-webkit-scrollbar]:hidden
           ${isEditMode ? "pointer-events-none" : "pointer-events-auto"}
         `}
       />

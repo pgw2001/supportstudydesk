@@ -31,10 +31,12 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
       const boardRect = boardRef.current?.getBoundingClientRect();
       if (!boardRect) return;
 
-      const memoWidth = boardRect.width * 0.8; // Memo.jsx의 w-[80%]와 맞춤
+      const memoWidth = boardRect.width * 0.6; // Memo.jsx의 w-[60%]와 맞춤
       const memoHeight = memoWidth * 1.1;
-      const x = e.clientX - boardRect.left - dragOffset.x;
-      const y = e.clientY - boardRect.top - dragOffset.y;
+
+      let x = e.clientX - boardRect.left - dragOffset.x;
+      let y = e.clientY - boardRect.top - dragOffset.y;
+
       const xPercent = (x + memoWidth / 2) / boardRect.width;
       const yPercent = (y + memoHeight / 2) / boardRect.height;
 
@@ -110,10 +112,19 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
               const boardRect = boardRef.current?.getBoundingClientRect();
               if (!boardRect) return;
 
-              const memoWidth = boardRect.width * 0.8;
+              const memoWidth = boardRect.width * 0.6;
               const memoHeight = memoWidth * 1.1;
               const memoLeft = memo.xPercent * boardRect.width - memoWidth / 2;
               const memoTop = memo.yPercent * boardRect.height - memoHeight / 2;
+
+              // 드래그 시작 시 해당 메모를 배열의 맨 뒤로 이동시켜 
+              // 레이어 순서(zIndex)를 최상단으로 올림
+              setMemos((prev) => {
+                const target = prev.find((m) => m.id === memo.id);
+                if (!target) return prev;
+                const others = prev.filter((m) => m.id !== memo.id);
+                return [...others, target];
+              });
 
               setDraggingId(memo.id);
               setDragOffset({
