@@ -20,6 +20,7 @@ import PlannerProgress from "./PlannerProgress";
 function Planner({
   onClose,
   user,
+  dailyStudyTime = {},
 }) {
 
   const svgRef = useRef(null);
@@ -224,6 +225,40 @@ function Planner({
           ) * 100
         );
 
+  const totalStudySeconds = Object.values(
+    dailyStudyTime
+  ).reduce(
+    (total, seconds) =>
+      total + (Number(seconds) || 0),
+    0
+  );
+
+  const formatTotalTime = (seconds) => {
+    const safeSeconds = Math.max(
+      0,
+      Math.floor(seconds)
+    );
+    const hours = Math.floor(
+      safeSeconds / 3600
+    );
+    const minutes = Math.floor(
+      (safeSeconds % 3600) / 60
+    );
+    const restSeconds =
+      safeSeconds % 60;
+
+    return `${String(hours).padStart(
+      2,
+      "0"
+    )}:${String(minutes).padStart(
+      2,
+      "0"
+    )}:${String(restSeconds).padStart(
+      2,
+      "0"
+    )}`;
+  };
+
   return (
 
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40">
@@ -256,7 +291,9 @@ function Planner({
 
           {/* 헤더 */}
           <PlannerHeader
-            totalTime="-- : --"
+            totalTime={formatTotalTime(
+              totalStudySeconds
+            )}
             dday={dday}
             setDday={setDday}
           />
