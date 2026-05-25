@@ -8,6 +8,7 @@ function Memo({
   onDelete,
   isEditMode,
   index,
+  isPreview,
 }) {
   const svgRef = useRef(null);
   const roughGroupRef = useRef(null);
@@ -22,15 +23,19 @@ function Memo({
 
     const rc = rough.svg(svg);
 
+    // Defensive check for missing color properties (e.g., legacy data)
+    const fill = memo.color?.fill || "#ffd93b";
+    const stroke = memo.color?.stroke || "#987a00";
+
     const note = rc.rectangle(
       4,
       4,
       192,
       212,
       {
-        stroke: "#987a00",
+        stroke: stroke, // 메모 객체의 stroke 색상 사용
         strokeWidth: 2,
-        fill: "#ffd93b",
+        fill: fill, // 메모 객체의 fill 색상 사용
         fillStyle: "solid",
         roughness: 1.2,
         bowing: 1.5,
@@ -38,7 +43,7 @@ function Memo({
     );
 
     roughGroup.appendChild(note);
-  }, []);
+  }, [memo.color]);
 
   return (
     <section
@@ -46,14 +51,16 @@ function Memo({
         group
         absolute
         select-none
-        w-[60%]
-        h-[66%]
-        min-w-[100px]
+        overflow-visible
+        w-[10%]
+        aspect-[200/220]
+        min-w-[150px]
         min-h-[110px]
       "
       style={{
         left: `${memo.xPercent * 100}%`,
         top: `${memo.yPercent * 100}%`,
+        opacity: isPreview ? 0.6 : 1,
         transform: `
           translate(-50%, -50%)
           rotate(${memo.rotation}deg)
@@ -65,9 +72,10 @@ function Memo({
           : "default",
         // Draggable의 투명 덮개(z-9999)보다 높게 설정하여 
         // 개별 메모가 이벤트를 직접 받을 수 있게 함
-        zIndex: 10000 + index, 
+        zIndex: isPreview ? 20000 : 10000 + (index || 0), 
+        pointerEvents: isPreview ? "none" : "auto",
       }}
-
+      data-no-drag="true"
       // 메모 드래그 시작
       onPointerDown={(e) => {
         if (!isEditMode) return;

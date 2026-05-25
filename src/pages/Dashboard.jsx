@@ -569,6 +569,8 @@ useEffect(() => {
           <MemoBoard ref={memoBoardRef} isEditMode={isEditMode} setMemoCount={setMemoCount} user={user}/>
         </Draggable>
 
+
+
         <Draggable
           initialLeft={widgetPositions.memoHolder?.left || DEFAULT_POSITIONS.memoHolder.left}
           initialTop={widgetPositions.memoHolder?.top || DEFAULT_POSITIONS.memoHolder.top}
@@ -577,7 +579,7 @@ useEffect(() => {
           disabled={!isEditMode}
         >
           {/* 클릭 시 ref를 통해 MemoBoard 안의 startCreate 실행 */}
-          <MemoHolder onStart={() => memoBoardRef.current?.startCreate()} />
+          <MemoHolder onStart={(e) => memoBoardRef.current?.startCreate(e)} />
         </Draggable>
 
         <Draggable
