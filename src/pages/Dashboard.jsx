@@ -549,21 +549,10 @@ useEffect(() => {
           />
         </Draggable>
 
-        <Draggable      
-          key={`${user?.uid || "logout"}-memo`}    
-          initialLeft={widgetPositions.memo.left}
-          initialTop={widgetPositions.memo.top}
-          onDragEnd={(pos) => handleDragEnd("memo", pos)}
-          className="z-10 transition-shadow duration-300"
-          style={{ 
-            width: "16%",
-            aspectRatio: "1 / 1.2", // 높이를 확보하여 Draggable 덮개가 생성되도록 함
-            filter: isDarkMode ? "drop-shadow(0 12px 24px rgba(0,0,0,0.4))" : "none"
-          }}
-          disabled={!isEditMode}
-        >
+        {/* 메모 보드는 이제 대시보드 전체를 커버하는 투명 레이어가 되어 자유로운 배치를 지원합니다 */}
+        <div className="absolute inset-0 z-[25] pointer-events-none">
           <MemoBoard ref={memoBoardRef} isEditMode={isEditMode} />
-        </Draggable>
+        </div>
 
         <Draggable
           initialLeft={widgetPositions.memoHolder?.left || DEFAULT_POSITIONS.memoHolder.left}
@@ -573,7 +562,7 @@ useEffect(() => {
           disabled={!isEditMode}
         >
           {/* 클릭 시 ref를 통해 MemoBoard 안의 startCreate 실행 */}
-          <MemoHolder onStart={() => memoBoardRef.current?.startCreate()} />
+          <MemoHolder onStart={(e) => memoBoardRef.current?.startCreate(e)} />
         </Draggable>
 
         <Draggable

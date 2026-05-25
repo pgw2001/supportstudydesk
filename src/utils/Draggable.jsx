@@ -18,11 +18,11 @@ function Draggable({ children, initialLeft = "0%", initialTop = "0%", className 
     // 비활성화 상태면 드래그 방지
     if (disabled) return;
 
-    // 일반 모드(disabled=true)일 때는 버튼/입력창 클릭 시 드래그를 방지하지만,
-    // 배치 수정 모드(disabled=false)일 때는 오버레이가 이벤트를 가로채므로 
-    // 아래 체크 로직을 통과하여 어디를 잡아도 드래그가 가능해집니다.
-    // 다만, data-no-drag 속성이 명시된 영역은 수정 모드에서도 드래그를 막고 싶다면 로직을 유지합니다.
-    if (disabled && e.target.closest('button, input, textarea, [data-no-drag="true"]')) {
+    // 오버레이가 자식 요소 위에 놓여 있어 e.target이 항상 오버레이가 되는 문제를 해결하기 위해
+    // 현재 포인터 위치 아래 실제 요소를 확인합니다. 이렇게 하면 오버레이가 이벤트를 가로채더라도
+    // 실질적으로 클릭된(또는 눌린) 내부 요소를 기반으로 드래그 허용 여부를 판단할 수 있습니다.
+    const underlyingEl = document.elementFromPoint(e.clientX, e.clientY);
+    if (underlyingEl && underlyingEl.closest('button, input, textarea, [data-no-drag="true"]')) {
       return;
     }
 

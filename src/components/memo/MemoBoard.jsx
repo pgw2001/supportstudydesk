@@ -1,12 +1,25 @@
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from "react";
 import Memo from "./Memo";
+
+const MEMO_COLOR_PALETTE = [
+  { fill: "#ffd93b", stroke: "#987a00" }, // 노란색
+  { fill: "#ffcccc", stroke: "#cc9999" }, // 연한 분홍
+  { fill: "#ccf0ff", stroke: "#99c0cc" }, // 연한 하늘
+  { fill: "#ccffcc", stroke: "#99cc99" }, // 연한 초록
+];
 
 const MemoBoard = forwardRef(({ isEditMode }, ref) => {
   const [memos, setMemos] = useState(() => {
     if (typeof window === "undefined") return [];
     try {
       const saved = JSON.parse(localStorage.getItem("memos") ?? "[]");
-      return Array.isArray(saved) ? saved : [];
+      // Ensure all loaded memos have a color property (migration for legacy data)
+      return Array.isArray(saved) 
+        ? saved.map(memo => ({
+            ...memo,
+            color: memo.color || MEMO_COLOR_PALETTE[0]
+          }))
+        : [];
     } catch {
       return [];
     }
@@ -14,12 +27,41 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
 
   const [draggingId, setDraggingId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  
+  // 새 메모 생성 대기 상태 (마우스 따라다니는 모드)
+  const [pendingMemo, setPendingMemo] = useState(null);
+
   const boardRef = useRef(null);
+
+  // 화면 클릭 시 대기 중인 메모를 실제로 배치
+  const handlePlaceMemo = useCallback(() => {
+    if (pendingMemo) {
+      setMemos((prev) => [...prev, { ...pendingMemo, id: Date.now() }]);
+      setPendingMemo(null);
+    }
+  }, [pendingMemo]);
+
+  const startCreate = useCallback((e) => {
+    const boardRect = boardRef.current?.getBoundingClientRect();
+    if (!boardRect) return;
+
+    const randomColor = MEMO_COLOR_PALETTE[Math.floor(Math.random() * MEMO_COLOR_PALETTE.length)];
+
+    // 즉시 생성하지 않고 '배치 대기' 상태로 만듦
+    setPendingMemo({
+      id: "preview",
+      xPercent: (e.clientX - boardRect.left) / boardRect.width,
+      yPercent: (e.clientY - boardRect.top) / boardRect.height,
+      text: "",
+      color: randomColor,
+      rotation: Math.random() * 6 - 3,
+    });
+  }, []);
 
   // 외부(Dashboard)에서 startCreate를 호출할 수 있도록 연결
   useImperativeHandle(ref, () => ({
     startCreate,
-  }));
+  }), [startCreate]);
 
   useEffect(() => {
     localStorage.setItem("memos", JSON.stringify(memos));
@@ -27,12 +69,28 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
 
   useEffect(() => {
     const handlePointerMove = (e) => {
-      if (!draggingId || !isEditMode) return;
       const boardRect = boardRef.current?.getBoundingClientRect();
       if (!boardRect) return;
 
-      const memoWidth = boardRect.width * 0.6; // Memo.jsx의 w-[60%]와 맞춤
-      const memoHeight = memoWidth * 1.1;
+      // 전체 화면에서의 메모 크기 비율 조정 (기존 대비 약 10%)
+      const memoWidth = Math.max(boardRect.width * 0.1, 150);
+      const memoHeight = Math.max(memoWidth * 1.1, 110);
+
+      // 1. 새 메모 생성 중일 때 (마우스 따라다니기)
+      if (pendingMemo) {
+        const xPercent = (e.clientX - boardRect.left) / boardRect.width;
+        const yPercent = (e.clientY - boardRect.top) / boardRect.height;
+        
+        setPendingMemo(prev => ({
+          ...prev,
+          xPercent,
+          yPercent
+        }));
+        return;
+      }
+
+      // 2. 기존 메모 드래그 중일 때
+      if (!draggingId || !isEditMode) return;
 
       let x = e.clientX - boardRect.left - dragOffset.x;
       let y = e.clientY - boardRect.top - dragOffset.y;
@@ -50,41 +108,22 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
     };
 
     const handlePointerUp = () => {
-      setDraggingId(null);
-      setDragOffset({ x: 0, y: 0 });
+      if (draggingId) {
+        setDraggingId(null);
+        setDragOffset({ x: 0, y: 0 });
+      }
     };
 
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointerdown", handlePlaceMemo);
 
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointerdown", handlePlaceMemo);
     };
-  }, [draggingId, dragOffset, isEditMode]);
-
-  const startCreate = () => {
-    const boardRect = boardRef.current?.getBoundingClientRect();
-    
-    let initialX = 0.5;
-    let initialY = 0.5;
-
-    if (boardRect && boardRect.width > 0 && boardRect.height > 0) {
-      // 메모를 위젯 내부(중앙)에 생성하도록 수정
-      // 화면 중심 좌표를 사용하면 위젯이 작을 때 메모가 영역 밖으로 튀어나가 Draggable 덮개 영역을 벗어남
-      initialX = 0.5;
-      initialY = 0.5;
-    }
-
-    const newMemo = {
-      id: Date.now(),
-      xPercent: initialX,
-      yPercent: initialY,
-      text: "",
-      rotation: Math.random() * 6 - 3,
-    };
-    setMemos((prev) => [...prev, newMemo]);
-  };
+  }, [draggingId, dragOffset, isEditMode, pendingMemo, handlePlaceMemo]);
 
   const updateText = (id, value) => {
     setMemos((prev) =>
@@ -97,7 +136,10 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
   };
 
   return (
-    <div ref={boardRef} className="relative w-full h-full">
+    <div 
+      ref={boardRef} 
+      className={`relative w-full h-full ${pendingMemo ? 'pointer-events-auto cursor-crosshair' : 'pointer-events-none'}`}
+    >
       {/* 메모 */}
       {memos.map((memo, index) => (
           <Memo
@@ -112,8 +154,9 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
               const boardRect = boardRef.current?.getBoundingClientRect();
               if (!boardRect) return;
 
-              const memoWidth = boardRect.width * 0.6;
-              const memoHeight = memoWidth * 1.1;
+              // 클릭 시 크기 계산 동기화
+              const memoWidth = Math.max(boardRect.width * 0.1, 150);
+              const memoHeight = Math.max(memoWidth * 1.1, 110);
               const memoLeft = memo.xPercent * boardRect.width - memoWidth / 2;
               const memoTop = memo.yPercent * boardRect.height - memoHeight / 2;
 
@@ -134,6 +177,17 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
             }}
           />
       ))}
+
+      {/* 배치 대기 중인 미리보기 메모 */}
+      {pendingMemo && (
+        <Memo
+          memo={pendingMemo}
+          isPreview={true}
+          isEditMode={false}
+          onChange={() => {}}
+          onDelete={() => {}}
+        />
+      )}
     </div>
   );
 });
