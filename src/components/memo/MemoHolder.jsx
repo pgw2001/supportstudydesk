@@ -10,7 +10,7 @@ function MemoHolder({ onStart }) {
     <div
       onClick={handleClick}
       data-no-drag="true"
-      style={{ touchAction: "none", cursor: "pointer", zIndex: 10002, position: "relative" }}
+      style={{ touchAction: "none", cursor: "pointer", zIndex: 30, position: "relative" }}
       className="w-[150px] h-[150px]"
     >
       <img

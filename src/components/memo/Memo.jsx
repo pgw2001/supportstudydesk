@@ -63,25 +63,15 @@ function Memo({
         cursor: isEditMode
           ? "grab"
           : "default",
-        // Draggable의 투명 덮개(z-9999)보다 낮게 설정하여 
-        // 배치 수정 모드에서 위젯 전체가 드래그되도록 함 (기존 Date.now()는 너무 큼)
-        zIndex: index + 1, 
-      }}
-
-      // 부모 Draggable 이벤트 차단
-      onMouseDownCapture={(e) => {
-        if (!isEditMode) return;
-
-        e.stopPropagation();
+        // Draggable의 투명 덮개(z-9999)보다 높게 설정하여 
+        // 개별 메모가 이벤트를 직접 받을 수 있게 함
+        zIndex: 10000 + index, 
       }}
 
       // 메모 드래그 시작
-      onMouseDown={(e) => {
+      onPointerDown={(e) => {
         if (!isEditMode) return;
-
-        e.preventDefault();
         e.stopPropagation();
-
         onDragStart?.(
           e.clientX,
           e.clientY
@@ -106,7 +96,7 @@ function Memo({
       {/* 삭제 버튼 */}
       <button
         type="button"
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
           e.stopPropagation();
         }}
         onClick={(e) => {
@@ -154,13 +144,7 @@ function Memo({
         }
         placeholder="Write memo..."
         readOnly={isEditMode}
-        onMouseDown={(e) => {
-          if (isEditMode) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
-        className="
+        className={`
           absolute
           inset-0
           z-10
@@ -175,7 +159,8 @@ function Memo({
           leading-[1.3]
           text-neutral-900
           outline-none
-        "
+          ${isEditMode ? "pointer-events-none" : "pointer-events-auto"}
+        `}
       />
     </section>
   );
