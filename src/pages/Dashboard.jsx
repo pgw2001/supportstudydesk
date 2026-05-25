@@ -50,6 +50,9 @@ const DEFAULT_PLANT_PROGRESS = {
   hyacinth: 0,
 };
 
+const PLANT_PROGRESS_KEY = "plantProgress";
+const ACTIVE_PLANT_TYPE_KEY = "activePlantType";
+
 function Dashboard({ user, setUser }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -141,12 +144,14 @@ function Dashboard({ user, setUser }) {
 
 
   // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
-  const [plantProgress, setPlantProgress] =
-  useState(DEFAULT_PLANT_PROGRESS);
+  const [plantProgress, setPlantProgress] = useState(() => {
+    const saved = localStorage.getItem(PLANT_PROGRESS_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_PLANT_PROGRESS;
+  });
 
-  const [activePlantType, setActivePlantType] =
-  useState("rose");
-
+  const [activePlantType, setActivePlantType] = useState(() => {
+    return localStorage.getItem(ACTIVE_PLANT_TYPE_KEY) || "rose";
+  });
 
   const [isPlantLoaded, setIsPlantLoaded] =
 useState(false);
@@ -157,23 +162,23 @@ useEffect(() => {
   const loadPlantData =
     async () => {
 
-      // 로그아웃 상태
-      if (user === null) {
+      // 로그아웃 또는 게스트 상태
+      if (user === null || user?.isGuest) {
+        const savedPlantProgress = localStorage.getItem(PLANT_PROGRESS_KEY);
+        const savedActivePlantType = localStorage.getItem(ACTIVE_PLANT_TYPE_KEY);
 
         setPlantProgress(
-          DEFAULT_PLANT_PROGRESS
+          savedPlantProgress ? JSON.parse(savedPlantProgress) : DEFAULT_PLANT_PROGRESS
         );
 
         setActivePlantType(
-          "rose"
+          savedActivePlantType || "rose"
         );
 
         setIsPlantLoaded(true);
 
         return;
       }
-
-
 
       const data =
         await loadUserData(
@@ -230,6 +235,14 @@ useEffect(() => {
   useEffect(() => {
     localStorage.setItem("dailyStudyTime", JSON.stringify(dailyStudyTime));
   }, [dailyStudyTime]);
+
+  useEffect(() => {
+    localStorage.setItem(PLANT_PROGRESS_KEY, JSON.stringify(plantProgress));
+  }, [plantProgress]);
+
+  useEffect(() => {
+    localStorage.setItem(ACTIVE_PLANT_TYPE_KEY, activePlantType);
+  }, [activePlantType]);
 
   const handleTick = useCallback(() => {
     const todayStr = getLocalDateString(new Date());
