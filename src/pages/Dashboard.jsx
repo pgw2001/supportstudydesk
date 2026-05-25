@@ -134,10 +134,6 @@ function Dashboard({ user, setUser }) {
         await loadUserData(
           user.uid
         );
-      console.log(
-      "FIREBASE DATA",
-      data
-      );  
 
       setWidgetPositions({
       ...DEFAULT_POSITIONS,
