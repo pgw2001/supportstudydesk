@@ -43,7 +43,7 @@ function Memo() {
     <section
       className="
         relative
-        w-[clamp(120px,16vw,200px)]
+        w-full
         aspect-[200/220]
       "
     >

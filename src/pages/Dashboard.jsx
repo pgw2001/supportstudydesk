@@ -3,7 +3,7 @@ import {
   loadUserData,
 } from "../services/userData";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Check, CloudRain, ImagePlus, Layout, Moon, RotateCcw, Sun, Upload } from "lucide-react";
+import { Check, CloudRain, ImagePlus, Layout, Moon, RotateCcw, Save, Sun, Upload } from "lucide-react";
 import Sidebar from "../components/sidebar/Sidebar";
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
@@ -26,6 +26,9 @@ import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg";
 
 const DEFAULT_WINDOW_BG = "/assets/window/window_bg.png";
 const WIDGET_POSITIONS_KEY = "widgetPositions";
+const DASHBOARD_BASE_WIDTH = 1600;
+const DASHBOARD_BASE_HEIGHT = 900;
+const CONTROL_BUTTON_SIZE = 54;
 
 const DEFAULT_POSITIONS = {
   calendar: { left: "28%", top: "8%" },
@@ -51,6 +54,7 @@ function Dashboard({ user, setUser }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+  const [dashboardScale, setDashboardScale] = useState(1);
   
   // 다크모드 상태 관리
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -62,6 +66,8 @@ function Dashboard({ user, setUser }) {
 
   const [widgetPositions, setWidgetPositions] =
   useState(DEFAULT_POSITIONS);
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+  const [layoutSaved, setLayoutSaved] = useState(false);
 
   const [isWidgetLoaded, setIsWidgetLoaded] =
   useState(false);
@@ -78,6 +84,26 @@ function Dashboard({ user, setUser }) {
     })
   );
   };
+
+  const handleSaveWidgetLayout = useCallback(async () => {
+    setIsSavingLayout(true);
+
+    try {
+      if (!user?.uid || user?.isGuest) {
+        localStorage.setItem(WIDGET_POSITIONS_KEY, JSON.stringify(widgetPositions));
+      } else {
+        await saveUserData(user.uid, {
+          widgetPositions,
+        });
+      }
+
+      setLayoutSaved(true);
+      setIsEditMode(false);
+      window.setTimeout(() => setLayoutSaved(false), 1800);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  }, [user, widgetPositions]);
   useEffect(() => {
 
   setIsWidgetLoaded(false);  
@@ -86,9 +112,9 @@ function Dashboard({ user, setUser }) {
     async () => {
 
       if (user === null) {
-
+        const savedGuestPositions = localStorage.getItem(WIDGET_POSITIONS_KEY);
         setWidgetPositions(
-          DEFAULT_POSITIONS
+          savedGuestPositions ? JSON.parse(savedGuestPositions) : DEFAULT_POSITIONS
         );
 
         setIsWidgetLoaded(true);
@@ -112,29 +138,6 @@ function Dashboard({ user, setUser }) {
   loadWidgetPositions();
 
   }, [user]);
-
-  useEffect(() => {
-
-  if (
-    !isWidgetLoaded ||
-    !user?.uid ||
-    user?.isGuest
-  ) {
-    return;
-  }
-
-  saveUserData(
-    user.uid,
-    {
-      widgetPositions,
-    }
-  );
-
-}, [
-  widgetPositions,
-  user,
-  isWidgetLoaded,
-  ]);
 
 
   // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
@@ -274,9 +277,32 @@ useEffect(() => {
     setWindowRainIntensity,
   } = useWindow(DEFAULT_WINDOW_BG);
 
+  useEffect(() => {
+    const updateDashboardScale = () => {
+      const widthScale = window.innerWidth / DASHBOARD_BASE_WIDTH;
+      const heightScale = window.innerHeight / DASHBOARD_BASE_HEIGHT;
+      setDashboardScale(Math.min(widthScale, heightScale));
+    };
+
+    updateDashboardScale();
+    window.addEventListener("resize", updateDashboardScale);
+
+    return () => {
+      window.removeEventListener("resize", updateDashboardScale);
+    };
+  }, []);
+
   return (
-    <div className={`flex min-h-screen items-center justify-center overflow-visible transition-colors duration-700 ${isDarkMode ? "bg-[#111]" : "bg-[#f4f1ec]"}`}>
-      <main className={`relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden transition-colors duration-700 ${isDarkMode ? "bg-[#161616]" : "bg-[#fcfbf8]"}`}>
+    <div className={`relative h-screen w-screen overflow-hidden transition-colors duration-700 ${isDarkMode ? "bg-[#111]" : "bg-[#f4f1ec]"}`}>
+      <main
+        className={`absolute left-1/2 top-1/2 overflow-hidden transition-colors duration-700 ${isDarkMode ? "bg-[#161616]" : "bg-[#fcfbf8]"}`}
+        style={{
+          width: `${DASHBOARD_BASE_WIDTH}px`,
+          height: `${DASHBOARD_BASE_HEIGHT}px`,
+          transform: `translate(-50%, -50%) scale(${dashboardScale})`,
+          transformOrigin: "center center",
+        }}
+      >
         {/* 비 효과 활성 시 화면 전체를 우중충하고 흐리게 만드는 분위기 레이어 */}
         <div 
           className="absolute inset-0 pointer-events-none transition-all duration-1000 z-[1000]"
@@ -314,47 +340,71 @@ useEffect(() => {
         )}
 
         {!isSidebarOpen && (
-          <div className="absolute top-3 right-3 z-[999] flex gap-2">
+          <div
+            className="absolute z-[999] flex"
+            style={{ top: 22, right: 22, gap: 12 }}
+          >
             {/* 다크모드 토글 버튼 */}
             <button
               onClick={() => setIsDarkMode((prev) => !prev)}
-              className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+              className={`flex items-center justify-center rounded-full shadow-sm transition ${
                 isDarkMode
                   ? "bg-indigo-900/80 text-yellow-200 hover:bg-indigo-800"
                   : "bg-white/80 text-gray-700 hover:bg-white"
               }`}
+              style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
               title={isDarkMode ? "라이트 모드" : "다크 모드"}
             >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              {isDarkMode ? <Sun className="h-[56%] w-[56%]" /> : <Moon className="h-[56%] w-[56%]" />}
             </button>
 
             <button
               onClick={() => setIsEditMode((prev) => !prev)}
-              className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${
+              className={`flex items-center justify-center rounded-full shadow-sm transition ${
                 isEditMode
                   ? "bg-green-500 text-white"
                   : "bg-white/80 text-gray-700 hover:bg-white"
               }`}
+              style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
               title={isEditMode ? "배치 완료" : "배치 수정"}
             >
-              {isEditMode ? <Check size={20} /> : <Layout size={20} />}
+              {isEditMode ? <Check className="h-[56%] w-[56%]" /> : <Layout className="h-[56%] w-[56%]" />}
             </button>
 
             {isEditMode && (
               <button
-                onClick={openWindowEditor}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-white"
-                title="창 배경 수정"
+                onClick={handleSaveWidgetLayout}
+                disabled={isSavingLayout}
+                className="flex items-center gap-2 rounded-full bg-[#1f7a55] px-5 text-white shadow-sm transition hover:bg-[#196244] disabled:cursor-wait disabled:opacity-70"
+                style={{ height: CONTROL_BUTTON_SIZE }}
+                title="위젯 위치 저장"
               >
-                <ImagePlus size={18} />
+                <Save className="h-5 w-5" />
+                <span className="font-['Patrick_Hand'] text-base">
+                  {isSavingLayout ? "Saving..." : layoutSaved ? "Saved" : "위젯 저장"}
+                </span>
               </button>
             )}
 
-            <button onClick={() => setIsSidebarOpen(true)}>
+            {isEditMode && (
+              <button
+                onClick={openWindowEditor}
+                className="flex items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-white"
+                style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
+                title="창 배경 수정"
+              >
+                <ImagePlus className="h-[54%] w-[54%]" />
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
+            >
               <img
                 src={menubar}
                 alt="menu"
-                className="h-8 w-8 opacity-70 transition hover:opacity-100"
+                className="h-full w-full opacity-70 transition hover:opacity-100"
               />
             </button>
           </div>
@@ -595,6 +645,7 @@ useEffect(() => {
           initialTop={widgetPositions.plant.top}
           onDragEnd={(pos) => handleDragEnd("plant", pos)}
           className="z-30"
+          style={{ width: "8%", aspectRatio: "1/1" }}
           disabled={!isEditMode}
         >
           <StudyPlant

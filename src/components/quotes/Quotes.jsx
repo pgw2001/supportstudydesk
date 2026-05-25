@@ -70,7 +70,7 @@ function Quotes() {
       className="
         relative
         z-50
-        w-[clamp(220px,22vw,320px)]
+        w-full
         aspect-[300/180]
         drop-shadow-xl
         select-none
