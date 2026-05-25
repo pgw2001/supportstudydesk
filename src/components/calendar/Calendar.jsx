@@ -20,6 +20,8 @@ const formatStudyTime = (seconds) => {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 };
 
+const CALENDAR_FONT_STACK = `var(--calendar-mixed-font)`;
+
 function CalendarPin({className}) {
     const svgRef = useRef(null);
 
@@ -110,7 +112,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             monthText.setAttribute("x", mainRectX + 15); // Left aligned
             monthText.setAttribute("y", mainRectY + 55); // Position below top edge
             monthText.setAttribute("text-anchor", "start"); // Start text from x
-            monthText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 30px; font-weight: bold; fill: #333;");
+            monthText.setAttribute("style", `font-family: ${CALENDAR_FONT_STACK}; font-size: 30px; font-weight: bold; fill: #333;`);
             monthText.textContent = displayTitle;
             svgRef.current.appendChild(monthText);
 
@@ -164,7 +166,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
             todayBtnText.setAttribute("x", (buttonFrameX + 80 + 85 / 2).toString()); // Today 버튼(너비 85)의 중앙
             todayBtnText.setAttribute("y", "51");
             todayBtnText.setAttribute("text-anchor", "middle");
-            todayBtnText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 19px; font-weight: bold; fill: #333; letter-spacing: -0.8px;");
+            todayBtnText.setAttribute("style", `font-family: ${CALENDAR_FONT_STACK}; font-size: 19px; font-weight: bold; fill: #333; letter-spacing: -0.8px;`);
             todayBtnText.textContent = "Today";
             svgRef.current.appendChild(todayBtnText);
 
@@ -289,7 +291,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 dayText.setAttribute("x", x + (dayBlockWidth / 2)); // Center text horizontally within its block
                 dayText.setAttribute("y", dayBlockStartY + (dayBlockHeight / 2) + 5); // Center text vertically
                 dayText.setAttribute("text-anchor", "middle"); // Center text based on x
-                dayText.setAttribute("style", "font-family: 'Comic Sans MS', cursive; font-size: 16px; font-weight: bold; fill: #fff;");
+                dayText.setAttribute("style", `font-family: ${CALENDAR_FONT_STACK}; font-size: 16px; font-weight: bold; fill: #fff;`);
                 dayText.textContent = day;
                 svgRef.current.appendChild(dayText);
             });
@@ -461,7 +463,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                 dateText.setAttribute("x", textX.toString());
                 dateText.setAttribute("y", textY.toString());
                 dateText.setAttribute("text-anchor", "start");
-                dateText.setAttribute("style", `font-family: 'Comic Sans MS', cursive; font-size: 17px; font-weight: ${dateInfo.isToday ? 'bold' : 'normal'}; fill: ${textColor}; pointer-events: none;`);
+                dateText.setAttribute("style", `font-family: ${CALENDAR_FONT_STACK}; font-size: 17px; font-weight: ${dateInfo.isToday ? 'bold' : 'normal'}; fill: ${textColor}; pointer-events: none;`);
                 dateText.textContent = dateInfo.date.getDate().toString();
                 svgRef.current.appendChild(dateText);
 
@@ -482,7 +484,7 @@ function CalendarBody({ className, viewDate, onPrev, onNext, canPrev, canNext, o
                     };
 
                     const div = document.createElement("div");
-                    div.style.fontFamily = "'Comic Sans MS', cursive";
+                    div.style.fontFamily = CALENDAR_FONT_STACK;
                     // 일정 텍스트 크기도 가변적으로 설정 (최소 8px, 기본 2cqw, 최대 11px)
                     div.style.fontSize = "clamp(8px, 2cqw, 11px)";
                     div.style.display = "flex";
@@ -873,7 +875,7 @@ function Calendar({ user, onExpandStateChange, dailyStudyTime = {} }) {
                     </div>
                 }
             >
-                <div className="flex h-full w-full bg-white rounded-b-xl overflow-hidden font-['Comic_Sans_MS',_cursive]">
+                <div className="calendar-mixed-font flex h-full w-full bg-white rounded-b-xl overflow-hidden">
                     {/* Sidebar: 1/4 */}
                     <aside className="w-[28%] flex-shrink-0 border-r border-gray-200 bg-gray-50/50 py-6 px-4 flex flex-col gap-4 overflow-y-auto h-full">
                         <button 
@@ -1068,7 +1070,7 @@ function Calendar({ user, onExpandStateChange, dailyStudyTime = {} }) {
                     title={`Schedule Info`}
                     width="400px"
                 >
-                    <div className="flex flex-col gap-3 font-['Comic_Sans_MS',_cursive] p-2">
+                    <div className="calendar-mixed-font flex flex-col gap-3 p-2">
                         <p className="text-center font-bold text-gray-400 mb-2">{selectedDate.dateString}</p>
                         {selectedDate.holiday && (
                             <div className="p-3 bg-red-50 border-l-4 border-red-500 rounded text-red-700">
@@ -1131,7 +1133,7 @@ function Calendar({ user, onExpandStateChange, dailyStudyTime = {} }) {
                                     width: '550px',
                                 height: `${popoverHeight}px`,
                                 containerType: 'both',
-                                fontFamily: "'Comic Sans MS', cursive",
+                                fontFamily: CALENDAR_FONT_STACK,
                                 padding: '20px 30px',
                                 gap: '8px',
                                 filter: 'drop-shadow(0 20px 25px rgba(0,0,0,0.2))'
@@ -1152,7 +1154,7 @@ function Calendar({ user, onExpandStateChange, dailyStudyTime = {} }) {
                             top: `${rect.top + buttonTopYPx}px`,
                             width: `${modalWidth}px`,
                             height: `${popoverHeight}px`,
-                            fontFamily: "'Comic Sans MS', cursive",
+                            fontFamily: CALENDAR_FONT_STACK,
                             padding: `${20 * scale}px ${30 * scale}px`,
                             gap: `${12 * scale}px`,
                             transform: 'translate(0, 0)',
