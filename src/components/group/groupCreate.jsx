@@ -10,7 +10,10 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-import { db } from "../../services/firebase";
+import {
+  db,
+  auth,
+} from "../../services/firebase";
 
 import rough from "roughjs/bundled/rough.esm";
 
@@ -686,6 +689,9 @@ function GroupCreate({
                             : password,
 
                         icon,
+
+                        ownerUid:
+                          auth.currentUser.uid,
 
                         createdAt:
                           serverTimestamp(),

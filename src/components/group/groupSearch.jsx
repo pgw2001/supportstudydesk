@@ -16,6 +16,7 @@ import rough from "roughjs/bundled/rough.esm";
 function GroupSearch({
   setPage,
   setIsGroupOpen,
+  setSelectedGroup,
 }) {
   const paperSvgRef =
     useRef(null);
@@ -376,7 +377,7 @@ function GroupSearch({
               {groups.map(
                 (group) => (
                   <button
-                    key={group.title}
+                    key={group.id}
 
                     onClick={()=>{
                         setSelectedGroup(group);

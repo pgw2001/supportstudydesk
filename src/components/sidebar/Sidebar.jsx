@@ -35,6 +35,7 @@ function Sidebar({
   setIsOpen,
   deskTimerDisplay,
   taskCount,
+  memoCount,
   user,
   setUser,
   }) {
@@ -711,6 +712,7 @@ function Sidebar({
                 deskTimerDisplay={
                 deskTimerDisplay}
                 taskCount={taskCount}
+                memoCount={memoCount}
               />
             ) : null}
           </div>

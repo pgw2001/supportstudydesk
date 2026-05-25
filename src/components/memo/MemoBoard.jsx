@@ -1,7 +1,17 @@
+import {
+  doc,
+  setDoc,
+  getDoc,
+} from "firebase/firestore";
+
+import {
+  db,
+} from "../../services/firebase";
+
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import Memo from "./Memo";
 
-const MemoBoard = forwardRef(({ isEditMode }, ref) => {
+const MemoBoard = forwardRef(({ isEditMode, setMemoCount,user }, ref) => {
   const [memos, setMemos] = useState(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -11,7 +21,15 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
       return [];
     }
   });
+  const [isLoaded, setIsLoaded] =
+  useState(false);
+  useEffect(() => {
 
+  setMemoCount?.(
+    memos.length
+  );
+
+  }, [memos]);
   const [draggingId, setDraggingId] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const boardRef = useRef(null);
@@ -22,8 +40,72 @@ const MemoBoard = forwardRef(({ isEditMode }, ref) => {
   }));
 
   useEffect(() => {
-    localStorage.setItem("memos", JSON.stringify(memos));
-  }, [memos]);
+  const loadMemos = async () => {
+    if (!user?.uid || user?.isGuest) {
+      setIsLoaded(true);
+      return;
+    }
+
+    try {
+      const memoRef = doc(db, "users", user.uid);
+      const snapshot = await getDoc(memoRef);
+
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+
+        if (Array.isArray(data.memos)) {
+          setMemos(data.memos);
+        }
+        setIsLoaded(true);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+    setIsLoaded(true);
+  };
+
+  loadMemos();
+}, [user]);
+
+useEffect(() => {
+
+  if (!isLoaded) return;
+
+  // guest는 localStorage만
+  if (user?.isGuest) {
+
+    localStorage.setItem(
+      "memos",
+      JSON.stringify(memos)
+    );
+
+    return;
+  }
+
+  // 로그아웃 중 저장 금지
+  if (!user?.uid) {
+    return;
+  }
+
+  const saveMemos = async () => {
+    try {
+      const memoRef = doc(db, "users", user.uid);
+
+      await setDoc(
+        memoRef,
+        {
+          memos,
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  saveMemos();
+  }, [memos, user]);
+
 
   useEffect(() => {
     const handlePointerMove = (e) => {

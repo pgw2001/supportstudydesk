@@ -253,19 +253,50 @@ function GroupRoom({
     user,
     username,
   ]);
-   useEffect(() => {
+  useEffect(() => {
   let interval;
 
-  if (isStudying) {
-    interval = setInterval(() => {
-      setSeconds((prev) => prev + 1);
-    }, 1000);
+  if (
+    isStudying &&
+    user?.uid &&
+    group?.id
+  ) {
+    interval = setInterval(
+      async () => {
+
+        setSeconds(
+          (prev) => prev + 1
+        );
+
+        await setDoc(
+          doc(
+            db,
+            "groups",
+            group.id,
+            "members",
+            user.uid
+          ),
+          {
+            updatedAt:
+              Date.now(),
+          },
+          {
+            merge: true,
+          }
+        );
+      },
+      1000
+    );
   }
 
   return () => {
     clearInterval(interval);
   };
-}, [isStudying]);
+}, [
+  isStudying,
+  user?.uid,
+  group?.id,
+]);
 
   useEffect(() => {
     if (!group?.id) return;
@@ -356,6 +387,41 @@ function GroupRoom({
     return () =>
       unsubscribe();
   }, [group?.id]);
+
+  useEffect(() => {
+  if (!group?.id)
+    return;
+
+  const groupRef = doc(
+    db,
+    "groups",
+    group.id
+  );
+
+  const unsubscribe =
+    onSnapshot(
+      groupRef,
+      (snap) => {
+
+        // 방장이 그룹 삭제함
+        if (!snap.exists()) {
+
+          alert(
+            "방장이 그룹을 삭제했습니다."
+          );
+
+          setIsGroupOpen(
+            false
+          );
+
+          setPage("main");
+        }
+      }
+    );
+
+  return () =>
+    unsubscribe();
+}, [group?.id]);
 
   const handleToggleStudy =
     async () => {
@@ -494,6 +560,63 @@ function GroupRoom({
         console.log(error);
       }
     };
+  const handleDeleteGroup =
+  async () => {
+    if (
+      !user ||
+      !group?.id
+    )
+      return;
+
+    try {
+      const membersSnapshot =
+        await getDocs(
+          collection(
+            db,
+            "groups",
+            group.id,
+            "members"
+          )
+        );
+
+      for (const memberDoc of membersSnapshot.docs) {
+        await deleteDoc(
+          memberDoc.ref
+        );
+      }
+
+      const messagesSnapshot =
+        await getDocs(
+          collection(
+            db,
+            "groups",
+            group.id,
+            "messages"
+          )
+        );
+
+      for (const msgDoc of messagesSnapshot.docs) {
+        await deleteDoc(
+          msgDoc.ref
+        );
+      }
+
+      await deleteDoc(
+        doc(
+          db,
+          "groups",
+          group.id
+        )
+      );
+
+      setIsGroupOpen(false);
+
+      setPage("main");
+
+    } catch (error) {
+      console.log(error);
+    }
+  };  
 
   const totalStudyTime =
     members.reduce(
@@ -802,22 +925,47 @@ function GroupRoom({
     </div>
   </div>
 
-  {/* Leave */}
-  <button
-    onClick={handleLeaveGroup}
-    className="
-      rounded-[22px]
-      border-[2px]
-      border-black
-      bg-[#fecaca]
-      px-5
-      py-4
-      text-[15px]
-      font-bold
-    "
-  >
-    그룹 탈퇴
-  </button>
+  {
+  group?.ownerUid ===
+  user?.uid ? (
+    <button
+      onClick={
+        handleDeleteGroup
+      }
+      className="
+        rounded-[22px]
+        border-[2px]
+        border-black
+        bg-[#f87171]
+        px-5
+        py-4
+        text-[15px]
+        font-bold
+        text-white
+      "
+    >
+      그룹 삭제
+    </button>
+  ) : (
+    <button
+      onClick={
+        handleLeaveGroup
+      }
+      className="
+        rounded-[22px]
+        border-[2px]
+        border-black
+        bg-[#fecaca]
+        px-5
+        py-4
+        text-[15px]
+        font-bold
+      "
+    >
+      그룹 탈퇴
+    </button>
+  )
+}
 
 </div>
           </div>

@@ -11,6 +11,7 @@ import {
 import {
   collection,
   getDocs,
+  onSnapshot,
 } from "firebase/firestore";
 
 import { db } from "../../services/firebase";
@@ -152,37 +153,29 @@ function Group({
     }
   }, [page]);
 
-  useEffect(() => {
-    const fetchGroups =
-      async () => {
-        try {
-          const querySnapshot =
-            await getDocs(
-              collection(
-                db,
-                "groups"
-              )
-            );
+useEffect(() => {
+  const unsubscribe =
+    onSnapshot(
+      collection(
+        db,
+        "groups"
+      ),
+      (snapshot) => {
+        const data =
+          snapshot.docs.map(
+            (doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            })
+          );
 
-          const data =
-            querySnapshot.docs
-              .map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-              }))
-              .filter(
-                (group) =>
-                  group.isPublic
-              );
+        setGroups(data);
+      }
+    );
 
-          setGroups(data);
-        } catch (error) {
-          console.log(error);
-        }
-      };
-
-    fetchGroups();
-  }, [page]);
+  return () =>
+    unsubscribe();
+}, []);
 
   return (
     <div

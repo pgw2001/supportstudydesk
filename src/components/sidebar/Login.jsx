@@ -26,7 +26,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
+function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount,memoCount }) {
 
   const [hoveredMenu, setHoveredMenu] =
     useState(null);
@@ -136,7 +136,7 @@ function Login({ user, setUser, setIsGroupOpen,deskTimerDisplay, taskCount, }) {
           strokeWidth={1.8}
         />
       ),
-      info: "12 notes",
+      info: `${memoCount} notes`,
     },
 
     {

@@ -265,6 +265,7 @@ useEffect(() => {
   
   const [deskTimerDisplay, setDeskTimerDisplay] = useState("00:00");
   const [taskCount, setTaskCount] = useState(0);
+  const [memoCount, setMemoCount] = useState(0);
 
   const {
     fileInputRef,
@@ -565,7 +566,7 @@ useEffect(() => {
           }}
           disabled={!isEditMode}
         >
-          <MemoBoard ref={memoBoardRef} isEditMode={isEditMode} />
+          <MemoBoard ref={memoBoardRef} isEditMode={isEditMode} setMemoCount={setMemoCount} user={user}/>
         </Draggable>
 
         <Draggable
@@ -715,6 +716,7 @@ useEffect(() => {
           user={user}
           setUser={setUser}
           taskCount={taskCount}
+          memoCount={memoCount}
           deskTimerTime={dailyStudyTime[getLocalDateString(new Date())] || 0}
         />
 
