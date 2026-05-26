@@ -1,99 +1,830 @@
+import {
+  saveUserData,
+  loadUserData,
+} from "../services/userData";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { Check, CloudRain, ImagePlus, Layout, Moon, RotateCcw, Save, Sun, Upload } from "lucide-react";
+import Sidebar from "../components/sidebar/Sidebar";
 import Timer from "../components/timer/Timer";
 import TodoList from "../components/todo/TodoList";
-import Memo from "../components/memo/Memo";
+import MemoBoard from "../components/memo/MemoBoard";
+import MemoHolder from "../components/memo/MemoHolder";
+import Quotes from "../components/quotes/Quotes";
+import Calendar from "../components/calendar/Calendar";
+import PlannerButton from "../components/planner/PlannerButton";
+import MusicPlayer from "../components/musicPlayer/MusicPlayer";
+import Tablet from "../components/tablet/Tablet";
+import StudyPlant from "../components/study-plant/StudyPlant";
+import Modal from "../components/common/modal";
+import Draggable from "../utils/Draggable";
+import { useWindow } from "../components/window/useWindow";
+import RainyWindowOverlay from "../components/window/RainyWindowOverlay";
+import { getLocalDateString } from "../utils/dateUtils";
+import menubar from "../assets/menubar.svg";
 import deskSvg from "../assets/desk.svg";
-import windowSvg from "../assets/window.svg";
+import windowLayerSvg from "/assets/window/window_layer.svg";
+import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg";
+
+const DEFAULT_WINDOW_BG = "/assets/window/window_bg.png";
+const WIDGET_POSITIONS_KEY = "widgetPositions";
+const DASHBOARD_BASE_WIDTH = 1600;
+const DASHBOARD_BASE_HEIGHT = 900;
+const CONTROL_BUTTON_SIZE = 54;
+
+const DEFAULT_POSITIONS = {
+  calendar: { left: "28%", top: "8%" },
+  memo: { left: "61%", top: "18%" },
+  memoHolder: { left: "80%", top: "25%" },
+  quotes: { left: "80%", top: "25%" },
+  timer: { left: "34%", top: "auto" }, // style에서 bottom 사용 중
+  planner: { left: "70%", top: "80%" },
+  todo: { left: "60%", top: "auto" }, // style에서 bottom, right 사용 중
+  music: { left: "70%", top: "50%" },
+  plant: { left: "45%", top: "68%" },
+  tablet: { left: "15%", top: "55%" },
+};
+
+const DEFAULT_PLANT_PROGRESS = {
+  rose: 0,
+  sunflower: 0,
+  hydrangea: 0,
+  lilyOfTheValley: 0,
+  hyacinth: 0,
+};
+
+const PLANT_PROGRESS_KEY = "plantProgress";
+const ACTIVE_PLANT_TYPE_KEY = "activePlantType";
+
+function Dashboard({ user, setUser }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+  const [dashboardScale, setDashboardScale] = useState(1);
+  
+  // 다크모드 상태 관리
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem("isDarkMode") === "true";
+  });
+  useEffect(() => {
+    localStorage.setItem("isDarkMode", isDarkMode);
+  }, [isDarkMode]);
+
+  const [widgetPositions, setWidgetPositions] =
+  useState(DEFAULT_POSITIONS);
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
+  const [layoutSaved, setLayoutSaved] = useState(false);
+
+  const [isWidgetLoaded, setIsWidgetLoaded] =
+  useState(false);
+
+  const handleDragEnd = (
+  id,
+  pos
+  ) => {
+
+  setWidgetPositions(
+    prev => ({
+      ...prev,
+      [id]: pos,
+    })
+  );
+  };
+
+  const handleSaveWidgetLayout = useCallback(async () => {
+    setIsSavingLayout(true);
+
+    try {
+      if (!user?.uid || user?.isGuest) {
+        localStorage.setItem(WIDGET_POSITIONS_KEY, JSON.stringify(widgetPositions));
+      } else {
+        await saveUserData(user.uid, {
+          widgetPositions,
+        });
+      }
+
+      setLayoutSaved(true);
+      setIsEditMode(false);
+      window.setTimeout(() => setLayoutSaved(false), 1800);
+    } finally {
+      setIsSavingLayout(false);
+    }
+  }, [user, widgetPositions]);
+  useEffect(() => {
+
+  setIsWidgetLoaded(false);  
+
+  const loadWidgetPositions =
+    async () => {
+
+      if (user === null || user?.isGuest){
+        const savedGuestPositions = localStorage.getItem(WIDGET_POSITIONS_KEY);
+        setWidgetPositions({
+        ...DEFAULT_POSITIONS,
+        ...(savedGuestPositions
+        ? JSON.parse(savedGuestPositions)
+        : {}),
+        });
+
+        setIsWidgetLoaded(true);
+
+        return;
+      }
+
+      const data =
+        await loadUserData(
+          user.uid
+        );
+
+      setWidgetPositions({
+      ...DEFAULT_POSITIONS,
+      ...(data?.widgetPositions || {}),
+      });
+
+      setIsWidgetLoaded(true);
+    };
+
+  loadWidgetPositions();
+
+  }, [user]);
+  const memoBoardRef = useRef(null);
 
 
-function Dashboard() {
+  // 화분별 누적 학습 시간과 현재 책상에 놓인 화분 종류 관리
+  const [plantProgress, setPlantProgress] =
+  useState(DEFAULT_PLANT_PROGRESS);
+
+  const [activePlantType, setActivePlantType] =
+  useState("rose");
+
+  const [isPlantLoaded, setIsPlantLoaded] =
+  useState(false);
+  
+  const [
+  hasLoadedFromFirebase,
+  setHasLoadedFromFirebase
+  ] = useState(false);
+
+useEffect(() => {
+  setIsPlantLoaded(false);
+
+  const loadPlantData =
+    async () => {
+
+      // 로그아웃 또는 게스트 상태
+      if (user === null || user?.isGuest) {
+      
+      setHasLoadedFromFirebase(false);
+
+      setPlantProgress(
+      DEFAULT_PLANT_PROGRESS
+    );
+
+    setActivePlantType("rose");
+
+    setIsPlantLoaded(true);
+
+    return;
+    }
+
+      const data =
+        await loadUserData(
+          user.uid
+        );
+
+      setPlantProgress({
+      ...DEFAULT_PLANT_PROGRESS,
+      ...(data?.plantProgress || {}),
+      });
+
+      setActivePlantType(
+      data?.activePlantType ?? "rose"
+      );
+
+
+      setHasLoadedFromFirebase(true);
+
+      setIsPlantLoaded(true);
+    };
+
+  loadPlantData();
+
+  }, [user]);
+
+  useEffect(() => {
+
+  if (
+    !hasLoadedFromFirebase ||
+    !isPlantLoaded ||
+    !user?.uid ||
+    user?.isGuest
+  ) {
+    return;
+  }
+
+  saveUserData(
+    user.uid,
+    {
+      plantProgress,
+      activePlantType,
+    }
+  );
+
+  }, [
+  plantProgress,
+  activePlantType,
+  user,
+  isPlantLoaded,
+  hasLoadedFromFirebase,
+  ]);
+  // 일간 공부 시간 데이터 관리 (성장 화분 방식과 동일)
+  const [dailyStudyTime, setDailyStudyTime] = useState(() => {
+    const saved = localStorage.getItem("dailyStudyTime");
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dailyStudyTime", JSON.stringify(dailyStudyTime));
+  }, [dailyStudyTime]);
+
+  const handleTick = useCallback(() => {
+    const todayStr = getLocalDateString(new Date());
+    setDailyStudyTime(prev => ({
+      ...prev,
+      [todayStr]: (prev[todayStr] || 0) + 1
+    }));
+
+    setPlantProgress((prev) => ({
+      ...prev,
+      [activePlantType]: (prev[activePlantType] || 0) + 1,
+    }));
+  }, [activePlantType]);
+  
+  const [deskTimerDisplay, setDeskTimerDisplay] = useState("00:00");
+  const [taskCount, setTaskCount] = useState(0);
+  const [memoCount, setMemoCount] = useState(0);
+
+  const {
+    fileInputRef,
+    windowBg,
+    isWindowModalOpen,
+    draftBg,
+    openWindowEditor,
+    closeWindowEditor,
+    applyWindowBackground,
+    resetDraftWindowBackground,
+    draftScale,
+    updateDraftScale,
+    minScale,
+    maxScale,
+    triggerFilePicker,
+    handleWindowBgChange,
+    previewPointerHandlers,
+    windowFrameRef,
+    previewFrameRef,
+    windowImageStyle,
+    previewImageStyle,
+    windowMaskStyle,
+    previewContainerStyle,
+    windowButtonStyle,
+    previewAspect,
+    isWindowRainEnabled,
+    setIsWindowRainEnabled,
+    windowRainIntensity,
+    setWindowRainIntensity,
+  } = useWindow(DEFAULT_WINDOW_BG);
+
+  useEffect(() => {
+    const updateDashboardScale = () => {
+      const widthScale = window.innerWidth / DASHBOARD_BASE_WIDTH;
+      const heightScale = window.innerHeight / DASHBOARD_BASE_HEIGHT;
+      setDashboardScale(Math.min(widthScale, heightScale));
+    };
+
+    updateDashboardScale();
+    window.addEventListener("resize", updateDashboardScale);
+
+    return () => {
+      window.removeEventListener("resize", updateDashboardScale);
+    };
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center overflow-hidden bg-[#f4f1ec]">
-      <main className="relative aspect-[16/9] h-auto w-screen max-h-screen max-w-[calc(100vh*16/9)] overflow-hidden bg-[#fcfbf8]">
-        {/* Window */}
-        <div className="absolute left-[0%] top-[0%] w-[30%] aspect-[370/687] z-0">
-          <img
-            src={windowSvg}
-            alt="window"
-            className="h-full w-full object-contain"
-          />
-        </div>
+    <div className={`relative h-screen w-screen overflow-hidden transition-colors duration-700 ${isDarkMode ? "bg-[#111]" : "bg-[#f4f1ec]"}`}>
+      <main
+        className={`absolute left-1/2 top-1/2 overflow-hidden transition-colors duration-700 ${isDarkMode ? "bg-[#161616]" : "bg-[#fcfbf8]"}`}
+        style={{
+          width: `${DASHBOARD_BASE_WIDTH}px`,
+          height: `${DASHBOARD_BASE_HEIGHT}px`,
+          transform: `translate(-50%, -50%) scale(${dashboardScale})`,
+          transformOrigin: "center center",
+        }}
+      >
+        {/* 비 효과 활성 시 화면 전체를 우중충하고 흐리게 만드는 분위기 레이어 */}
+        <div 
+          className="absolute inset-0 pointer-events-none transition-all duration-1000 z-[1000]"
+          style={{
+            backgroundColor: isDarkMode 
+              ? (isWindowRainEnabled 
+                  ? `rgba(15, 20, 40, ${0.35 + windowRainIntensity * 0.2})` 
+                  : "rgba(15, 20, 40, 0.25)")
+              : (isWindowRainEnabled 
+                  ? `rgba(35, 45, 65, ${0.05 + windowRainIntensity * 0.12})` 
+                  : "transparent"),
+            backdropFilter: isDarkMode 
+              ? `brightness(0.9) saturate(0.85)` 
+              : isWindowRainEnabled 
+                ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
+                : "none",
+            WebkitBackdropFilter: isDarkMode 
+              ? `brightness(0.9) saturate(0.85)` 
+              : isWindowRainEnabled 
+                ? `brightness(${1 - windowRainIntensity * 0.1}) saturate(${1 - windowRainIntensity * 0.3})` 
+                : "none",
+          }}
+        />
 
-        {/* Calendar */}
-        <div className="absolute left-[30%] top-[7%] h-[53%] w-[26%] rounded-[4px] border-2 border-neutral-900 bg-white p-3 shadow-[3px_4px_0_rgba(0,0,0,0.14)] z-10">
-          <div className="mx-auto mb-2 h-3 w-3 rounded-full border-2 border-red-700 bg-red-500" />
-          <div className="border-b-2 border-neutral-900 pb-2">
-            <p className="text-4xl leading-none text-neutral-900">April</p>
-            <div className="mt-2 grid grid-cols-7 gap-1 text-center text-[10px] font-medium">
-              {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
-                <div
-                  key={day}
-                  className={`border border-neutral-900 py-1 ${
-                    day === "SUN" ? "bg-red-500 text-white" : "bg-neutral-900 text-white"
-                  }`}
-                >
-                  {day}
+        {/* 미세한 노이즈 텍스처 (다크모드 전용) */}
+        {isDarkMode && (
+          <div 
+            className="absolute inset-0 pointer-events-none z-[1001] opacity-[0.03]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'repeat',
+              mixBlendMode: 'overlay',
+            }}
+          />
+        )}
+
+        {!isSidebarOpen && (
+          <div
+            className="absolute z-[999] flex"
+            style={{ top: 22, right: 22, gap: 12 }}
+          >
+            {/* 다크모드 토글 버튼 */}
+            <button
+              onClick={() => setIsDarkMode((prev) => !prev)}
+              className={`flex items-center justify-center rounded-full shadow-sm transition ${
+                isDarkMode
+                  ? "bg-indigo-900/80 text-yellow-200 hover:bg-indigo-800"
+                  : "bg-white/80 text-gray-700 hover:bg-white"
+              }`}
+              style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
+              title={isDarkMode ? "라이트 모드" : "다크 모드"}
+            >
+              {isDarkMode ? <Sun className="h-[56%] w-[56%]" /> : <Moon className="h-[56%] w-[56%]" />}
+            </button>
+
+            <button
+              onClick={() => setIsEditMode((prev) => !prev)}
+              className={`flex items-center justify-center rounded-full shadow-sm transition ${
+                isEditMode
+                  ? "bg-green-500 text-white"
+                  : "bg-white/80 text-gray-700 hover:bg-white"
+              }`}
+              style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
+              title={isEditMode ? "배치 완료" : "배치 수정"}
+            >
+              {isEditMode ? <Check className="h-[56%] w-[56%]" /> : <Layout className="h-[56%] w-[56%]" />}
+            </button>
+
+            {isEditMode && (
+              <button
+                onClick={handleSaveWidgetLayout}
+                disabled={isSavingLayout}
+                className="flex items-center gap-2 rounded-full bg-[#1f7a55] px-5 text-white shadow-sm transition hover:bg-[#196244] disabled:cursor-wait disabled:opacity-70"
+                style={{ height: CONTROL_BUTTON_SIZE }}
+                title="위젯 위치 저장"
+              >
+                <Save className="h-5 w-5" />
+                <span className="font-['Patrick_Hand'] text-base">
+                  {isSavingLayout ? "Saving..." : layoutSaved ? "Saved" : "위젯 저장"}
+                </span>
+              </button>
+            )}
+
+            {isEditMode && (
+              <button
+                onClick={openWindowEditor}
+                className="flex items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-sm transition hover:bg-white"
+                style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
+                title="창 배경 수정"
+              >
+                <ImagePlus className="h-[54%] w-[54%]" />
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              style={{ width: CONTROL_BUTTON_SIZE, height: CONTROL_BUTTON_SIZE }}
+            >
+              <img
+                src={menubar}
+                alt="menu"
+                className="h-full w-full opacity-70 transition hover:opacity-100"
+              />
+            </button>
+          </div>
+        )}
+
+        <div 
+          className="group absolute left-[-38%] top-[-53%] aspect-[370/687] w-[65%] transition-all duration-300 z-[1]"
+          style={{ pointerEvents: "auto" }}
+        >
+          {/* 창문에서 책상으로 흘러나오는 광원 효과 (다크모드) */}
+          {isDarkMode && (
+            <>
+              {/* 창문 틀 근처의 핵심 푸른 광원 */}
+              <div 
+                className="absolute left-[5%] top-[10%] w-[90%] h-[80%] blur-[100px] rounded-full mix-blend-screen pointer-events-none transition-opacity duration-1000"
+                style={{
+                  background: 'radial-gradient(circle, rgba(60, 100, 255, 0.15) 0%, rgba(140, 80, 255, 0.05) 70%)'
+                }}
+              />
+              {/* 책상 쪽으로 길게 흘러나오는 빛줄기 (Spill Light) */}
+              <div 
+                className="absolute left-[20%] top-[30%] w-[180%] h-[150%] blur-[150px] rounded-[100%] mix-blend-soft-light pointer-events-none transition-opacity duration-1000"
+                style={{
+                  background: 'radial-gradient(ellipse at center, rgba(70, 130, 255, 0.1) 0%, transparent 60%)',
+                  transform: 'rotate(-25deg)',
+                }}
+              />
+            </>
+          )}
+
+          <div className="absolute left-[4%] top-0 h-full w-full z-0 pointer-events-none">
+            {/* 배경과 비 레이어를 하나의 마스크 컨테이너로 통합 */}
+            <div
+              ref={windowFrameRef}
+              className="absolute inset-0 overflow-hidden"
+              style={windowMaskStyle}
+            >
+              <img
+                src={windowBg}
+                alt="user window background"
+                className="absolute max-w-none select-none"
+                style={windowImageStyle}
+                draggable={false}
+              />
+              {/* 비 레이어를 배경 이미지 바로 위에 배치 */}
+              <RainyWindowOverlay 
+                enabled={isWindowRainEnabled} 
+                intensity={windowRainIntensity}
+              />
+            </div>
+
+            <img
+              src={windowLayerSvg}
+              alt="window background frame outline"
+              className="absolute inset-0 h-full w-full object-contain"
+            />
+          </div>
+
+          <img
+            src={windowGlassLayerSvg}
+            alt="window glass"
+            className="absolute left-[7%] z-10 h-full w-full object-contain opacity-60 pointer-events-none"
+          />
+          <img
+            src={windowLayerSvg}
+            alt="window front frame"
+            className="absolute left-[10%] z-20 h-full w-full object-contain pointer-events-none"
+          />
+
+          <div
+            className="absolute inset-0 z-30 pointer-events-none opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100"
+          >
+            <div className="absolute z-30 flex flex-col items-center gap-3" style={windowButtonStyle}>
+              <button
+                type="button"
+                onClick={() => setIsWindowRainEnabled((prev) => !prev)}
+                className={`pointer-events-auto inline-flex items-center gap-2 rounded-full border px-4 py-2 font-['Patrick_Hand'] text-sm shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-[3px] transition ${
+                  isWindowRainEnabled
+                    ? "border-black/15 bg-white/90 text-black"
+                    : "border-black/10 bg-[#f7f3eb]/88 text-black/70"
+                }`}
+                title={isWindowRainEnabled ? "비 끄기" : "비 켜기"}
+              >
+                <CloudRain size={16} />
+                <span>{isWindowRainEnabled ? "Rain Off" : "Rain On"}</span>
+              </button>
+
+              {isWindowRainEnabled && (
+                <div className="pointer-events-auto flex flex-col items-center gap-1 rounded-2xl border border-black/10 bg-white/80 p-3 shadow-sm backdrop-blur-md">
+                  <div className="flex w-full justify-between px-1 font-['Patrick_Hand'] text-[10px] text-black/50">
+                    <span>Light</span>
+                    <span>Heavy</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={windowRainIntensity}
+                    onChange={(e) => setWindowRainIntensity(parseFloat(e.target.value))}
+                    className="h-1.5 w-24 cursor-pointer appearance-none rounded-lg bg-black/10 accent-black"
+                  />
                 </div>
-              ))}
+              )}
             </div>
           </div>
-          
-          <div className="mt-2 grid grid-cols-7 border-l border-t border-neutral-900 text-[10px] text-neutral-700 z-20">
-            {Array.from({ length: 35 }, (_, index) => (
-              <div
-                key={index + 1}
-                className="flex aspect-square items-start justify-start border-b border-r border-neutral-900 p-1"
-              >
-                {index < 30 ? index + 1 : ""}
-              </div>
-            ))}
-          </div>
         </div>
-        
-        {/* Memo */}
-        <div className="absolute left-[60%] top-[18%] z-10">
-            <Memo />
-        </div>
-        
-        {/* Timer */}
-        <div className="absolute bottom-[19%] left-[34%] z-20">
-          <Timer />
-        </div>
-        
-        {/* 자명종 시계 */}
-        <div className="absolute bottom-[21%] left-[46%] h-[10%] w-[6%] rounded-full border-2 border-neutral-800 bg-white z-20">
-          <div className="absolute left-1/2 top-[20%] h-[40%] w-px -translate-x-1/2 bg-neutral-900" />
-          <div className="absolute left-1/2 top-1/2 h-px w-[26%] bg-neutral-900" />
-          <div className="absolute -bottom-[16%] left-[18%] h-[20%] w-px rotate-[18deg] bg-neutral-900" />
-          <div className="absolute -bottom-[16%] right-[18%] h-[20%] w-px -rotate-[18deg] bg-neutral-900" />
-        </div>
-        
-        {/* Desk */}
-        <div className="absolute bottom-[12%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
-        <div className="absolute bottom-[0%] left-[19%] w-[81%] aspect-[1594/390] z-0">
-          <img
-            src={deskSvg}
-            alt="desk"
-            className="h-full w-full object-contain"
+
+        <Draggable
+          key={`${user?.uid || "logout"}-calendar`}
+          initialLeft={widgetPositions.calendar?.left}
+          initialTop={widgetPositions.calendar?.top}
+          onDragEnd={(pos) => handleDragEnd("calendar", pos)}
+          className={`${isCalendarExpanded ? "z-[9999]" : "z-20"} transition-shadow duration-300`}
+          style={{ 
+            width: "28%",
+            filter: isDarkMode ? "drop-shadow(0 15px 30px rgba(0,0,0,0.4))" : "none"
+          }}
+          disabled={!isEditMode}
+        >
+          <Calendar 
+            key={user?.uid || "logout"}
+            user={user}
+            onExpandStateChange={setIsCalendarExpanded} 
+            dailyStudyTime={dailyStudyTime}
           />
+        </Draggable>
+
+        <Draggable      
+          key={`${user?.uid || "logout"}-memo`}    
+          initialLeft={widgetPositions.memo?.left}
+          initialTop={widgetPositions.memo?.top}
+          onDragEnd={(pos) => handleDragEnd("memo", pos)}
+          className="z-10 transition-shadow duration-300"
+          style={{ 
+            width: "16%",
+            aspectRatio: "1 / 1.2", // 높이를 확보하여 Draggable 덮개가 생성되도록 함
+            filter: isDarkMode ? "drop-shadow(0 12px 24px rgba(0,0,0,0.4))" : "none"
+          }}
+          disabled={!isEditMode}
+        >
+          <MemoBoard ref={memoBoardRef} isEditMode={isEditMode} setMemoCount={setMemoCount} user={user}/>
+        </Draggable>
+
+
+
+        <Draggable
+          initialLeft={widgetPositions.memoHolder?.left || DEFAULT_POSITIONS.memoHolder.left}
+          initialTop={widgetPositions.memoHolder?.top || DEFAULT_POSITIONS.memoHolder.top}
+          onDragEnd={(pos) => handleDragEnd("memoHolder", pos)}
+          className="z-30"
+          disabled={!isEditMode}
+        >
+          {/* 클릭 시 ref를 통해 MemoBoard 안의 startCreate 실행 */}
+          <MemoHolder onStart={(e) => memoBoardRef.current?.startCreate(e)} />
+        </Draggable>
+
+        <Draggable
+          key={`${user?.uid || "logout"}-quotes`}
+          initialLeft={widgetPositions.quotes?.left}
+          initialTop={widgetPositions.quotes?.top}
+          onDragEnd={(pos) => handleDragEnd("quotes", pos)}
+          className="z-10 transition-shadow duration-300"
+          style={{ 
+            width: "18%",
+            filter: isDarkMode ? "drop-shadow(0 8px 20px rgba(0,0,0,0.4))" : "none"
+          }}
+          disabled={!isEditMode}
+        >
+          <Quotes />
+        </Draggable>
+
+        <Draggable
+          key={`${user?.uid || "logout"}-timer`}
+          initialLeft={widgetPositions.timer?.left}
+          initialTop={widgetPositions.timer?.top}
+          onDragEnd={(pos) => handleDragEnd("timer", pos)}
+          className="z-20"
+          style={{
+            width: "12%",
+            ...(widgetPositions.timer?.top === "auto" ? { bottom: "19%" } : {}),
+            filter: isDarkMode ? "drop-shadow(0 10px 25px rgba(0,0,0,0.4))" : "none"
+          }}
+          disabled={!isEditMode}
+        >
+          <Timer
+          key={user?.uid || "logout"}
+          user={user}
+          onTick={handleTick}
+          onPomoTick={handleTick} 
+          onPomodoroTick={handleTick}
+          setDeskTimerDisplay={
+          setDeskTimerDisplay
+          }
+          />
+        </Draggable>
+
+        <Draggable
+          key={`${user?.uid || "logout"}-planner`}
+          initialLeft={widgetPositions.planner?.left}
+          initialTop={widgetPositions.planner?.top}
+          onDragEnd={(pos) => handleDragEnd("planner", pos)}
+          className="z-[30]"
+          style={{ width: "25%" }}
+          disabled={!isEditMode}
+        >
+          <div className="p-2">
+            <PlannerButton
+              user={user}
+              dailyStudyTime={dailyStudyTime}
+            />
+          </div>
+        </Draggable>
+
+        <div className="absolute top-[82%] left-[33%] h-[6%] w-[12%] rotate-[-18deg] rounded-[6px] border-2 border-neutral-700 bg-white" />
+
+        <div className="absolute bottom-[0%] left-[17%] z-0 aspect-[2244/389] w-[100%]">
+          <img src={deskSvg} alt="desk" className="h-full w-full object-contain" />
         </div>
-        
-        {/* Monitor */}
-        <div className="absolute bottom-[20%] left-[58%] h-[23%] w-[16%] rounded-[8px] border-2 border-neutral-900 bg-white shadow-[3px_4px_0_rgba(0,0,0,0.12)] z-20">
-          <div className="mx-auto mt-[8%] h-[48%] w-[82%] rounded-[6px] border-2 border-neutral-900 bg-neutral-950" />
-          <div className="mx-auto mt-[3%] h-[24%] w-[75%] rounded-b-[10px] border-2 border-neutral-500 bg-white" />
-        </div>
-        
-        {/* Desk Lamp */}
-        <div className="absolute bottom-[16%] right-[7%] h-[30%] w-[8%] z-20">
-          <div className="absolute bottom-0 right-[12%] h-[18%] w-[44%] rounded-[14px] border-2 border-neutral-700 bg-white" />
-          <div className="absolute bottom-[15%] right-[30%] h-[58%] w-px rotate-[22deg] bg-neutral-700" />
-          <div className="absolute bottom-[69%] right-[38%] h-[26%] w-[44%] rotate-[20deg] rounded-t-full border-2 border-neutral-700 bg-white" />
-        </div>
-        
-        {/* Todo List */}
-        <div className="absolute left-[60%] bottom-[50%] right-[28%] w-[11%] z-20">
-          <TodoList />
-        </div>
+
+        <Draggable
+          key={`${user?.uid || "logout"}-todo`}
+          initialLeft={widgetPositions.todo?.left}
+          initialTop={widgetPositions.todo?.top}
+          onDragEnd={(pos) => handleDragEnd("todo", pos)}
+          className="z-20"
+          style={{
+            ...(widgetPositions.todo?.top === "auto" ? { bottom: "50%", right: "28%" } : {}),
+            width: "11%",
+            filter: isDarkMode ? "drop-shadow(0 10px 20px rgba(0,0,0,0.4))" : "none"
+          }}
+          disabled={!isEditMode}
+        >
+          <TodoList setTaskCount={setTaskCount} user={user} />
+        </Draggable>
+
+        <Draggable
+          key={`${user?.uid || "logout"}-music`}
+          initialLeft={
+          widgetPositions.music?.left ||
+          DEFAULT_POSITIONS.music.left
+          }
+          initialTop={widgetPositions.music?.top}
+          onDragEnd={(pos) => handleDragEnd("music", pos)}
+          className="z-20"
+          style={{ 
+            width: "26%",
+            filter: isDarkMode ? "drop-shadow(0 15px 35px rgba(0,0,0,0.4))" : "none"
+          }}
+          disabled={!isEditMode}
+        >
+          <MusicPlayer />
+        </Draggable>
+
+        <Draggable
+          key={`${user?.uid || "logout"}-plant`}
+          initialLeft={widgetPositions.plant?.left}
+          initialTop={widgetPositions.plant?.top}
+          onDragEnd={(pos) => handleDragEnd("plant", pos)}
+          className="z-10"
+          style={{ width: "8%", aspectRatio: "1/1" }}
+          disabled={!isEditMode}
+        >
+          <StudyPlant
+             key={user?.uid || "logout"}
+            plantProgress={plantProgress}
+            activePlantType={activePlantType}
+            onPlantChange={setActivePlantType}
+          />
+        </Draggable>
+
+        <Draggable
+          key={`${user?.uid || "logout"}-tablet`}
+          initialLeft={widgetPositions.tablet?.left}
+          initialTop={widgetPositions.tablet?.top}
+          onDragEnd={(pos) => handleDragEnd("tablet", pos)}
+          className="z-20"
+          style={{ 
+            width: "20%",
+            filter: isDarkMode ? "drop-shadow(0 15px 30px rgba(0,0,0,0.4))" : "none"
+          }}
+          disabled={!isEditMode}
+        >
+          <Tablet
+          key={user?.uid || "logout"}
+          user={user}
+          />
+        </Draggable>
+
+        <Sidebar
+          isOpen={isSidebarOpen}
+          setIsOpen={setIsSidebarOpen}
+          deskTimerDisplay={deskTimerDisplay}
+          user={user}
+          setUser={setUser}
+          taskCount={taskCount}
+          memoCount={memoCount}
+          deskTimerTime={dailyStudyTime[getLocalDateString(new Date())] || 0}
+        />
+
+        <Modal
+          isOpen={isWindowModalOpen}
+          onClose={closeWindowEditor}
+          title="창 배경 꾸미기"
+          width="min(92vw, 720px)"
+          className="font-['Patrick_Hand']"
+        >
+          <div className="flex flex-col gap-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleWindowBgChange}
+            />
+
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-black/65">
+                이미지를 올린 뒤 미리보기 안에서 드래그해서 위치를 맞춰주세요.
+              </p>
+              <button
+                type="button"
+                onClick={triggerFilePicker}
+                className="inline-flex items-center gap-2 rounded-full border border-black/15 bg-[#f7efe2] px-4 py-2 text-sm transition hover:-translate-y-0.5 hover:bg-[#f3e6d3]"
+              >
+                <Upload size={16} />
+                이미지 불러오기
+              </button>
+            </div>
+
+            <div className="rounded-[28px] border border-black/10 bg-[#f8f3ea] p-5">
+              <div
+                className="mx-auto relative w-full max-w-[220px] overflow-hidden rounded-[24px] border border-black/10 bg-white"
+                style={{ aspectRatio: `${previewAspect}` }}
+              >
+                <div className="absolute" style={previewContainerStyle}>
+                  <div
+                    ref={previewFrameRef}
+                    className="absolute left-[4%] top-0 h-full w-full overflow-hidden cursor-grab touch-none active:cursor-grabbing"
+                    style={windowMaskStyle}
+                    {...previewPointerHandlers}
+                  >
+                    <img
+                      src={draftBg}
+                      alt="window preview"
+                      className="absolute max-w-none select-none pointer-events-none"
+                      style={previewImageStyle}
+                      draggable={false}
+                    />
+                  </div>
+                  <img
+                    src={windowLayerSvg}
+                    alt="window preview back frame"
+                    className="absolute left-[4%] h-full w-full object-contain pointer-events-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between text-sm text-black/65">
+                  <span>배경 배율</span>
+                  <span>{draftScale.toFixed(2)}x</span>
+                </div>
+                <input
+                  type="range"
+                  min={minScale}
+                  max={maxScale}
+                  step="0.01"
+                  value={draftScale}
+                  onChange={(event) => updateDraftScale(Number(event.target.value))}
+                  className="w-full accent-[#2f7d32]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={resetDraftWindowBackground}
+                className="inline-flex items-center gap-2 rounded-full border border-black/15 px-4 py-2 text-sm transition hover:bg-black/5"
+              >
+                <RotateCcw size={16} />
+                기본 배경으로 되돌리기
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={closeWindowEditor}
+                  className="rounded-full border border-black/15 px-4 py-2 text-sm transition hover:bg-black/5"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={applyWindowBackground}
+                  className="rounded-full bg-[#2f7d32] px-4 py-2 text-sm text-white transition hover:bg-[#27682a]"
+                >
+                  적용
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       </main>
     </div>
   );

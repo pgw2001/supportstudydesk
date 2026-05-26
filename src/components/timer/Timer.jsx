@@ -1,26 +1,142 @@
-function Timer() {
-  return (
-    <section className="w-[170px] rotate-[6deg] rounded-[26px] border-2 border-neutral-800 bg-white p-4 shadow-[4px_5px_0_rgba(0,0,0,0.16)]">
-      <div className="text-center">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-neutral-500">
-          Desk Timer
-        </p>
-        <p className="mt-3 text-4xl font-semibold tracking-[0.08em] text-neutral-900">
-          25:00
-        </p>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
-          <button className="rounded-full border border-neutral-900 px-2 py-1.5">
-            Start
-          </button>
-          <button className="rounded-full border border-neutral-900 px-2 py-1.5">
-            Pause
-          </button>
-          <button className="rounded-full border border-neutral-900 px-2 py-1.5">
-            Reset
-          </button>
-        </div>
-      </div>
-    </section>
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  saveUserData,
+  loadUserData,
+} from "../../services/userData";
+
+import NormalTimer from "./NormalTimer";
+import PomodoroTimer from "./PomodoroTimer";
+
+function Timer({
+  onTick,
+  setDeskTimerDisplay,
+  user,
+}) {
+
+  const [mode, setMode] =
+    useState(
+      localStorage.getItem(
+        "timer-mode"
+      ) || null
+    );
+
+  const [isLoaded, setIsLoaded] =
+    useState(false);
+
+  useEffect(() => {
+
+    const loadMode =
+      async () => {
+
+        // 진짜 로그아웃
+        if (user === null) {
+
+          localStorage.removeItem(
+            "timer-mode"
+          );
+
+          setMode("normal");
+
+          setIsLoaded(true);
+
+          return;
+        }
+
+        // 로그인 복구 중
+        if (!user?.uid) {
+          return;
+        }
+
+        const data =
+          await loadUserData(
+            user.uid
+          );
+
+        setMode(
+          data?.timerMode ||
+          "normal"
+        );
+
+        setIsLoaded(true);
+      };
+
+    loadMode();
+
+  }, [user]);
+
+  useEffect(() => {
+
+    if (
+      !isLoaded ||
+      !mode ||
+      !user?.uid ||
+      user?.isGuest
+    ) {
+      return;
+    }
+
+    saveUserData(
+      user.uid,
+      {
+        timerMode: mode,
+      }
+    );
+
+    localStorage.setItem(
+      "timer-mode",
+      mode
+    );
+
+  }, [
+    mode,
+    user,
+    isLoaded,
+  ]);
+
+  // mode 로딩 전 렌더 방지
+  if (
+    !isLoaded ||
+    !mode
+  ) {
+    return null;
+  }
+
+  return mode === "normal" ? (
+
+    <NormalTimer
+      user={user}
+
+      switchMode={() =>
+        setMode("pomodoro")
+      }
+
+      onTick={onTick}
+
+      setDeskTimerDisplay={
+        setDeskTimerDisplay
+      }
+    />
+
+  ) : (
+
+    <PomodoroTimer
+      user={user}
+
+      switchMode={() =>
+        setMode("normal")
+      }
+
+      onTick={onTick}
+
+      setDeskTimerDisplay={
+        setDeskTimerDisplay
+      }
+    />
+
   );
 }
 
