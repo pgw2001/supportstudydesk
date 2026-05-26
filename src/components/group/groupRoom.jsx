@@ -104,29 +104,21 @@ function GroupRoom({
         if (!user?.uid)
           return;
 
-        const usersSnapshot =
-          await getDocs(
-            collection(
-              db,
-              "users"
-            )
-          );
+        const userRef = doc(
+        db,
+        "users",
+        user.uid
+      );
 
-        usersSnapshot.forEach(
-          (docItem) => {
-            const data =
-              docItem.data();
+    const userSnap =
+      await getDoc(userRef);
 
-            if (
-              data.email ===
-              user.email
-            ) {
-              setRealUsername(
-                data.username
-              );
-            }
-          }
-        );
+    if (userSnap.exists()) {
+
+      setRealUsername(
+      userSnap.data().username
+    );
+  }
       };
 
     loadUsername();
@@ -174,7 +166,8 @@ function GroupRoom({
       async () => {
         if (
           !user ||
-          !group?.id
+          !group?.id ||
+          !realUsername
         )
           return;
 
@@ -251,7 +244,7 @@ function GroupRoom({
   }, [
     group?.id,
     user,
-    username,
+    realUsername
   ]);
   useEffect(() => {
   let interval;
@@ -825,7 +818,7 @@ function GroupRoom({
 
       <button
         onClick={handleToggleStudy}
-        className={`rounded-full border-[2px] border-black px-5 py-3 text-[14px] font-bold whitespace-nowrap ${
+        className={`rounded-full border-[2px] border-black px-3 py-2 text-[13px] font-bold whitespace-nowrap ${
           isStudying
             ? "bg-[#fecaca]"
             : "bg-[#bbf7d0]"

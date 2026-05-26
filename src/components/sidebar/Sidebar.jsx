@@ -1,5 +1,5 @@
 import Signup from "./Signup";
-import FindPW from "./FindPW";
+import ResetPW from "./ResetPW";
 import Login from "./Login";
 import Guest from "./guest";
 import Group from "../group/group";
@@ -649,7 +649,7 @@ function Sidebar({
                 >
                   <button
                     onClick={() =>
-                      setMode("findPW")
+                      setMode("Reset PW")
                     }
                     className="
                       transition-all
@@ -657,7 +657,7 @@ function Sidebar({
                       hover:text-black/70
                     "
                   >
-                    Find PW
+                    Reset PW
                   </button>
 
                   <span>|</span>
@@ -693,8 +693,8 @@ function Sidebar({
               mode === "signup" ? (
               <Signup setMode={setMode} />
             ) : !user &&
-              mode === "findPW" ? (
-              <FindPW setMode={setMode} />
+              mode === "Reset PW" ? (
+              <ResetPW setMode={setMode} />
             ) : null}
 
             {user?.isGuest ? (

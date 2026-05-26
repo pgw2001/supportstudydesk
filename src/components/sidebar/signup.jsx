@@ -149,7 +149,6 @@ function Signup({ setMode }) {
             phone,
             birth,
             email,
-            password,
 
             createdAt:
               new Date(),

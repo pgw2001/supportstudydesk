@@ -7,26 +7,14 @@ import {
 import rough from "roughjs";
 
 import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+  sendPasswordResetEmail
+} from "firebase/auth";
 
-const db = getFirestore();
+import { auth } from "../../services/firebase";
+
 
 function FindPW({ setMode }) {
-  const [username, setUsername] =
-    useState("");
-
   const [email, setEmail] =
-    useState("");
-
-  const [phone, setPhone] =
-    useState("");
-
-  const [birth, setBirth] =
     useState("");
 
   const [message, setMessage] =
@@ -88,10 +76,7 @@ function FindPW({ setMode }) {
   const handleFindPW =
     async () => {
       if (
-        username.trim() === "" ||
-        email.trim() === "" ||
-        phone.trim() === "" ||
-        birth.trim() === ""
+        email.trim() === "" 
       ) {
         setMessage(
           "Fill all fields."
@@ -100,60 +85,23 @@ function FindPW({ setMode }) {
         return;
       }
 
-      try {
-        const q = query(
-          collection(db, "users"),
+  try {
 
-          where(
-            "username",
-            "==",
-            username
-          ),
+  await sendPasswordResetEmail(
+    auth,
+    email
+    );
 
-          where(
-            "email",
-            "==",
-            email
-          ),
+    setMessage(
+    "Password reset email sent."
+    );
 
-          where(
-            "phone",
-            "==",
-            phone
-          ),
+    } catch (error) {
 
-          where(
-            "birth",
-            "==",
-            birth
-          )
-        );
+    console.error(error);
 
-        const querySnapshot =
-          await getDocs(q);
-
-        if (
-          querySnapshot.empty
-        ) {
-          setMessage(
-            "Incorrect user information."
-          );
-
-          return;
-        }
-
-        querySnapshot.forEach(
-          (doc) => {
-            setMessage(
-              `Password : ${doc.data().password || "Not available"}`
-            );
-          }
-        );
-      } catch (error) {
-        console.error(error);
-
-        setMessage(
-          "Something went wrong."
+    setMessage(
+      "Email not found."
         );
       }
     };
@@ -202,57 +150,8 @@ function FindPW({ setMode }) {
           text-[22px]
         "
       >
-        Find Password
+        Reset Password
       </div>
-
-      {/* Username */}
-      <div className="flex flex-col gap-1">
-        <label
-          className="
-            font-['Patrick_Hand']
-            text-[16px]
-          "
-        >
-          Username
-        </label>
-
-        <div className="relative">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) =>
-              setUsername(
-                e.target.value
-              )
-            }
-            placeholder=""
-            className={inputStyle}
-          />
-
-          {!username && (
-            <span
-              className="
-                pointer-events-none
-
-                absolute
-                left-3
-                top-1/2
-                -translate-y-1/2
-
-                font-['Patrick_Hand']
-                text-[14px]
-
-                text-black/35
-
-                animate-pulse
-              "
-            >
-              your username |
-            </span>
-          )}
-        </div>
-      </div>
-
 
       {/* Email */}
       <div className="flex flex-col gap-1">
@@ -300,78 +199,6 @@ function FindPW({ setMode }) {
             </span>
           )}
         </div>
-      </div>
-
-      {/* Phone */}
-      <div className="flex flex-col gap-1">
-        <label
-          className="
-            font-['Patrick_Hand']
-            text-[16px]
-          "
-        >
-          Phone
-        </label>
-
-        <div className="relative">
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) =>
-              setPhone(
-                e.target.value
-              )
-            }
-            placeholder=""
-            className={inputStyle}
-          />
-
-          {!phone && (
-            <span
-              className="
-                pointer-events-none
-
-                absolute
-                left-3
-                top-1/2
-                -translate-y-1/2
-
-                font-['Patrick_Hand']
-                text-[14px]
-
-                text-black/35
-
-                animate-pulse
-              "
-            >
-              010-0000-0000 |
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Birth */}
-      <div className="flex flex-col gap-1">
-        <label
-          className="
-            font-['Patrick_Hand']
-            text-[16px]
-          "
-        >
-          Birth
-        </label>
-
-        <input
-          type="text"
-          value={birth}
-          onChange={(e) =>
-            setBirth(
-              e.target.value
-            )
-          }
-          placeholder="yyyy-mm-dd"
-          className={inputStyle}
-        />
       </div>
 
       {/* Find Button */}
@@ -426,7 +253,7 @@ function FindPW({ setMode }) {
             text-[18px]
           "
         >
-          Find My Password
+          Send Reset Email
         </div>
       </div>
 
