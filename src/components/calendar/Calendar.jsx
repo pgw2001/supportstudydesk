@@ -719,6 +719,30 @@ function Calendar({ user, onExpandStateChange, dailyStudyTime = {} }) {
         setSelectedDate
     } = expanded;
 
+    // 연속 학습 일수(Streak) 계산 로직
+    const streak = useMemo(() => {
+        let count = 0;
+        const now = new Date();
+        const todayStr = getLocalDateString(now);
+        
+        let checkDate = new Date(now);
+        // 오늘 공부 기록이 없다면 어제를 기점으로 스트레익이 유지되고 있는지 확인
+        if (!dailyStudyTime[todayStr] || dailyStudyTime[todayStr] <= 0) {
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+
+        while (true) {
+            const ds = getLocalDateString(checkDate);
+            if (dailyStudyTime[ds] && dailyStudyTime[ds] > 0) {
+                count++;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+        return count;
+    }, [dailyStudyTime]);
+
     // 확장 모달에서 선택된 날짜의 최신 일정을 실시간으로 반영하기 위해 schedules 상태를 직접 필터링합니다.
     const currentModalSchedules = selectedDate ? filteredSchedules.filter(s => {
         const start = s.startDate || s.date;
@@ -978,7 +1002,19 @@ function Calendar({ user, onExpandStateChange, dailyStudyTime = {} }) {
                         className="w-[72%] p-6 flex flex-col overflow-y-auto"
                         style={{ containerType: 'inline-size' }}
                     >
-                        <div className="flex justify-end items-center mb-6">
+                        <div className="flex justify-between items-center mb-6">
+                            {isStudyTimeMode ? (
+                                <div className="flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-xl border border-orange-200 shadow-sm animate-in fade-in slide-in-from-left-4">
+                                    <span className="text-2xl">🔥</span>
+                                    <span 
+                                        className="text-lg font-bold text-orange-600"
+                                        style={{ fontFamily: "'Comic Sans MS', 'Pretendard', cursive" }}
+                                    >
+                                        {streak} Day Streak
+                                    </span>
+                                </div>
+                            ) : <div />}
+
                             <div className="flex gap-2 items-center">
                                 <button 
                                     onClick={() => setIsStudyTimeMode(!isStudyTimeMode)} 
