@@ -680,7 +680,7 @@ useEffect(() => {
           initialLeft={widgetPositions.plant?.left}
           initialTop={widgetPositions.plant?.top}
           onDragEnd={(pos) => handleDragEnd("plant", pos)}
-          className="z-10"
+          className="z-30"
           style={{ width: "8%", aspectRatio: "1/1" }}
           disabled={!isEditMode}
         >

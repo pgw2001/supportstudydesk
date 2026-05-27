@@ -109,6 +109,13 @@ function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChang
     }
   ];
 
+  // 레벨이 올라갈수록 SVG 전체 크기가 커지면서 object-contain에 의해 화분이 작아지는 것을 방지합니다.
+  // 레벨 1을 100% 기준으로 하여, 레벨업 시 화분 본체의 시각적 크기가 일정하게 유지되도록 배율을 적용합니다.
+  // (기본 1.0에서 레벨당 0.15씩 증가 - SVG 디자인에 따라 수치는 조정 가능합니다)
+  // 보정치를 0.4로 대폭 높여 화분 크기가 줄어드는 현상을 방지합니다.
+  // 만약 여전히 화분이 작아진다면 0.45나 0.5로 더 높여보세요.
+  const levelScale = 1 + (displayedLevel - 1) * 0.35;
+
   return (
     <div className="flex h-full w-full items-center justify-center transition-all duration-500 pointer-events-none">
       <div className="relative group h-full w-full">
@@ -126,7 +133,11 @@ function StudyPlant({ plantProgress = {}, activePlantType = 'rose', onPlantChang
             alt={`${currentPlantType} level ${displayedLevel}`}
             onClick={() => setIsModalOpen(true)}
             data-no-drag="true"
-            className="block h-full w-full object-contain object-bottom transition-transform duration-700 transform hover:scale-110 filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)] pointer-events-auto cursor-pointer"
+            className="block h-full w-full object-contain object-bottom transition-all duration-700 hover:brightness-110 filter drop-shadow-[0_0_1px_rgba(0,0,0,0.1)] pointer-events-auto cursor-pointer"
+            style={{ 
+              transform: `scale(${levelScale})`,
+              transformOrigin: 'bottom center'
+            }}
             onError={(e) => {
               e.target.style.opacity = '0'; // 이미지 로딩 실패 시 이미지를 숨김
               console.error(`Failed to load image: ${svgSrc}`); // 콘솔에 어떤 이미지가 로딩 실패했는지 출력
