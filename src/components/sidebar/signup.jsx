@@ -24,15 +24,6 @@ function Signup({ setMode }) {
   const [username, setUsername] =
     useState("");
 
-  const [name, setName] =
-    useState("");
-
-  const [phone, setPhone] =
-    useState("");
-
-  const [birth, setBirth] =
-    useState("");
-
   const [email, setEmail] =
     useState("");
 
@@ -100,19 +91,41 @@ function Signup({ setMode }) {
     }
   }, [isCreateHovered]);
 
+  const validateEmail = (em) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(em);
+  };
+
+  const validatePassword = (pwd) => {
+    return pwd.length >= 8;
+  };
+
   const handleSignup =
     async () => {
       if (
         username.trim() === "" ||
-        name.trim() === "" ||
-        phone.trim() === "" ||
-        birth.trim() === "" ||
         email.trim() === "" ||
         password.trim() === "" ||
         confirmPassword.trim() === ""
       ) {
         setMessage(
           "Fill all fields."
+        );
+
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        setMessage(
+          "Invalid email format."
+        );
+
+        return;
+      }
+
+      if (!validatePassword(password)) {
+        setMessage(
+          "Password must be at least 8 characters."
         );
 
         return;
@@ -145,9 +158,6 @@ function Signup({ setMode }) {
           ),
           {
             username,
-            name,
-            phone,
-            birth,
             email,
 
             createdAt:
@@ -226,78 +236,6 @@ function Signup({ setMode }) {
             )
           }
           placeholder="your username"
-          className={inputStyle}
-        />
-      </div>
-
-      {/* Name */}
-      <div className="flex flex-col gap-1">
-        <label
-          className="
-            font-['Patrick_Hand']
-            text-[16px]
-          "
-        >
-          Name
-        </label>
-
-        <input
-          type="text"
-          value={name}
-          onChange={(e) =>
-            setName(
-              e.target.value
-            )
-          }
-          placeholder="your name"
-          className={inputStyle}
-        />
-      </div>
-
-      {/* Phone */}
-      <div className="flex flex-col gap-1">
-        <label
-          className="
-            font-['Patrick_Hand']
-            text-[16px]
-          "
-        >
-          Phone
-        </label>
-
-        <input
-          type="tel"
-          value={phone}
-          onChange={(e) =>
-            setPhone(
-              e.target.value
-            )
-          }
-          placeholder="010-0000-0000"
-          className={inputStyle}
-        />
-      </div>
-
-      {/* Birth */}
-      <div className="flex flex-col gap-1">
-        <label
-          className="
-            font-['Patrick_Hand']
-            text-[16px]
-          "
-        >
-          Birth
-        </label>
-
-        <input
-          type="text"
-          value={birth}
-          onChange={(e) =>
-            setBirth(
-              e.target.value
-            )
-          }
-          placeholder="yyyy-mm-dd"
           className={inputStyle}
         />
       </div>

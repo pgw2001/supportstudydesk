@@ -73,35 +73,45 @@ function FindPW({ setMode }) {
     }
   }, [isFindHovered]);
 
+  const validateEmail = (em) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(em);
+  };
+
   const handleFindPW =
     async () => {
       if (
-        email.trim() === "" 
+        email.trim() === ""
       ) {
         setMessage(
-          "Fill all fields."
+          "Please enter your email address."
         );
 
         return;
       }
 
-  try {
+      if (!validateEmail(email)) {
+        setMessage(
+          "Invalid email format."
+        );
 
-  await sendPasswordResetEmail(
-    auth,
-    email
-    );
+        return;
+      }
 
-    setMessage(
-    "Password reset email sent."
-    );
+      try {
+        await sendPasswordResetEmail(
+          auth,
+          email
+        );
 
-    } catch (error) {
+        setMessage(
+          "If an account exists, a reset email has been sent."
+        );
+      } catch (error) {
+        console.error(error);
 
-    console.error(error);
-
-    setMessage(
-      "Email not found."
+        setMessage(
+          "If an account exists, a reset email has been sent."
         );
       }
     };

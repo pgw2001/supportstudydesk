@@ -24,6 +24,7 @@ const createTodoList = (number = 1) => ({
 function TodoList({ className,setTaskCount,user }) {
   const svgRef = useRef(null);
   const listSvgRef = useRef(null);
+  const deleteSvgRef = useRef(null);
 
   const isResettingRef =
   useRef(false);
@@ -96,6 +97,7 @@ setIsLoaded(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   const [isWidgetHovered, setIsWidgetHovered] = useState(false); // New state for widget hover
+  const [isOverListArea, setIsOverListArea] = useState(false); // track mouse over the list area
   const currentList = todoLists[currentListIndex];
   const todos = currentList.todos;
   const title = currentList.title;
@@ -163,6 +165,18 @@ setIsLoaded(true);
     });
     resetInteraction();
   }, [resetInteraction]);
+
+  const deleteCurrentList = useCallback((e) => {
+    e.stopPropagation();
+    setTodoLists((prev) => {
+      if (prev.length <= 1) return [createTodoList()];
+      const next = prev.filter((_, i) => i !== currentListIndex);
+      const newIndex = Math.min(currentListIndex, Math.max(0, next.length - 1));
+      setCurrentListIndex(newIndex);
+      return next;
+    });
+    resetInteraction();
+  }, [currentListIndex, resetInteraction]);
 
   const goToPreviousList = useCallback((e) => {
     e.stopPropagation();
@@ -345,6 +359,56 @@ setIsLoaded(true);
   }, [addTodo, completedCount, currentListIndex, isEditingTitle, setTitle, title, totalCount, isWidgetHovered, todoLists.length]);
 
   useEffect(() => {
+    if (!deleteSvgRef.current) return;
+    const el = deleteSvgRef.current;
+    el.innerHTML = "";
+    const rc = rough.svg(el);
+
+    // post-it background sized for 25x40 SVG
+    const rect = rc.rectangle(2, 2, 21, 36, {
+      fill: "#fff3b0",
+      fillStyle: "solid",
+      stroke: "#000",
+      strokeWidth: 1.4,
+      roughness: 2,
+      bowing: 1,
+      seed: TODO_SEED + 500 + currentListIndex,
+    });
+    el.appendChild(rect);
+
+    // little curl/fold
+    const fold = rc.polygon([[14,2],[24,2],[24,10]], {
+      fill: "#fff7d0",
+      fillStyle: "solid",
+      stroke: "#000",
+      strokeWidth: 0.9,
+      roughness: 1.2,
+      seed: TODO_SEED + 600 + currentListIndex,
+    });
+    el.appendChild(fold);
+
+    // X mark
+    const x1 = rc.line(7, 16, 18, 28, { stroke: "#000", strokeWidth: 1.9, roughness: 1.5, seed: TODO_SEED + 700 + currentListIndex });
+    const x2 = rc.line(18, 16, 7, 28, { stroke: "#000", strokeWidth: 1.9, roughness: 1.5, seed: TODO_SEED + 800 + currentListIndex });
+    el.appendChild(x1);
+    el.appendChild(x2);
+
+    // add subtle shadow path behind
+    const shadow = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    shadow.setAttribute("x", "2");
+    shadow.setAttribute("y", "32");
+    shadow.setAttribute("width", "21");
+    shadow.setAttribute("height", "5");
+    shadow.setAttribute("fill", "rgba(0,0,0,0.06)");
+    shadow.setAttribute("pointer-events", "none");
+    el.appendChild(shadow);
+
+    return () => {
+      // cleanup if component unmounts
+    };
+  }, [deleteSvgRef, isWidgetHovered, isOverListArea, hasMultipleLists, currentListIndex]);
+
+  useEffect(() => {
 
   if (
     !isLoaded ||
@@ -462,6 +526,38 @@ setIsLoaded(true);
             opacity: 0;
             transition: opacity 0.2s;
           }
+          /* Delete post-it style button */
+          .todo-list-delete {
+            position: absolute;
+            /* 위치: SVG의 우측 상단 플러스 버튼 위에 오도록 비율로 설정 */
+            right: 10%;
+            top: 8%;
+            z-index: 6;
+            width: 20px;
+            height: 44px; /* 세로로 긴 포스트잇 */
+            border-radius: 6px;
+            border: none;
+            background: #fff3b0; /* post-it color */
+            color: #222;
+            transform: translateY(8px); /* start slightly down */
+            cursor: pointer;
+            box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.18);
+            opacity: 0;
+            transition: transform 0.28s cubic-bezier(.2,.9,.2,1), opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            pointer-events: auto;
+          }
+          .todo-list-delete.visible {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          .todo-list-delete:hover {
+            transform: translateY(-6px);
+          }
           .todo-list-widget-root:hover .todo-list-create {
             opacity: 1;
           }
@@ -484,8 +580,23 @@ setIsLoaded(true);
             width: 2px;
             height: 12px;
           }
+          .todo-list-delete-svg {
+            opacity: 0;
+            transform: translateY(8px) scale(0.98);
+            transition: transform 0.28s cubic-bezier(.2,.9,.2,1), opacity 0.18s;
+            pointer-events: none;
+          }
+          .todo-list-delete-svg.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+          }
         `}
       </style>
+
+      {/* draw rough.js post-it with X inside */}
+      {/** draw/update delete button svg */}
+      <style dangerouslySetInnerHTML={{__html: ''}} />
 
       {isLastList ? (
         <>
@@ -509,6 +620,7 @@ setIsLoaded(true);
           >
             +
           </button>
+          {/* delete button rendered as rough.js SVG (outside list area) */}
         </>
       ) : (
         <>
@@ -540,10 +652,24 @@ setIsLoaded(true);
         style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "visible" }}
       />
 
+      {/* Rough.js delete button SVG placed outside the todo rectangle (top-right) */}
+      <svg
+        ref={deleteSvgRef}
+        viewBox="0 0 25 40"
+        className={`todo-list-delete-svg ${isWidgetHovered && !isOverListArea && hasMultipleLists ? 'visible' : ''}`}
+        onPointerDown={(e) => { e.stopPropagation(); deleteCurrentList(e); }}
+        data-no-drag="true"
+        style={{ position: 'absolute', right: '8px', top: '-30px', width: '25px', height: '40px', zIndex: -1, cursor: 'pointer', overflow: 'visible', transformOrigin: 'center' }}
+      />
+
       <div
         className="todo-list-container"
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoveredIndex(-1)}
+        onMouseEnter={() => setIsOverListArea(true)}
+        onMouseLeave={() => {
+          setHoveredIndex(-1);
+          setIsOverListArea(false);
+        }}
         style={{
           position: "absolute",
           top: "23.5%",
