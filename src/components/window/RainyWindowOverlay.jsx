@@ -14,7 +14,7 @@ const createDrops = (count, seed = 17) => {
   const random = createRandom(seed);
 
   return Array.from({ length: count }, (_, index) => {
-    const thickness = 0.5 + random() * 1.5; // 0.5px ~ 2px 사이의 랜덤 굵기
+    const thickness = 1.0 + random() * 2.0; // 1.0px ~ 3.0px 사이의 랜덤 굵기 (가시성 향상을 위해 상향)
     const length = 15 + random() * 25;
     const duration = 0.6 + random() * 0.4; // 고정된 랜덤 속도
 
@@ -41,11 +41,11 @@ const createSplashes = (count, seed = 42) => {
   }));
 };
 
-function RainDrop({ drop, intensity }) {
+function RainDrop({ drop, intensity, isDarkMode }) {
   const speedFactor = 0.5 + intensity;
   return (
     <div
-      className="absolute bg-black will-change-transform"
+      className={`absolute will-change-transform ${isDarkMode ? 'bg-white' : 'bg-black'}`}
       style={{
         left: `${drop.x}%`,
         top: `0%`, 
@@ -60,11 +60,11 @@ function RainDrop({ drop, intensity }) {
   );
 }
 
-function RainSplash({ splash, intensity }) {
+function RainSplash({ splash, intensity, isDarkMode }) {
   const speedFactor = 0.5 + intensity;
   return (
     <div
-      className="absolute bottom-0 rounded-full border border-black/20"
+      className={`absolute bottom-0 rounded-full border ${isDarkMode ? 'border-white/20' : 'border-black/20'}`}
       style={{
         left: `${splash.x}%`,
         width: `${splash.size}px`,
@@ -81,6 +81,7 @@ export default function RainyWindowOverlay({
   enabled = false,
   intensity = 0.5,
   className = "",
+  isDarkMode = false,
   seed = 17,
 }) {
   // 최대 개수의 빗줄기를 미리 생성 (한 번만 실행됨)
@@ -131,14 +132,12 @@ export default function RainyWindowOverlay({
         }
       `}</style>
 
-      <div className="absolute inset-0 bg-black/5 backdrop-blur-[0.5px]" />
-
       {allDrops.slice(0, visibleDropCount).map((drop) => (
-        <RainDrop key={drop.id} drop={drop} intensity={quantizedIntensity} />
+        <RainDrop key={drop.id} drop={drop} intensity={quantizedIntensity} isDarkMode={isDarkMode} />
       ))}
 
       {allSplashes.slice(0, visibleSplashCount).map((splash) => (
-        <RainSplash key={splash.id} splash={splash} intensity={quantizedIntensity} />
+        <RainSplash key={splash.id} splash={splash} intensity={quantizedIntensity} isDarkMode={isDarkMode} />
       ))}
     </div>
   );

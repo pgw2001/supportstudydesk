@@ -26,6 +26,7 @@ import windowLayerSvg from "/assets/window/window_layer.svg";
 import windowGlassLayerSvg from "/assets/window/window_glassLayer.svg";
 
 const DEFAULT_WINDOW_BG = "/assets/window/window_bg.png";
+const DEFAULT_WINDOW_BG_DARK = "/assets/window/window_bg_dark.png";
 const WIDGET_POSITIONS_KEY = "widgetPositions";
 const DASHBOARD_BASE_WIDTH = 1600;
 const DASHBOARD_BASE_HEIGHT = 900;
@@ -291,7 +292,7 @@ useEffect(() => {
     setIsWindowRainEnabled,
     windowRainIntensity,
     setWindowRainIntensity,
-  } = useWindow(DEFAULT_WINDOW_BG);
+  } = useWindow(DEFAULT_WINDOW_BG, DEFAULT_WINDOW_BG_DARK, isDarkMode);
 
   useEffect(() => {
     const updateDashboardScale = () => {
@@ -469,6 +470,7 @@ useEffect(() => {
               <RainyWindowOverlay 
                 enabled={isWindowRainEnabled} 
                 intensity={windowRainIntensity}
+                isDarkMode={isDarkMode}
               />
             </div>
 

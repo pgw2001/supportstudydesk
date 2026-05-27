@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import rainSound from "../../assets/rain.mp3";
 
 const WINDOW_BG_STORAGE_KEY = "windowBg";
+const WINDOW_BG_DARK_STORAGE_KEY = "windowBgDark";
 const WINDOW_BG_POSITION_STORAGE_KEY = "windowBgPosition";
+const WINDOW_BG_POSITION_DARK_STORAGE_KEY = "windowBgPositionDark";
 const WINDOW_BG_SCALE_STORAGE_KEY = "windowBgScale";
+const WINDOW_BG_SCALE_DARK_STORAGE_KEY = "windowBgScaleDark";
 const WINDOW_RAIN_STORAGE_KEY = "windowRainEnabled";
 const WINDOW_RAIN_INTENSITY_KEY = "windowRainIntensity";
 
@@ -75,8 +78,8 @@ const WINDOW_VISIBLE_PREVIEW_ASPECT =
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-const readStoredPosition = () => {
-  const saved = localStorage.getItem(WINDOW_BG_POSITION_STORAGE_KEY);
+const readStoredPosition = (storageKey) => {
+  const saved = localStorage.getItem(storageKey);
 
   if (!saved) {
     return DEFAULT_POSITION;
@@ -101,8 +104,8 @@ const readStoredPosition = () => {
   return DEFAULT_POSITION;
 };
 
-const readStoredScale = () => {
-  const saved = Number(localStorage.getItem(WINDOW_BG_SCALE_STORAGE_KEY));
+const readStoredScale = (storageKey) => {
+  const saved = Number(localStorage.getItem(storageKey));
 
   if (Number.isFinite(saved)) {
     return clamp(saved, MIN_SCALE, MAX_SCALE);
@@ -203,17 +206,34 @@ const useElementSize = () => {
   return [setNode, size];
 };
 
-export const useWindow = (defaultBg) => {
-  const [windowBg, setWindowBg] = useState(() => {
+export const useWindow = (defaultLightBg, defaultDarkBg, isDarkMode) => {
+  // Light mode states
+  const [windowBgLight, setWindowBgLight] = useState(() => {
     const saved = localStorage.getItem(WINDOW_BG_STORAGE_KEY);
-    return saved || defaultBg;
+    return saved || defaultLightBg;
   });
-  const [windowPosition, setWindowPosition] = useState(readStoredPosition);
-  const [windowScale, setWindowScale] = useState(readStoredScale);
+  const [windowPositionLight, setWindowPositionLight] = useState(() => readStoredPosition(WINDOW_BG_POSITION_STORAGE_KEY));
+  const [windowScaleLight, setWindowScaleLight] = useState(() => readStoredScale(WINDOW_BG_SCALE_STORAGE_KEY));
+
+  // Dark mode states
+  const [windowBgDark, setWindowBgDark] = useState(() => {
+    const saved = localStorage.getItem(WINDOW_BG_DARK_STORAGE_KEY);
+    return saved || defaultDarkBg;
+  });
+  const [windowPositionDark, setWindowPositionDark] = useState(() => readStoredPosition(WINDOW_BG_POSITION_DARK_STORAGE_KEY));
+  const [windowScaleDark, setWindowScaleDark] = useState(() => readStoredScale(WINDOW_BG_SCALE_DARK_STORAGE_KEY));
+
+  // Draft states for the modal (current mode)
   const [isWindowModalOpen, setIsWindowModalOpen] = useState(false);
-  const [draftBg, setDraftBg] = useState(windowBg);
-  const [draftPosition, setDraftPosition] = useState(windowPosition);
-  const [draftScale, setDraftScale] = useState(windowScale);
+  const [draftBg, setDraftBg] = useState(""); // Will be set in openWindowEditor
+  const [draftPosition, setDraftPosition] = useState(DEFAULT_POSITION); // Will be set in openWindowEditor
+  const [draftScale, setDraftScale] = useState(DEFAULT_SCALE); // Will be set in openWindowEditor
+
+  // Current active window properties based on isDarkMode
+  const windowBg = isDarkMode ? windowBgDark : windowBgLight;
+  const windowPosition = isDarkMode ? windowPositionDark : windowPositionLight;
+  const windowScale = isDarkMode ? windowScaleDark : windowScaleLight;
+
   const [windowImageSize, setWindowImageSize] = useState(null);
   const [draftImageSize, setDraftImageSize] = useState(null);
   const [isWindowRainEnabled, setIsWindowRainEnabled] = useState(() => {
@@ -228,7 +248,7 @@ export const useWindow = (defaultBg) => {
   const [previewFrameRef, previewFrameSize] = useElementSize();
   const fileInputRef = useRef(null);
   const dragStateRef = useRef(null);
-
+  
   useEffect(() => loadImageSize(windowBg, setWindowImageSize), [windowBg]);
   useEffect(() => loadImageSize(draftBg, setDraftImageSize), [draftBg]);
 
@@ -268,55 +288,96 @@ export const useWindow = (defaultBg) => {
   }, [windowRainIntensity]);
 
   useEffect(() => {
-    localStorage.setItem(WINDOW_BG_STORAGE_KEY, windowBg);
-  }, [windowBg]);
+    localStorage.setItem(WINDOW_BG_STORAGE_KEY, windowBgLight);
+  }, [windowBgLight]);
 
   useEffect(() => {
-    localStorage.setItem(
-      WINDOW_BG_POSITION_STORAGE_KEY,
-      JSON.stringify(windowPosition)
-    );
-  }, [windowPosition]);
+    localStorage.setItem(WINDOW_BG_DARK_STORAGE_KEY, windowBgDark);
+  }, [windowBgDark]);
 
   useEffect(() => {
-    localStorage.setItem(WINDOW_BG_SCALE_STORAGE_KEY, String(windowScale));
-  }, [windowScale]);
+    localStorage.setItem(WINDOW_BG_POSITION_STORAGE_KEY, JSON.stringify(windowPositionLight));
+  }, [windowPositionLight]);
+
+  useEffect(() => {
+    localStorage.setItem(WINDOW_BG_POSITION_DARK_STORAGE_KEY, JSON.stringify(windowPositionDark));
+  }, [windowPositionDark]);
+
+  useEffect(() => {
+    localStorage.setItem(WINDOW_BG_SCALE_STORAGE_KEY, String(windowScaleLight));
+  }, [windowScaleLight]);
+
+  useEffect(() => {
+    localStorage.setItem(WINDOW_BG_SCALE_DARK_STORAGE_KEY, String(windowScaleDark));
+  }, [windowScaleDark]);
 
   const openWindowEditor = useCallback(() => {
-    setDraftBg(windowBg);
-    setDraftPosition(windowPosition);
-    setDraftScale(windowScale);
+    // Load draft states based on current mode
+    if (isDarkMode) {
+      setDraftBg(windowBgDark);
+      setDraftPosition(windowPositionDark);
+      setDraftScale(windowScaleDark);
+    } else {
+      setDraftBg(windowBgLight);
+      setDraftPosition(windowPositionLight);
+      setDraftScale(windowScaleLight);
+    }
     setIsWindowModalOpen(true);
-  }, [windowBg, windowPosition, windowScale]);
+  }, [isDarkMode, windowBgDark, windowPositionDark, windowScaleDark, windowBgLight, windowPositionLight, windowScaleLight]);
 
   const closeWindowEditor = useCallback(() => {
     setIsWindowModalOpen(false);
   }, []);
 
   const applyWindowBackground = useCallback(() => {
-    setWindowBg(draftBg);
-    setWindowPosition(draftPosition);
-    setWindowScale(draftScale);
+    // Apply draft states to the current mode's window states
+    if (isDarkMode) {
+      setWindowBgDark(draftBg);
+      setWindowPositionDark(draftPosition);
+      setWindowScaleDark(draftScale);
+    } else {
+      setWindowBgLight(draftBg);
+      setWindowPositionLight(draftPosition);
+      setWindowScaleLight(draftScale);
+    }
     setIsWindowModalOpen(false);
-  }, [draftBg, draftPosition, draftScale]);
+  }, [draftBg, draftPosition, draftScale, isDarkMode]);
 
   const resetDraftWindowBackground = useCallback(() => {
-    setDraftBg(defaultBg);
+    // Reset draft to the default for the current mode
+    if (isDarkMode) {
+      setDraftBg(defaultDarkBg);
+    } else {
+      setDraftBg(defaultLightBg);
+    }
     setDraftPosition(DEFAULT_POSITION);
     setDraftScale(DEFAULT_SCALE);
-  }, [defaultBg]);
+  }, [isDarkMode, defaultLightBg, defaultDarkBg]);
 
   const resetWindowBackground = useCallback(() => {
-    setWindowBg(defaultBg);
-    setWindowPosition(DEFAULT_POSITION);
-    setWindowScale(DEFAULT_SCALE);
-    setDraftBg(defaultBg);
+    // Reset both light and dark mode backgrounds
+    setWindowBgLight(defaultLightBg);
+    setWindowPositionLight(DEFAULT_POSITION);
+    setWindowScaleLight(DEFAULT_SCALE);
+    setWindowBgDark(defaultDarkBg);
+    setWindowPositionDark(DEFAULT_POSITION);
+    setWindowScaleDark(DEFAULT_SCALE);
+
+    // Also reset draft to the current mode's default
+    if (isDarkMode) {
+      setDraftBg(defaultDarkBg);
+    } else {
+      setDraftBg(defaultLightBg);
+    }
     setDraftPosition(DEFAULT_POSITION);
     setDraftScale(DEFAULT_SCALE);
     localStorage.removeItem(WINDOW_BG_STORAGE_KEY);
+    localStorage.removeItem(WINDOW_BG_DARK_STORAGE_KEY);
     localStorage.removeItem(WINDOW_BG_POSITION_STORAGE_KEY);
+    localStorage.removeItem(WINDOW_BG_POSITION_DARK_STORAGE_KEY);
     localStorage.removeItem(WINDOW_BG_SCALE_STORAGE_KEY);
-  }, [defaultBg]);
+    localStorage.removeItem(WINDOW_BG_SCALE_DARK_STORAGE_KEY);
+  }, [defaultLightBg, defaultDarkBg, isDarkMode]);
 
   const updateDraftScale = useCallback((nextScale) => {
     setDraftScale(clamp(nextScale, MIN_SCALE, MAX_SCALE));
@@ -326,7 +387,7 @@ export const useWindow = (defaultBg) => {
     fileInputRef.current?.click();
   }, []);
 
-  const handleWindowBgChange = useCallback((event) => {
+  const handleWindowBgChange = useCallback((event) => { // This updates the draft for the current mode
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -426,7 +487,7 @@ export const useWindow = (defaultBg) => {
     previewFrameRef,
     windowImageStyle: getImageStyle(windowFrameSize, windowImageSize, windowPosition, windowScale),
     previewImageStyle: getImageStyle(previewFrameSize, draftImageSize, draftPosition, draftScale),
-    hasCustomWindowBg: windowBg !== defaultBg,
+    hasCustomWindowBg: isDarkMode ? windowBg !== defaultDarkBg : windowBg !== defaultLightBg,
     windowMaskStyle: WINDOW_MASK_STYLE,
     previewContainerStyle: WINDOW_VISIBLE_PREVIEW_STYLE,
     windowButtonStyle: WINDOW_DASHBOARD_BUTTON_STYLE,
