@@ -95,6 +95,7 @@ setIsLoaded(true);
   const [editingIndex, setEditingIndex] = useState(-1);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isDeleteButtonHovered, setIsDeleteButtonHovered] = useState(false);
 
   const [isWidgetHovered, setIsWidgetHovered] = useState(false); // New state for widget hover
   const [isOverListArea, setIsOverListArea] = useState(false); // track mouse over the list area
@@ -127,6 +128,7 @@ setIsLoaded(true);
     setEditingIndex(-1);
     setHoveredIndex(-1);
     setIsEditingTitle(false);
+    setIsDeleteButtonHovered(false);
   }, []);
 
   const handleTextClick = useCallback((index) => {
@@ -652,14 +654,34 @@ setIsLoaded(true);
         style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "visible" }}
       />
 
-      {/* Rough.js delete button SVG placed outside the todo rectangle (top-right) */}
+      {/* 삭제 버튼 감지 영역 (Hitbox): 본체보다 앞에 두어 마우스 이벤트를 정확히 잡습니다. */}
+      <div
+        onMouseEnter={() => setIsDeleteButtonHovered(true)}
+        onMouseLeave={() => setIsDeleteButtonHovered(false)}
+        onPointerDown={(e) => { 
+          if (hasMultipleLists && isDeleteButtonHovered) {
+            e.stopPropagation(); 
+            deleteCurrentList(e); 
+          }
+        }}
+        data-no-drag="true"
+        style={{ 
+          position: 'absolute', 
+          right: '8px', 
+          top: '-25px', 
+          width: '25px', 
+          height: '40px', 
+          zIndex: 10, 
+          cursor: hasMultipleLists ? 'pointer' : 'default' 
+        }}
+      />
+
+      {/* 실제 삭제 버튼 (포스트잇): 본체 뒤로 가게 하여 X 버튼이 살짝 가려지는 연출을 합니다. */}
       <svg
         ref={deleteSvgRef}
         viewBox="0 0 25 40"
-        className={`todo-list-delete-svg ${isWidgetHovered && !isOverListArea && hasMultipleLists ? 'visible' : ''}`}
-        onPointerDown={(e) => { e.stopPropagation(); deleteCurrentList(e); }}
-        data-no-drag="true"
-        style={{ position: 'absolute', right: '8px', top: '-30px', width: '25px', height: '40px', zIndex: -1, cursor: 'pointer', overflow: 'visible', transformOrigin: 'center' }}
+        className={`todo-list-delete-svg ${isDeleteButtonHovered && hasMultipleLists ? 'visible' : ''}`}
+        style={{ position: 'absolute', right: '8px', top: '-25px', width: '25px', height: '40px', zIndex: -1, overflow: 'visible', transformOrigin: 'center' }}
       />
 
       <div
